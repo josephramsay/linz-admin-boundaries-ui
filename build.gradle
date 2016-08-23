@@ -1,0 +1,67 @@
+/**
+build.gradle
+
+Copyright 2014 Crown copyright (c)
+Land Information New Zealand and the New Zealand Government.
+All rights reserved
+
+This program is released under the terms of the new BSD license. See the
+LICENSE file for more information.
+ */
+
+ext {
+    postgresqlApiVersion = '9.4-1206-jdbc42'
+    postGISApiVersion = '2.2.0'
+    servletApiVersion = '3.+'
+    junitVersion = '4.12'
+}
+
+apply plugin: 'java'
+apply plugin: 'war'
+
+archivesBaseName = 'ab'
+version = '0.1'
+sourceCompatibility = '1.8'
+
+def deployDir = file("/var/lib/tomcat6/webapps/")
+def externalJarDir = file("src/main/webapp/WEB-INF/lib")
+
+war {
+    manifest {
+        attributes 'Implementation-Title': 'LINZ Admin Boundaries Downloader',
+            'Implementation-Version': version
+
+    }
+    destinationDir = deployDir
+    archiveName = 'ab.war'
+    classpath fileTree(externalJarDir)
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    //classpath "org.postgresql:postgresql:$postgresqlApiVersion"
+
+    providedCompile "javax.servlet:servlet-api:$servletApiVersion"
+    providedRuntime "org.postgresql:postgresql:$postgresqlApiVersion"
+    providedRuntime "net.postgis:postgis-jdbc:$postGISApiVersion"
+    testCompile "junit:junit:$junitVersion" 
+}
+
+
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath "org.postgresql:postgresql:9.4-1206-jdbc42"
+    }
+}
+
+test {
+    systemProperties 'property': '1'
+}

@@ -1,0 +1,112 @@
+[source]
+base_uri = http://maps.stats.govt.nz/wss/service/arcgis1/guest/Boundaries
+
+[database]
+name = <dbname>
+rolename = <role?>
+host = localhost
+user = <dbuser>
+port = <port.
+password = <dbpass>
+schema = <temp_import_schema>
+originschema = <schema>
+
+[layer]
+name = territorial_authority
+output_srid = 4167
+geom_column = shape
+create_grid = True
+grid_res = 0.05
+shift_geometry = True
+
+; logging parameters from here on. For more info see python logger config options:
+; https://docs.python.org/2/library/logging.config.html#logging-config-fileformat
+[loggers]
+keys=root
+
+[handlers]
+keys=consoleHandler,fileHandler,emailHandler
+
+[formatters]
+keys=simpleFormatter
+
+[logger_root]
+level=DEBUG
+handlers=consoleHandler,fileHandler,emailHandler
+
+[handler_emailHandler]
+class=handlers.SMTPHandler
+level=WARN
+formatter=simpleFormatter
+args=('linzsmtp', 'noreply@<sender_domain>', ['<recipient@recipient_domain>'], '%(hostname)s - Download TA Boundaries Errors')
+
+[handler_consoleHandler]
+class=StreamHandler
+level=DEBUG
+formatter=simpleFormatter
+args=(sys.stdout,)
+
+[handler_fileHandler]
+class=handlers.RotatingFileHandler
+level=DEBUG
+formatter=simpleFormatter
+; args=('<logfile>', 'a', 1000000, 5)
+args=('download-admin-bdys.log', 'a', 1000000, 5)
+
+[formatter_simpleFormatter]
+format=%(asctime)s - %(name)s - %(levelname)s - %(message)s
+
+[connection]
+ftphost=<ftphost>
+ftpport=<ftpport>
+ftpuser=<ftpuser>
+ftppass=<ftppass>
+ftppath=<ftppath>
+
+[meshblock]
+filepattern = Stats_Meshblock_concordance_(\d{8}).zip
+localpath = .
+colmap = {
+    "statsnz_meshblock":{
+    "table":"meshblock",
+    "rename":[{"old":"mb_code","new":"code"},{"old":"geom","new":"shape"}],
+    "drop":["ogc_fid"],
+    "primary":"code",
+    "geom":"shape",
+    "srid":"4167"
+    },
+    "statsnz_ta":{
+    "table":"territorial_authority",
+    "rename":[{"old":"geom","new":"shape"}],
+    "drop":["ta_code"],
+    "primary":"ogc_fid",
+    "geom":"shape",
+    "srid":"4167",
+    "grid":{"geocol":"shape","res":"10"}
+    },
+    "meshblock_concordance":{
+    "table":"meshblock_concordance",
+    "primary":"meshblock"
+    }
+    }
+
+[nzlocalities]
+filepath = /mnt/geo_dat/NZ Localities/
+filename = nz_localities
+colmap = {
+    "nz_locality":{
+    "table":"nz_locality",
+    "rename":[{"old":"geom","new":"shape"}],
+    "drop":["ogc_fid"],
+    "cast":[{"cast":"id","type":"integer"}],
+    "primary":"id",
+    "geom":"shape",
+    "srid":"4167"
+    }
+    }
+
+[validation]
+data = [('select count(*) from meshblock where length(code)>7','0'),]
+spatial = [{'',''},]
+
+

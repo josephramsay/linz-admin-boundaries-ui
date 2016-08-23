@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://xmlns.jcp.org/xml/ns/javaee" 
+         xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd" 
+         id="WebApp_ID" version="3.1">
+    
+    <display-name>LINZ DAB Interface</display-name>
+    
+    <security-role>
+        <role-name>tomcat</role-name>
+    </security-role>
+    
+    <security-constraint>
+        <web-resource-collection>
+            <web-resource-name>ab</web-resource-name>
+            <url-pattern>/ab</url-pattern>
+            <url-pattern>/ab/*</url-pattern>
+            <http-method>GET</http-method>
+            <http-method>POST</http-method>
+        </web-resource-collection>
+        
+        <auth-constraint>
+            <role-name>tomcat</role-name>
+        </auth-constraint>
+        
+        <user-data-constraint>
+            <transport-guarantee>NONE</transport-guarantee>
+        </user-data-constraint>
+    </security-constraint>
+    
+    <resource-ref>
+        <res-ref-name>jdbc/linz/aims</res-ref-name>
+        <res-type>javax.sql.DataSource</res-type>
+        <res-auth>Container</res-auth>
+        <res-sharing-scope>Shareable</res-sharing-scope>
+    </resource-ref>
+    
+    <login-config>
+        <auth-method>BASIC</auth-method>
+        <!-- <realm-name>LINZ DAB</realm-name>-->
+    </login-config>
+    
+    <servlet>
+        <servlet-name>summary</servlet-name>
+        <servlet-class>nz.govt.linz.AdminBoundaries.DABServletSummary</servlet-class>
+    </servlet>    
+    
+    <servlet>
+        <servlet-name>action</servlet-name>
+        <servlet-class>nz.govt.linz.AdminBoundaries.DABServletAction</servlet-class>
+    </servlet>    
+    
+    <servlet>
+        <servlet-name>main</servlet-name>
+        <servlet-class>nz.govt.linz.AdminBoundaries.DABServletMain</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>summary</servlet-name>
+        <url-pattern>/sum</url-pattern>
+    </servlet-mapping>    
+    
+    <servlet-mapping>
+        <servlet-name>action</servlet-name>
+        <url-pattern>/act</url-pattern>
+    </servlet-mapping>    
+    
+    <servlet-mapping>
+        <servlet-name>main</servlet-name>
+        <url-pattern>/dab</url-pattern>
+    </servlet-mapping>    
+    
+    <welcome-file-list>
+        <welcome-file>dab</welcome-file>
+        <welcome-file>index.html</welcome-file>
+    </welcome-file-list>
+    
+</web-app>

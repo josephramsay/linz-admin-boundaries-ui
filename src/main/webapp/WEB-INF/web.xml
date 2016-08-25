@@ -5,22 +5,19 @@
          id="WebApp_ID" version="3.1">
     
     <display-name>LINZ DAB Interface</display-name>
-    
+    <!-- 
     <security-role>
-        <role-name>tomcat</role-name>
+        <role-name>AIMS</role-name>
     </security-role>
-    
+    -->
     <security-constraint>
         <web-resource-collection>
-            <web-resource-name>ab</web-resource-name>
-            <url-pattern>/ab</url-pattern>
-            <url-pattern>/ab/*</url-pattern>
-            <http-method>GET</http-method>
-            <http-method>POST</http-method>
+            <web-resource-name>Daownload Admin Boundaries</web-resource-name>
+            <url-pattern>/*</url-pattern>
         </web-resource-collection>
         
         <auth-constraint>
-            <role-name>tomcat</role-name>
+            <role-name>AIMS</role-name>
         </auth-constraint>
         
         <user-data-constraint>
@@ -37,7 +34,7 @@
     
     <login-config>
         <auth-method>BASIC</auth-method>
-        <!-- <realm-name>LINZ DAB</realm-name>-->
+        <realm-name>AIMS API (for DAB)</realm-name>
     </login-config>
     
     <servlet>
@@ -50,11 +47,13 @@
         <servlet-class>nz.govt.linz.AdminBoundaries.DABServletAction</servlet-class>
     </servlet>    
     
+    <!-- 
     <servlet>
         <servlet-name>main</servlet-name>
         <servlet-class>nz.govt.linz.AdminBoundaries.DABServletMain</servlet-class>
     </servlet>
-
+    -->
+    
     <servlet-mapping>
         <servlet-name>summary</servlet-name>
         <url-pattern>/sum</url-pattern>
@@ -63,15 +62,17 @@
     <servlet-mapping>
         <servlet-name>action</servlet-name>
         <url-pattern>/act</url-pattern>
-    </servlet-mapping>    
-    
+    </servlet-mapping> 
+       
+    <!-- 
     <servlet-mapping>
         <servlet-name>main</servlet-name>
         <url-pattern>/dab</url-pattern>
     </servlet-mapping>    
+    -->
     
     <welcome-file-list>
-        <welcome-file>dab</welcome-file>
+        <welcome-file>sum</welcome-file>
         <welcome-file>index.html</welcome-file>
     </welcome-file-list>
     

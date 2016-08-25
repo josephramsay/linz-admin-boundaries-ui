@@ -40,9 +40,26 @@ public class DABServletMain extends DABServlet {
         PrintWriter out = response.getWriter();
         
         HttpSession session = request.getSession(true);
-
         Date created = new Date(session.getCreationTime());
         Date accessed = new Date(session.getLastAccessedTime());        
+        
+        Enumeration headerNames = request.getHeaderNames();
+        while (headerNames.hasMoreElements()) {
+			String headerName = (String) headerNames.nextElement();
+			out.print("<br/>Header Name: <em>" + headerName);
+			String headerValue = request.getHeader(headerName);
+			out.print("</em>, Header Value: <em>" + headerValue);
+			out.println("</em>");
+		}
+        
+        out.println("<hr/>");
+		String authHeader = request.getHeader("authorization");
+		out.println("Auth Header: <em>" + authHeader);
+		//String encodedValue = authHeader.split(" ")[1];
+		//out.println("Base64-encoded Authorization Value: <em>" + encodedValue);
+		//String decodedValue = Base64.base64Decode(encodedValue);
+		//out.println("</em><br/>Base64-decoded Authorization Value: <em>" + decodedValue);
+		out.println("</em><hr/>");
         
         out.println(docType +
                 "<html><head>\n" +

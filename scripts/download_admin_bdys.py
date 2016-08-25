@@ -917,6 +917,10 @@ def part3(v,t):
     v.versiontables(t,final=True)
     ###v.teardown()
     
+def partX(v):
+    '''User has signalled that this data load is corrupt, so delete it'''
+    v.teardown()
+    
 '''
 TODO
 file name reader, db overwrite
@@ -948,12 +952,17 @@ def main():
     with DB(c,'ogr') as ogrdb:           
         #if a 't' value is stored we dont want to pre-clean the import schema 
         ###t = v.setup()
-        aopts = ('load','map','transfer')
+        aopts = ('load','map','transfer','reject')
+        if 'reject' in args: 
+            partX(v)
+            return
         #if prepare requested import files and recreate 't'
         t = part1(args,ogrdb,v,c,m) if oneOrNone('load', aopts,args) else c.read('t')
         #if transfer requested map and transfer using current 't'
-        if oneOrNone('map',aopts,args): part2(v,t)
-        if oneOrNone('transfer',aopts,args): part3(v,t)
+        if oneOrNone('map',aopts,args): 
+            part2(v,t)
+        if oneOrNone('transfer',aopts,args): 
+            part3(v,t)
 
     
 if __name__ == "__main__":

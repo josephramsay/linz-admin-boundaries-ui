@@ -8,6 +8,17 @@ All rights reserved
 This program is released under the terms of the new BSD license. See the
 LICENSE file for more information.
  */
+ 
+ buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath "org.postgresql:postgresql:9.4-1206-jdbc42"
+    }
+}
 
 ext {
     postgresqlApiVersion = '9.4-1206-jdbc42'
@@ -15,6 +26,8 @@ ext {
     servletApiVersion = '3.+'
     junitVersion = '4.12'
 }
+
+
 
 apply plugin: 'java'
 apply plugin: 'war'
@@ -32,7 +45,7 @@ war {
             'Implementation-Version': version
 
     }
-    destinationDir = deployDir
+    //destinationDir = deployDir
     archiveName = 'ab.war'
     classpath fileTree(externalJarDir)
 }
@@ -50,17 +63,6 @@ dependencies {
     testCompile "junit:junit:$junitVersion" 
 }
 
-
-buildscript {
-    repositories {
-        mavenLocal()
-        mavenCentral()
-    }
-
-    dependencies {
-        classpath "org.postgresql:postgresql:9.4-1206-jdbc42"
-    }
-}
 
 test {
     systemProperties 'property': '1'

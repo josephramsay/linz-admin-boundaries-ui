@@ -95,6 +95,7 @@ public class DABConnector {
 		Properties props = ResourceLoader.getAsProperties(FILENAME);
 		String prefix = ConnectionDefinitions.POSTGRESQL.prefix();
 		String suffix = String.format("//%s:%s/%s", props.get("host"),props.get("port"),props.get("dbname"));
+		//System.out.println(String.format("### %s + %s", prefix,suffix));
 		try (Connection conn = DriverManager.getConnection(String.format("%s:%s",prefix,suffix),props)) {
 			Statement stmt = conn.createStatement();
 			result = parseResultSet(stmt.executeQuery(query));

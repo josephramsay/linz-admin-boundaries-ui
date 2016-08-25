@@ -17,6 +17,7 @@ LICENSE file for more information.
 
     dependencies {
         classpath "org.postgresql:postgresql:9.4-1206-jdbc42"
+        classpath 'com.bmuschko:gradle-cargo-plugin:2+'
     }
 }
 
@@ -31,13 +32,15 @@ ext {
 
 apply plugin: 'java'
 apply plugin: 'war'
+apply plugin: 'com.bmuschko.cargo'
+
 
 archivesBaseName = 'ab'
 version = '0.1'
 sourceCompatibility = '1.8'
 
-def deployDir = file("/var/lib/tomcat6/webapps/")
-def externalJarDir = file("src/main/webapp/WEB-INF/lib")
+def webContext = 'ab'
+def warName = 'build/libs/ab.war'
 
 war {
     manifest {
@@ -45,9 +48,29 @@ war {
             'Implementation-Version': version
 
     }
-    //destinationDir = deployDir
-    archiveName = 'ab.war'
-    classpath fileTree(externalJarDir)
+    archiveName = warName
+}
+
+
+task deploy {
+    dependsOn war
+	cargo {
+	    containerId = 'tomcat7x'
+	    port = 8080
+	
+	    deployable {
+	        file = file(warName)
+	        context = webContext
+	    }
+	
+	    remote {
+	       protocol = "${remoteProtocol}"
+	       hostname = "${remoteHost}"
+	       username = "${remoteUser}"
+	       password = "${remotePass}"
+	    }
+	
+	}
 }
 
 repositories {
@@ -56,14 +79,9 @@ repositories {
 
 dependencies {
     //classpath "org.postgresql:postgresql:$postgresqlApiVersion"
-
     providedCompile "javax.servlet:servlet-api:$servletApiVersion"
     providedRuntime "org.postgresql:postgresql:$postgresqlApiVersion"
     providedRuntime "net.postgis:postgis-jdbc:$postGISApiVersion"
     testCompile "junit:junit:$junitVersion" 
 }
 
-
-test {
-    systemProperties 'property': '1'
-}

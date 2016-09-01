@@ -18,6 +18,8 @@ LICENSE file for more information.
     dependencies {
         classpath "org.postgresql:postgresql:9.4-1206-jdbc42"
         classpath 'com.bmuschko:gradle-cargo-plugin:2+'
+        //for debpackage
+        //classpath 'com.netflix.nebula:gradle-ospackage-plugin:1+'
     }
 }
 
@@ -33,14 +35,16 @@ ext {
 apply plugin: 'java'
 apply plugin: 'war'
 apply plugin: 'com.bmuschko.cargo'
+//apply plugin: "nebula.deb"
 
-
-archivesBaseName = 'ab'
 version = '0.1'
 sourceCompatibility = '1.8'
 
 def webContext = 'ab'
-def warName = 'build/libs/ab.war'
+def warDir = 'build/libs/'
+def warName = 'ab.war'
+def packName = 'AdminBoundaryDownloader'
+def packVersion = '0.1'
 
 war {
     manifest {
@@ -52,14 +56,14 @@ war {
 }
 
 
-task deploy {
+task cargosetup {
     dependsOn war
 	cargo {
 	    containerId = 'tomcat7x'
 	    port = 8080
 	
 	    deployable {
-	        file = file(warName)
+	        file = file(warDir+warName)
 	        context = webContext
 	    }
 	
@@ -71,6 +75,16 @@ task deploy {
 	    }
 	
 	}
+}
+
+task redeploy {
+    dependsOn cargosetup
+    shouldRunAfter cargoRedeployRemote
+}
+
+task deploy {
+    dependsOn cargosetup 
+    shouldRunAfter cargoDeployRemote
 }
 
 repositories {

@@ -82,7 +82,6 @@ public class DABServletSummary extends DABServlet {
 	}
 	
 	
-	
 	public String readTableDifferences(String schema, String table){
 		//TODO
 		String query = String.format("SELECT COUNT(*) count FROM %s.%s",schema,table);
@@ -91,6 +90,7 @@ public class DABServletSummary extends DABServlet {
 	
 	public void doGet(HttpServletRequest request, HttpServletResponse response)
 		    throws IOException, ServletException {
+		String disp = "";
 		
 		response.setContentType("text/html");
         PrintWriter out = response.getWriter();
@@ -98,9 +98,22 @@ public class DABServletSummary extends DABServlet {
         HttpSession session = request.getSession(true);
 
         Date created = new Date(session.getCreationTime());
-        Date accessed = new Date(session.getLastAccessedTime());        
+        Date accessed = new Date(session.getLastAccessedTime());
+        
+        String action = request.getParameter("compare");
+        
+        if (action != null) {
+        	TableMapping tm = TableMapping.valueOf(action.toUpperCase());
+        	disp = readImportDifference(tm);
+        }
+        else {
+        	disp = getSummaryTable();
+        }
+
+        
         Map<String, String> info = new HashMap<>();
         info.put("USER",request.getParameter("user"));
+        info.put("ACTION",action);
         
         out.println(docType +
                 "<html><head>\n" +
@@ -109,7 +122,7 @@ public class DABServletSummary extends DABServlet {
                 getBodyHeader() +
                 getBodyTitle() +
                 getInfoMessage(info) +
-                getSummaryTable() +
+                disp +
                 getAcceptDeclineForm() +
                 "</div></body></html>");
         out.println("Created: " + created + "</br>");
@@ -117,7 +130,13 @@ public class DABServletSummary extends DABServlet {
 	}
 	
 	protected String getAcceptDeclineForm(){
-		return String.join("\n"
+		String msg = String.join("<br/>","<ul class=\"styledlist\">"
+				,"<li><b>Load.</b> Download new files from SFTP directory</li>"
+				,"<li><b>Map.</b> Match columns in import tables to columns in destinations tables (see config file for mappings)</li>"
+				,"<li><b>Transfer.</b> Run table_version function to populate destination tables</li>"
+				,"<li><b>Reject.</b> Drop the import tables and quit</li>"
+				,"</ul>");
+		return String.join("\n",msg
 			,"<form action=\"act\" method=\"GET\">"
 			,"<input class=\"formbutton\" type=\"submit\" name=\"action\" value=\"Load\">\n"
 			,"<input class=\"formbutton\" type=\"submit\" name=\"action\" value=\"Map\">\n"
@@ -141,13 +160,13 @@ public class DABServletSummary extends DABServlet {
 	        ,"<table class=\"result\">"
 	        ,"<tr><th>Admin Bdys</th><th>Imported</th></tr>"
 	        ,"<tr><td>" + tsm + "</td><td>" + tsmi + "</td></tr>"
-	        ,"<tr><td span=2><a href=\"#\" class=\"button\">Compare MB Tables</a></td></tr>"
+	        ,"<tr><td span=2><a href=\"sum?compare=mb\" class=\"button\">Compare MB Tables</a></td></tr>"
 	        ,"<tr><td>" + tmc + "</td><td>" + tmci + "</td></tr>"
-	        ,"<tr><td span=2><a href=\"#\" class=\"button\">Compare MBC Tables</a></td></tr>"
+	        ,"<tr><td span=2><a href=\"sum?compare=mbc\" class=\"button\">Compare MBC Tables</a></td></tr>"
 	        ,"<tr><td>" + tnl + "</td><td>" + tnli + "</td></tr>"
-	        ,"<tr><td span=2><a href=\"#\" class=\"button\">Compare NZL Tables</a></td></tr>"
+	        ,"<tr><td span=2><a href=\"sum?compare=nzl\" class=\"button\">Compare NZL Tables</a></td></tr>"
 	        ,"<tr><td>" + tst + "</td><td>" + tsti + "</td></tr>"
-	        ,"<tr><td span=2><a href=\"#\" class=\"button\">Compare TA Tables</a></td></tr>"
+	        ,"<tr><td span=2><a href=\"sum?compare=ta\" class=\"button\">Compare TA Tables</a></td></tr>"
 	        ,"</table>");
 	}
 

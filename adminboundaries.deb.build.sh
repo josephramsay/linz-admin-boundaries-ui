@@ -109,7 +109,7 @@ data/$proj_abv.png usr/share/pixmaps
 scripts/download_admin_bdys.sh usr/bin
 scripts/download_admin_bdys.py usr/bin
 scripts/$pyrepl usr/conf
-build/libs/ab.war $CATALINA_BASE/webapps
+libs/ab.war $CATALINA_BASE/webapps
 EOF
 
 	#-------------------
@@ -141,7 +141,7 @@ Name=$project
 Comment=Trigger download and import of $project
 Type=Application
 Keywords=$proj_abv
-Exec=/usr/bin/download_admin_bdys.sh prepare
+Exec=/usr/bin/download_admin_bdys.sh
 Terminal=true
 Icon=/usr/share/pixmaps/$proj_abv.png
 Categories=Utility;

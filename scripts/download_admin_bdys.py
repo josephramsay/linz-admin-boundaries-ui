@@ -33,10 +33,20 @@ import re
 import json
 import string
 import socket
-import urllib2
 import logging.config
 import getopt
 import psycopg2
+
+
+#2 to 3 imports
+try:
+    import Tkinter as TK
+    from Tkconstants import RAISED,SUNKEN,BOTTOM,RIGHT,LEFT,END,X,Y,W,E,N,S,ACTIVE  
+    from ConfigParser import SafeConfigParser
+except ImportError:
+    import tkinter as TK
+    from tkinter.constants import RAISED,SUNKEN,BOTTOM,RIGHT,LEFT,END,X,Y,W,E,N,S,ACTIVE  
+    from configparser import SafeConfigParser
 
 import socket,time
 from zipfile import ZipFile
@@ -60,7 +70,6 @@ import pexpect
 
 
 from optparse import OptionParser
-from ConfigParser import SafeConfigParser
 
 try:
     from osgeo import ogr, osr, gdal
@@ -93,7 +102,8 @@ TEST = True
 SELECTION = {'ogr':None,'psy':None}
 # Number of query attempts to make
 DEPTH = 5
-
+#Processing options
+OPTS = [('Load','load',0),('Map','map',1),('Transfer','transfer',2),('Reject','reject',3)]
 
 def shift_geom ( geom ):
     '''translate geometry to 0-360 longitude space'''
@@ -592,7 +602,7 @@ class Processor(object):
                         m = conn.get(q)
                         return m
             except RuntimeError as r:
-                print 'Attempt {} using {} failed, {}'.format(DEPTH-depth+1,select,m or r)
+                print ('Attempt {} using {} failed, {}'.format(DEPTH-depth+1,select,m or r))
                 #if re.search('table_version.ver_apply_table_differences',q) and Processor.nonOGR(conf,q,depth-1): return
                 return Processor.attempt(conf, q, Processor._next(select), depth-1)
         if r: raise r
@@ -732,7 +742,7 @@ class Version(object):
              where table_schema like '{s}' \
              and table_name like '{t}' \
              and constraint_type like 'PRIMARY KEY'".format(s=s,t=t)
-        print 'pQ2',q
+        print ('pQ2',q)
         #return bool(self.db.pg_ds.ExecuteSQL(q).GetFeatureCount())
         return Processor.attempt(self.conf, q, select='psy')
         
@@ -783,7 +793,7 @@ class Version(object):
                 original = '{}.x_{}'.format(self.conf.database_originschema,t2)
                 imported = '{}.{}{}'.format(self.conf.database_schema,PREFIX,t)
                 for q in self.qset(original,snap,imported,pk,geom,srid,final):
-                    print 'pQ1',q
+                    print ('pQ1',q)
                     Processor.attempt(self.conf,q)
                 dst_t = '{}{}'.format(SNAP,t) if TEST else 'x_{}'.format(t2)
                 self.gridtables(sec,t,dst_t)
@@ -816,7 +826,7 @@ class External(object):
             res = colres['res']
             dstschema = self.conf.database_schema if TEST else self.conf.database_originschema
             q = query.format(schema=dstschema, table=gridtable, column=col, xres=res, yres=res)
-            print 'eQ1',q
+            print ('eQ1',q)
             Processor.attempt(self.conf,q)
         #self.db.disconnect()
             
@@ -825,7 +835,7 @@ class External(object):
         q = "select * from information_schema.routines \
              where routine_schema like '{s}' \
              and routine_name like '{t}'".format(s=s,t=t)
-        print 'fQ2',q
+        print ('fQ2',q)
         return Processor.attempt(self.conf, q)
             
 class PExpectException(Exception):pass
@@ -879,6 +889,63 @@ class PExpectSFTP(object):
             
         return localpath
 
+class SimpleUI(object):
+    '''Simple UI component added to provide debian installer target'''
+    H = 100
+    W = 100
+    R = RAISED
+    
+    def __init__(self):
+        self.master = TK.Tk()
+        self.master.wm_title('DAB')
+        self.mainframe = TK.Frame(self.master,height=self.H,width=self.W,bd=1,relief=self.R)
+        self.mainframe.grid()
+        self.initWidgets()
+        self._offset(self.master)
+        self.mainframe.mainloop()
+
+    def initWidgets(self):
+        title_row = 0
+        select_row = 1
+        button_row = 3
+        
+        #B U T T O N
+        self.mainframe.selectbt = TK.Button(self.mainframe,  text='Start', command=self.start)
+        self.mainframe.selectbt.grid( row=button_row,column=0,sticky=E)
+ 
+        self.mainframe.quitbt = TK.Button(self.mainframe,    text='Quit',  command=self.quit)
+        self.mainframe.quitbt.grid(row=button_row,column=1,sticky=E)
+  
+        #C H E C K B O X
+        runlevel = TK.StringVar()
+        runlevel.set('reject')
+        for text,selection,col in OPTS:
+            self.mainframe.rlev = TK.Radiobutton(self.mainframe, text=text, variable=runlevel, value=selection)#,indicatoron=False)
+            self.mainframe.rlev.grid(row=int(select_row+abs(col/2)),column=int(col%2),sticky=W)
+        self.mainframe.rlev_var = runlevel   
+        
+        #L A B E L
+        self.mainframe.title = TK.Label(self.mainframe,text='Select DAB Operation')
+        self.mainframe.title.grid(row=title_row,column=0,sticky=W)
+   
+        
+    def quit(self):
+        self.mainframe.quit()
+        
+    def start(self):
+        self.ret_val = self.mainframe.rlev_var.get()
+        self.master.withdraw()
+        self.quit()
+        
+    def _offset(self,window):
+        window.update_idletasks()
+        w = window.winfo_screenwidth()
+        h = window.winfo_screenheight()
+        size = tuple(int(_) for _ in window.geometry().split('+')[0].split('x'))
+        x = w/4 - size[0]/2
+        y = h/4 - size[1]/2
+        window.geometry("%dx%d+%d+%d" % (size + (x, y)))
+
    
 def oneOrNone(a,options,args):
     '''is A in args OR are none of the options in args'''
@@ -886,7 +953,7 @@ def oneOrNone(a,options,args):
      
 def part1(args,ogrdb,v,c,m):            
     '''fetch data from sources and prepare import schema'''
-    print "Beginning meshblock/localities file download"
+    print ("Beginning meshblock/localities file download")
     t = ()
     SELECTION['ogr'] = ogrdb.d
     #SELECTION['ogr'] = DatabaseConn_ogr(c)
@@ -900,19 +967,19 @@ def part1(args,ogrdb,v,c,m):
         nzl = NZLocalities(c,SELECTION['ogr'],m,s) 
         t += (nzl.run(),)
     c.save('t',t)
-    print "Stopping post import for user validation, rerun with option 'transfer' to start again from this point"
+    print ("Stopping post import for user validation, rerun with option 'transfer' to start again from this point")
     return t
 
 def part2(v,t):            
     '''if data has been validated transfer to final schema'''
-    print "Begining table mapping and final data import"
+    print ("Begining table mapping and final data import")
     #if not t: t = _t
     v.versiontables(t,final=False)
     ###v.teardown()
     
 def part3(v,t):            
     '''if data has been validated transfer to final schema'''
-    print "Begining table mapping and final data import"
+    print ("Begining table mapping and final data import")
     #if not t: t = _t
     v.versiontables(t,final=True)
     ###v.teardown()
@@ -925,25 +992,35 @@ def partX(v):
 TODO
 file name reader, db overwrite
 '''
-def main():   
-    t = () 
-    _t = (('meshblock', ('statsnz_meshblock', 'statsnz_ta', 'meshblock_concordance')), ('nzlocalities', ('nz_locality',)))
+def main():  
+
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "h", ["help"])
-    except getopt.error, msg:
-        print msg
-        print "for help use --help"
+        opts, args = getopt.getopt(sys.argv[1:], "vh", ["version","help"])
+    except getopt.error as msg:
+        print (msg)
+        print ("for help use --help")
         sys.exit(2)
         
         
     for opt, val in opts:
         if opt in ("-h", "--help"):
-            print __doc__
+            print (__doc__)
             sys.exit(0)
         elif opt in ("-v", "--version"):
-            print __version__
+            print (__version__)
             sys.exit(0)
+                    
+    if len(args)==0:
+        sui = SimpleUI()
+        #sui.mainframe.mainloop()
+        args = [sui.ret_val,]
+        
+    process(args)
             
+def process(args):
+    t = () 
+    _t = (('meshblock', ('statsnz_meshblock', 'statsnz_ta', 'meshblock_concordance')), ('nzlocalities', ('nz_locality',)))
+    
     c = ConfReader()
     m = ColumnMapper(c)
     v = Version(c,m)
@@ -952,7 +1029,7 @@ def main():
     with DB(c,'ogr') as ogrdb:           
         #if a 't' value is stored we dont want to pre-clean the import schema 
         ###t = v.setup()
-        aopts = ('load','map','transfer','reject')
+        aopts = [a[1] for a in OPTS]
         if 'reject' in args: 
             partX(v)
             return
@@ -964,10 +1041,9 @@ def main():
         if oneOrNone('transfer',aopts,args): 
             part3(v,t)
 
-    
 if __name__ == "__main__":
     main()
-    print 'finished'
+    print ('finished')
 
 
 

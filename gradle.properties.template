@@ -10,14 +10,11 @@
 # These can be overridden for a specific environment in USER_HOME/.gradle/gradle.properties
 # These can be over-ridden with command line, e.g.: -PtestUser=aims_api_sa -PtestPassword=Password1
 
-## AIMS
-
-dbHost=<host>:<port>
-dbName=<dbname>
-
-# DB User used by the API webapp
-apiUser=<user>
-apiPassword=<pass>
+## Tomcat
+remoteProtocol=
+remoteHost=
+remoteUser=
+remotePass=
 
 ## GRADLE
 

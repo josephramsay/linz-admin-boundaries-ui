@@ -16,7 +16,34 @@ import java.util.*;
 import javax.servlet.*;
 import javax.servlet.http.*;
 
+
 public class DABServletSummary extends DABServlet {
+	
+	/**
+	 * Inner Enumeration matching imported tables to the final refernce tables in the admni_bdys schema
+	 * @author jramsay
+	 *
+	 */
+	public enum TableMapping {
+		MB("meshblock","temp_statsnz_meshblock","code"),
+		MBC("meshblock_concordance","temp_meshblock_concordance","meshblock"),
+		NZL("nz_locality","temp_nz_locality","id"),
+	    TA("territorial_authority","temp_statsnz_ta","ogc_fid");
+		
+		private final String dst;
+		private final String src;	
+		private final String key;	
+
+		private TableMapping(String dst, String src, String key){
+				this.dst = dst;
+				this.src = src;
+				this.key = key;
+		}
+		public String dst(){return dst;}
+		public String src(){return src;}
+		public String key(){return key;}
+	}
+
 	
 	static final long serialVersionUID = 1;
 	DABConnector dabc;		
@@ -24,7 +51,7 @@ public class DABServletSummary extends DABServlet {
 	
 	private final static String ABs = "admin_bdys";
     private final static String ABIs = "admin_bdys_import";
-	
+
 	public String docType = "<!doctype html public \"-//w3c//dtd html 4.0 transitional//en\">\n";
 	
 	public void init() throws ServletException {
@@ -33,17 +60,28 @@ public class DABServletSummary extends DABServlet {
 		dabc = new DABConnector();
 		dabf = new DABFormatter();
 	}
-	
-	
-	public void sendNotification(){
-		//Send email to users informing them a new import is ready to review 
-	}	
+
 	
 	public String readChangesetSummary(String schema, String table){
 		//read admin_bdys diffs
 		String query = String.format("SELECT COUNT(*) count FROM %s.%s",schema,table);
 		return dabf.getSummaryAsTable(table,dabc.getExtractSummary(query));
-	}	
+	}
+	
+	/**
+	 * Use table_version get_diff func to return differences between to-be merged tables
+	 * @param table
+	 * @return
+	 */
+	public String readImportDifference(TableMapping table){
+		//read table diffs
+		String t1 = String.format("%s.%s", ABs, table.dst());
+		String t2 = String.format("%s.%s", ABIs, table.src());
+		String query = String.format("SELECT table_version.ver_get_table_differences('%s'.'%s','%s')",t1,t2,table.key());
+		return dabf.getSummaryAsTable(table.dst(),dabc.getExtractSummary(query));
+	}
+	
+	
 	
 	public String readTableDifferences(String schema, String table){
 		//TODO
@@ -81,29 +119,35 @@ public class DABServletSummary extends DABServlet {
 	protected String getAcceptDeclineForm(){
 		return String.join("\n"
 			,"<form action=\"act\" method=\"GET\">"
+			,"<input class=\"formbutton\" type=\"submit\" name=\"action\" value=\"Load\">\n"
+			,"<input class=\"formbutton\" type=\"submit\" name=\"action\" value=\"Map\">\n"
 			,"<input class=\"formbutton\" type=\"submit\" name=\"action\" value=\"Transfer\">\n"
-			,"<input class=\"formbutton\" type=\"submit\" name=\"action\" value=\"Prepare\">\n"
 			,"<input class=\"formbutton\" type=\"submit\" name=\"action\" value=\"Reject\"><br/>\n"
 			,"</form>");
 	}
 	
 	protected String getSummaryTable(){	    
-	    String tsm = readChangesetSummary(ABs,"meshblock");
-	    String tmc = readChangesetSummary(ABs,"meshblock_concordance");
-	    String tnl = readChangesetSummary(ABs,"nz_locality");
-	    String tst = readChangesetSummary(ABs,"territorial_authority");        
+	    String tsm = readChangesetSummary(ABs,TableMapping.MB.dst());
+	    String tmc = readChangesetSummary(ABs,TableMapping.MBC.dst());
+	    String tnl = readChangesetSummary(ABs,TableMapping.NZL.dst());
+	    String tst = readChangesetSummary(ABs,TableMapping.TA.dst());        
 	    
-	    String tsmi = readChangesetSummary(ABIs,"temp_statsnz_meshblock");
-	    String tmci = readChangesetSummary(ABIs,"temp_meshblock_concordance");
-	    String tnli = readChangesetSummary(ABIs,"temp_nz_locality");
-	    String tsti = readChangesetSummary(ABIs,"temp_statsnz_ta");
+	    String tsmi = readChangesetSummary(ABIs,TableMapping.MB.src());
+	    String tmci = readChangesetSummary(ABIs,TableMapping.MBC.src());
+	    String tnli = readChangesetSummary(ABIs,TableMapping.NZL.src());
+	    String tsti = readChangesetSummary(ABIs,TableMapping.TA.src());
+	    
 		return String.join("\n"
 	        ,"<table class=\"result\">"
 	        ,"<tr><th>Admin Bdys</th><th>Imported</th></tr>"
 	        ,"<tr><td>" + tsm + "</td><td>" + tsmi + "</td></tr>"
+	        ,"<tr><td span=2><a href=\"#\" class=\"button\">Compare MB Tables</a></td></tr>"
 	        ,"<tr><td>" + tmc + "</td><td>" + tmci + "</td></tr>"
+	        ,"<tr><td span=2><a href=\"#\" class=\"button\">Compare MBC Tables</a></td></tr>"
 	        ,"<tr><td>" + tnl + "</td><td>" + tnli + "</td></tr>"
+	        ,"<tr><td span=2><a href=\"#\" class=\"button\">Compare NZL Tables</a></td></tr>"
 	        ,"<tr><td>" + tst + "</td><td>" + tsti + "</td></tr>"
+	        ,"<tr><td span=2><a href=\"#\" class=\"button\">Compare TA Tables</a></td></tr>"
 	        ,"</table>");
 	}
 

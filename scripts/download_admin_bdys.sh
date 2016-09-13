@@ -3,6 +3,10 @@
 action=$1
 
 case "$action" in
-        reject|prepare|transfer ) python download_admin_bdys.py $action;;
-        * ) echo "INVALID Request $action";;
+        load|reject|prepare|transfer ) 
+        	python download_admin_bdys.py $action;;
+        * ) 
+        	echo "Empty request. Opening dialog"
+			python download_admin_bdys.py
+			;;
 esac

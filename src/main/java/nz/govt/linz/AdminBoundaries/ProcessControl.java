@@ -17,9 +17,8 @@ import java.io.InputStreamReader;
 
 public class ProcessControl {
 	
-	
-	//private static final String PROCESS = "/home/jramsay/workspace/AdminBoundaries/printargs.sh";
-	private static final String PROCESS = "/home/lds_bde/scripts/download_admin_bdys.sh";
+	//this is the path where the debian packager puts the py part of the app
+	private static final String PROCESS = "/usr/local/share/AdminBoundaries/download_admin_bdys.sh";
 	
 	private ProcessBuilder processbuilder;
 

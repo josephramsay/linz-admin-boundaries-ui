@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 ################################################################################
 #
 # download_admin_bdys.py
@@ -19,11 +20,12 @@
 # TODO
 # No | X | Desc
 # ---+---+-----
-# 1. |   | Change legacy database config to common attribute mapping
+# 1. | x | Change legacy database config to common attribute mapping
 # 2. |   | Shift file to table mapping into config
 # 3. | x | Enforce create/drop schema
 # 4. |   | Consistent return types from db calls
 # 5. |   | Validation framework
+# 6. | x | Standardise logging, remove from config
  
 __version__ = 1.0
 
@@ -33,14 +35,39 @@ import re
 import json
 import string
 import socket
-import urllib2
-import logging.config
 import getopt
 import psycopg2
+<<<<<<< HEAD
 import smtplib
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+=======
+import logging
+
+
+PYVER3 = sys.version_info > (3,)
+
+
+#2 to 3 imports
+if PYVER3:
+    import tkinter as TK
+    from tkinter.constants import RAISED,SUNKEN,BOTTOM,RIGHT,LEFT,END,X,Y,W,E,N,S,ACTIVE  
+    from configparser import SafeConfigParser
+else:
+    import Tkinter as TK
+    from Tkconstants import RAISED,SUNKEN,BOTTOM,RIGHT,LEFT,END,X,Y,W,E,N,S,ACTIVE  
+    from ConfigParser import SafeConfigParser
+
+# try:
+#     import Tkinter as TK
+#     from Tkconstants import RAISED,SUNKEN,BOTTOM,RIGHT,LEFT,END,X,Y,W,E,N,S,ACTIVE  
+#     from ConfigParser import SafeConfigParser
+# except ImportError:
+#     import tkinter as TK
+#     from tkinter.constants import RAISED,SUNKEN,BOTTOM,RIGHT,LEFT,END,X,Y,W,E,N,S,ACTIVE  
+#     from configparser import SafeConfigParser
+>>>>>>> refs/remotes/origin/master
 
 import socket,time
 from zipfile import ZipFile
@@ -64,7 +91,6 @@ import pexpect
 
 
 from optparse import OptionParser
-from ConfigParser import SafeConfigParser
 
 try:
     from osgeo import ogr, osr, gdal
@@ -97,8 +123,22 @@ TEST = True
 SELECTION = {'ogr':None,'psy':None}
 # Number of query attempts to make
 DEPTH = 5
+#Processing options
+OPTS = [('1. Load - Copy AB files from Servers','load',0),
+        ('2. Map - Match columns from import to final tables','map',1),
+        ('3. Transfer - Copy AB tables from import schema to final schema','transfer',2),
+        ('4. Reject - Drop import tables and quit','reject',3)]
 
 
+if PYVER3:
+    def is_nonstr_iter(v):
+        if isinstance(v, str):
+            return False
+        return hasattr(v, '__iter__')
+else:
+    def is_nonstr_iter(v):
+        return hasattr(v, '__iter__')
+    
 def shift_geom ( geom ):
     '''translate geometry to 0-360 longitude space'''
     if geom is None:
@@ -153,6 +193,28 @@ def fix_esri_polyon(geom):
         new_geom = polygons.pop()
     return new_geom
 
+def setupLogging(lf='DEBUG',ll=logging.DEBUG,ff=1):
+    formats = {1:'%(asctime)s - %(levelname)s - %(module)s %(lineno)d - %(message)s',
+               2:':: %(module)s %(lineno)d - %(message)s',
+               3:'%(asctime)s,%(message)s'}
+    
+    log = logging.getLogger(lf)
+    log.setLevel(ll)
+    
+    path = os.path.normpath(os.path.join(os.path.dirname(__file__), "../log/"))
+    if not os.path.exists(path):
+        os.mkdir(path)
+    df = os.path.join(path,lf.lower()+'.log')
+    
+    fh = logging.FileHandler(df,'w')
+    fh.setLevel(logging.DEBUG)
+    
+    formatter = logging.Formatter(formats[ff])
+    fh.setFormatter(formatter)
+    log.addHandler(fh)
+    
+    return log
+
 class DataValidator(object):
     #DRAFT
     def __init__(self,conf):
@@ -179,14 +241,14 @@ class ColumnMapper(object):
     }
     
     def __init__(self,conf):
-        self.schema = conf.db_schema
+        self.schema = conf.database_schema
         for attr in conf.__dict__:
             m = re.search('(\w+)_colmap',attr)
             if m: self.map[m.group(1)] = json.loads(getattr(conf,attr))
             
     def action(self,section,tablename,action):
         '''Generate queries from the column map'''
-        _test = self.map.has_key(section) and self.map[section].has_key(tablename) and self.map[section][tablename].has_key(action)
+        _test = section in self.map and tablename in self.map[section] and action in self.map[section][tablename]
         return [self.formqry(action,PREFIX+tablename, sta) for sta in self.map[section][tablename][action]] if _test else []
     
     def _getArgs(self,a):
@@ -271,19 +333,8 @@ class DatabaseConn_ogr(object):
             logger.fatal('Could not load the OGR PostgreSQL driver')
             raise Exception('Could not load the OGR PostgreSQL driver')
             #sys.exit(1)
-        
-        self.pg_uri = 'PG:dbname=' + conf.db_name
-        if conf.db_host:
-            self.pg_uri = self.pg_uri + ' host=' +  conf.db_host
-        if conf.db_port:
-            self.pg_uri = self.pg_uri + ' port=' +  conf.db_port
-        if conf.db_user:
-            self.pg_uri = self.pg_uri + ' user=' +  conf.db_user
-        if conf.db_pass:
-            self.pg_uri = self.pg_uri + ' password=' +  conf.db_pass        
-        if conf.db_schema:
-            pass
-            #self.pg_uri = self.pg_uri + ' active_schema=' +  conf.db_schema
+        self.pg_uri = 'PG:dbname={} host={} port={} user={} password={}'
+        self.pg_uri = self.pg_uri.format(conf.database_name,conf.database_host,conf.database_port,conf.database_user,conf.database_password)
         
         self.pg_ds = None
         
@@ -291,8 +342,8 @@ class DatabaseConn_ogr(object):
         try:
             if not self.pg_ds: 
                 self.pg_ds = self.pg_drv.Open(self.pg_uri, update = 1)
-                if self.conf.db_rolename:
-                    self.pg_ds.ExecuteSQL("SET ROLE " + self.conf.db_rolename)
+                if self.conf.database_rolename:
+                    self.pg_ds.ExecuteSQL("SET ROLE " + self.conf.database_rolename)
         except Exception as e:
             logger.fatal("Can't open PG output database: " + str(e))
             raise
@@ -308,83 +359,27 @@ class ConfReader(object):
     TEMP = 'temp'
     
     def __init__(self):
-        #legacy, can remove most of this!
-        global logger
-        usage = "usage: %prog config_file.ini"
-        oparser = OptionParser(usage=usage)
-        (cmd_opt, args) = oparser.parse_args()
-           
-        #if len(args) == 1:
-        #    config_files = [args[0]]
-        #else:
-        self.config_files = ['download_admin_bdys.ini']
+
+        self.config_file = 'download_admin_bdys.ini'
         
         self.parser = SafeConfigParser()
-        found = self.parser.read(self.config_files)
+        found = self.parser.read(self.config_file)
         if not found:
-            raise Exception('Could not load config ' + self.config_files[0] )
+            raise Exception('Could not load config ' + self.config_file)
             #sys.exit('Could not load config ' + config_files[0] )
         
-        # set up logging
-        logging.config.fileConfig(self.config_files[0], defaults={ 'hostname': socket.gethostname() })
-        logger = logging.getLogger()
-        
-        self.db_host = None
-        self.db_rolename = None
-        self.db_port = None
-        self.db_user = None
-        self.db_pass = None
-        self.db_schema = 'public'
-        self.layer_name = None
-        self.layer_geom_column = None
-        self.layer_output_srid = 4167
-        self.create_grid = False
-        self.grid_res = 0.05
-        self.shift_geometry = False
-        
-        self.base_uri = self.parser.get('source', 'base_uri')
-        self.db_name = self.parser.get('database', 'name')
-        self.db_schema = self.parser.get('database', 'schema')
-        
-        if self.parser.has_option('database', 'rolename'):
-            self.db_rolename = self.parser.get('database', 'rolename')
-        if self.parser.has_option('database', 'host'):
-            self.db_host = self.parser.get('database', 'host')
-        if self.parser.has_option('database', 'port'):
-            self.db_port = self.parser.get('database', 'port')
-        if self.parser.has_option('database', 'user'):
-            self.db_user = self.parser.get('database', 'user')
-        if self.parser.has_option('database', 'password'):
-            self.db_pass = self.parser.get('database', 'password')
-            
-        self.layer_name = self.parser.get('layer', 'name')
-        self.layer_geom_column = self.parser.get('layer', 'geom_column')
-        if self.parser.has_option('layer', 'output_srid'):
-            self.layer_output_srid = self.parser.getint('layer', 'output_srid')
-        if self.parser.has_option('layer', 'create_grid'):
-            self.create_grid = self.parser.getboolean('layer', 'create_grid')
-        if self.parser.has_option('layer', 'grid_res'):
-            self.grid_res = self.parser.getfloat('layer', 'grid_res')
-        if self.parser.has_option('layer', 'shift_geometry'):
-            self.shift_geometry = self.parser.getboolean('layer', 'shift_geometry')
-            
-        #meshblocks
-        for section in ('connection','meshblock','nzlocalities','database'):
+        for section in ('connection','meshblock','nzlocalities','database','layer'):
             for option in self.parser.options(section): 
                 setattr(self,'{}_{}'.format(section,option),self.parser.get(section,option))
-            
-        # set up logging
-        logging.config.fileConfig(self.config_files[0], defaults={ 'hostname': socket.gethostname() })
-        logger = logging.getLogger()
     
-        logger.info('Starting download TA boundaries')
+        logger.info('Starting DAB')
         
     def save(self,name,data):
         '''configparser save for interrupted processing jobs'''
         if not self.parser.has_section(self.TEMP): 
             self.parser.add_section(self.TEMP)
         self.parser.set(self.TEMP,name,json.dumps(data))
-        with open(self.config_files[0], 'wb') as configfile: self.parser.write(configfile)
+        with open(self.config_file, 'w') as configfile: self.parser.write(configfile)
         
     def read(self,name):
         '''configparser read for interrupted processing jobs'''
@@ -394,7 +389,7 @@ class ConfReader(object):
             #if clean is set the data will be deleted after this read so delete the section/option to prevent attempted reread
             self.parser.remove_option(self.TEMP,name)
             self.parser.remove_section(self.TEMP)
-            with open(self.config_files[0], 'wb') as configfile: self.parser.write(configfile)
+            with open(self.config_file, 'w') as configfile: self.parser.write(configfile)
         return rv
         
     
@@ -416,6 +411,7 @@ class Processor(object):
            'StatsNZ_TA':['statsnz_ta','territorial_authority'],
            'Stats_Meshblock_concordance':['meshblock_concordance','meshblock_concordance']}
     
+    #common queries, indexed
     q = {'find':"select count(*) from information_schema.tables where table_schema like '{}' and table_name = '{}'",
          'create':'create table {}.{} ({})',
          'insert':'insert into {}.{} ({}) values ({})',
@@ -444,7 +440,7 @@ class Processor(object):
     @classmethod
     def recent(cls,filelist,pattern='[a-zA-Z_]*(\d{8}).*'):
         '''get the latest date labelled file from a list'''
-        extract = {re.match(pattern,val).group(1):val for val in filelist if re.match(pattern,val)} 
+        extract = {re.match(pattern,val.decode()).group(1):val for val in filelist if re.match(pattern,val.decode())} 
         return extract[max(extract)]
         
     def delete(self,file):
@@ -457,19 +453,19 @@ class Processor(object):
             if re.match(ff,cf): os.remove(os.path.join(p,candidate))
             
     def query(self,schema,table,headers='',values='',op='insert'):
-        h = ','.join([i.replace(' ','_') for i in headers]).lower() if hasattr(headers,'__iter__') else headers
-        v = ','.join(values) if hasattr(values,'__iter__') else values
+        h = ','.join([i.replace(' ','_') for i in headers]).lower() if is_nonstr_iter(headers) else headers
+        v = ','.join(values) if is_nonstr_iter(values) else values
         return self.q[op].format(schema,table,h, v).replace('"','\'')
     
     def layername(self,in_layer):
         '''Returns the name of the layer that inserting a shapefile would create'''
         in_name = in_layer.GetName()
-        return self.l2t[in_name][0] if self.l2t.has_key(in_name) else in_name
+        return self.l2t[in_name][0] if in_name in self.l2t else in_name
         
     def deletelyr(self,tname):
-        #dlayer = self.db.pg_ds.GetLayerByName('{}.{}'.format(self.conf.db_schema,tname))
+        #dlayer = self.db.pg_ds.GetLayerByName('{}.{}'.format(self.conf.database_schema,tname))
         #self.db.pg_ds.DeleteLayer(dlayer.GetName())
-        self.db.pg_ds.DeleteLayer('{}.{}{}'.format(self.conf.db_schema,PREFIX,tname))
+        self.db.pg_ds.DeleteLayer('{}.{}{}'.format(self.conf.database_schema,PREFIX,tname))
         
     def insertshp(self,in_layer):
         if not in_layer: raise ProcessorException('Attempt to process Empty Datasource')
@@ -477,18 +473,18 @@ class Processor(object):
 
         #options
         create_opts = ['GEOMETRY_NAME='+'geom']
-        create_opts.append('SCHEMA=' + self.conf.db_schema)
+        create_opts.append('SCHEMA=' + self.conf.database_schema)
         create_opts.append('OVERWRITE=' + 'yes')
         
         #create new layer
         try: 
             in_name = in_layer.GetName()
             logger.info('Inserting shapefile {}'.format(in_name))
-            out_name = PREFIX+self.l2t[in_name][0] if self.l2t.has_key(in_name) else in_name
+            out_name = PREFIX+self.l2t[in_name][0] if in_name in self.l2t else in_name
 
             out_srs = in_layer.GetSpatialRef()
             out_layer = self.db.pg_ds.CreateLayer(
-                out_name,
+                name = out_name,
                 srs = out_srs,
                 geom_type = ogr.wkbMultiPolygon,
                 options = create_opts
@@ -505,7 +501,7 @@ class Processor(object):
             Processor.attempt(self.conf, q1, select='psy')
             return self.insertshp(in_layer)
         except Exception as e:
-            logger.fatal('Can not create {} output table {}'.format(out_name,e))
+            logger.fatal('Can not create {} output table. {}'.format(out_name,e))
             raise
             #sys.exit(1)
             
@@ -522,7 +518,7 @@ class Processor(object):
                 #1. fix_esri_polygon (no longer needed?)
                 #geom = fix_esri_polyon(geom)
                 #2. shift_geom
-                if out_srs.IsGeographic() and self.conf.shift_geometry:
+                if out_srs.IsGeographic() and self.conf.layer_shift_geometry:
                         shift_geom(geom)
                 #3. always force, bugfix
                 geom = ogr.ForceToMultiPolygon(geom)
@@ -531,13 +527,13 @@ class Processor(object):
                 in_feat = in_layer.GetNextFeature()
             
         except Exception as e:
-            logger.fatal('Can not populate {} output table {}'.format(e))
+            logger.fatal('Can not populate {} output table. {}'.format(out_name,e))
             raise 
             #sys.exit(1)
             
         return out_name
             
-    def insertcsv(self,mbfile):
+    def insertcsv(self,mbfile):#TODO catch runtime errors
         fp,ff = os.path.split(mbfile) 
         logger.info('Inserting csv {}'.format(ff))
         #self.db.connect()
@@ -547,23 +543,23 @@ class Processor(object):
         csvhead = self.f2t[ff]
         with open(ff,'r') as fh:
             for line in fh:
-                line = line.strip().decode(self.enc)#.replace('"','\'')
+                line = line.strip().encode('ascii','ignore').decode(self.enc) if PYVER3 else line.strip().decode(self.enc)
                 if first: 
-                    headers = line.split(',')
-                    findqry = self.query(self.conf.db_schema,PREFIX+csvhead[0],op='find')
+                    headers = [h.strip() for h in line.split(',')]
+                    findqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],op='find')
                     if self.execute(findqry).GetNextFeature().GetFieldAsInteger(0) == 0:
                         storedheaders = ','.join(['{} VARCHAR'.format(m.replace(' ','_')) for m in csvhead[1]])
-                        createqry = self.query(self.conf.db_schema,PREFIX+csvhead[0],storedheaders,op='create')
+                        createqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],storedheaders,op='create')
                         self.execute(createqry)
                     else:
-                        truncqry = self.query(self.conf.db_schema,PREFIX+csvhead[0],op='trunc')
+                        truncqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],op='trunc')
                         self.execute(truncqry)
                     first = False
                 else:
                     values = line.replace("'","''").split(',',len(headers)-1)
                     #if int(values[0])<47800:continue
                     if '"NULL"' in values: continue
-                    insertqry = self.query(self.conf.db_schema,PREFIX+csvhead[0],headers,values,op='insert')
+                    insertqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],headers,values,op='insert')
                     self.execute(insertqry)
         #self.db.disconnect()            
         return csvhead[0]
@@ -577,7 +573,7 @@ class Processor(object):
                 
     def drop(self,table):
         '''Clean up any previous table instances. Doesn't work!''' 
-        return self.execute(self.q['drop'].format(self.conf.db_schema,table))
+        return self.execute(self.q['drop'].format(self.conf.database_schema,table))
 
 
     @staticmethod
@@ -596,7 +592,7 @@ class Processor(object):
                         m = conn.get(q)
                         return m
             except RuntimeError as r:
-                print 'Attempt {} using {} failed, {}'.format(DEPTH-depth+1,select,m or r)
+                logger.error('Attempt {} using {} failed, {}'.format(DEPTH-depth+1,select,m or r))
                 #if re.search('table_version.ver_apply_table_differences',q) and Processor.nonOGR(conf,q,depth-1): return
                 return Processor.attempt(conf, q, Processor._next(select), depth-1)
         if r: raise r
@@ -636,7 +632,7 @@ class Meshblock(Processor):
         #self.db.connect()
         ds = None
         if not pathlist: pathlist = [f for f in self.file if re.search('\.csv$|\.shp$',f)]
-        #extract the shapefiles
+        #for every fine in the pathlist
         for mbfile in pathlist:
             #extract the shapefiles
             if re.match('.*\.shp$',mbfile):
@@ -736,7 +732,7 @@ class Version(object):
              where table_schema like '{s}' \
              and table_name like '{t}' \
              and constraint_type like 'PRIMARY KEY'".format(s=s,t=t)
-        print 'pQ2',q
+        logger.debug('pQ2 {}'.format(q))
         #return bool(self.db.pg_ds.ExecuteSQL(q).GetFeatureCount())
         return Processor.attempt(self.conf, q, select='psy')
         
@@ -781,20 +777,20 @@ class Version(object):
             for t in tab:
                 t2 = self.cm.map[sec][t]['table']
                 pk = self.cm.map[sec][t]['primary']
-                geom = self.cm.map[sec][t]['geom'] if self.cm.map[sec][t].has_key('geom') else None
-                srid = self.cm.map[sec][t]['srid'] if self.cm.map[sec][t].has_key('srid') else None
+                geom = self.cm.map[sec][t]['geom'] if 'geom' in self.cm.map[sec][t] else None
+                srid = self.cm.map[sec][t]['srid'] if 'srid' in self.cm.map[sec][t] else None
                 snap = '{}.{}{}'.format(self.conf.database_schema,SNAP,t)
                 original = '{}.x_{}'.format(self.conf.database_originschema,t2)
                 imported = '{}.{}{}'.format(self.conf.database_schema,PREFIX,t)
                 for q in self.qset(original,snap,imported,pk,geom,srid,final):
-                    print 'pQ1',q
+                    logger.debug('pQ1 {}'.format(q))
                     Processor.attempt(self.conf,q)
                 dst_t = '{}{}'.format(SNAP,t) if TEST else 'x_{}'.format(t2)
                 self.gridtables(sec,t,dst_t)
                     
     def gridtables(self,sec,tab,tname):
         '''Look for grid specification and grid the table if found'''
-        if self.cm.map.has_key(sec) and self.cm.map[sec].has_key(tab) and self.cm.map[sec][tab].has_key('grid'):
+        if sec in self.cm.map and tab in self.cm.map[sec] and 'grid' in self.cm.map[sec][tab]:
             e = External(self.conf)
             e.build(tname,self.cm.map[sec][tab]['grid'])
         
@@ -820,7 +816,7 @@ class External(object):
             res = colres['res']
             dstschema = self.conf.database_schema if TEST else self.conf.database_originschema
             q = query.format(schema=dstschema, table=gridtable, column=col, xres=res, yres=res)
-            print 'eQ1',q
+            logger.debug('eQ1 {}'.format(q))
             Processor.attempt(self.conf,q)
         #self.db.disconnect()
             
@@ -829,7 +825,7 @@ class External(object):
         q = "select * from information_schema.routines \
              where routine_schema like '{s}' \
              and routine_name like '{t}'".format(s=s,t=t)
-        print 'fQ2',q
+        logger.debug('fQ2 {}'.format(q))
         return Processor.attempt(self.conf, q)
             
 class PExpectException(Exception):pass
@@ -854,10 +850,10 @@ class PExpectSFTP(object):
                     sftp.sendline('ls')
                     if sftp.expect(prompt) == 0:
                         for fname in sftp.before.split()[1:]:
-                            fmatch = re.match(pattern,fname)
+                            fmatch = re.match(pattern,fname.decode())
                             if fmatch: filelist += [fname,]
                         fname = Processor.recent(filelist,pattern)
-                        localfile = re.match(pattern,fname).group(0)
+                        localfile = re.match(pattern,fname.decode()).group(0)
                         #break
                         if not localfile: 
                             raise PExpectException('Cannot find matching file pattern')
@@ -883,6 +879,69 @@ class PExpectSFTP(object):
             
         return localpath
 
+class SimpleUI(object):
+    '''Simple UI component added to provide debian installer target'''
+    H = 100
+    W = 100
+    R = RAISED
+    
+    def __init__(self):
+        self.master = TK.Tk()
+        self.master.wm_title('DAB')
+        self.mainframe = TK.Frame(self.master,height=self.H,width=self.W,bd=1,relief=self.R)
+        self.mainframe.grid()
+        self.initWidgets()
+        self._offset(self.master)
+        self.mainframe.mainloop()
+
+    def initWidgets(self):
+        layout = '4x1' #2x2
+        title_row = 0
+        select_row = 1
+        button_row = select_row + int(max(list(re.sub("[^0-9]", "",layout))))
+        
+        #B U T T O N
+        self.mainframe.selectbt = TK.Button(self.mainframe,  text='Start', command=self.start)
+        self.mainframe.selectbt.grid( row=button_row,column=0,sticky=E)
+ 
+        self.mainframe.quitbt = TK.Button(self.mainframe,    text='Quit',  command=self.quit)
+        self.mainframe.quitbt.grid(row=button_row,column=1,sticky=E)
+  
+        #C H E C K B O X
+        runlevel = TK.StringVar()
+        runlevel.set('reject')
+        for text,selection,col in OPTS:
+            self.mainframe.rlev = TK.Radiobutton(self.mainframe, text=text, variable=runlevel, value=selection)#,indicatoron=False)
+            if layout=='2x2':
+                self.mainframe.rlev.grid(row=int(select_row+abs(col/2)),column=int(col%2),sticky=W)
+            elif layout == '4x1':         
+                self.mainframe.rlev.grid(row=int(select_row+col),column=0,sticky=W)
+        self.mainframe.rlev_var = runlevel   
+        
+        #L A B E L
+        self.mainframe.title = TK.Label(self.mainframe,text='Select DAB Operation')
+        self.mainframe.title.grid(row=title_row,column=0,sticky=W)
+   
+        
+    def quit(self):
+        self.ret_val = None 
+        self.master.withdraw()
+        self.mainframe.quit()
+        
+    def start(self):
+        self.ret_val = self.mainframe.rlev_var.get()
+        self.master.withdraw()
+        self.mainframe.quit()
+        
+    def _offset(self,window):
+        window.update_idletasks()
+        w = window.winfo_screenwidth()
+        h = window.winfo_screenheight()
+        size = tuple(int(_) for _ in window.geometry().split('+')[0].split('x'))
+        x = w/4 - size[0]/2
+        y = h/4 - size[1]/2
+        window.geometry("%dx%d+%d+%d" % (size + (x, y)))
+
    
 def oneOrNone(a,options,args):
     '''is A in args OR are none of the options in args'''
@@ -890,7 +949,7 @@ def oneOrNone(a,options,args):
      
 def part1(args,ogrdb,v,c,m):            
     '''fetch data from sources and prepare import schema'''
-    print "Beginning meshblock/localities file download"
+    logger.info("Beginning meshblock/localities file download")
     t = ()
     SELECTION['ogr'] = ogrdb.d
     #SELECTION['ogr'] = DatabaseConn_ogr(c)
@@ -904,7 +963,7 @@ def part1(args,ogrdb,v,c,m):
         nzl = NZLocalities(c,SELECTION['ogr'],m,s) 
         t += (nzl.run(),)
     c.save('t',t)
-    print "Stopping post import for user validation, rerun with option 'transfer' to start again from this point"
+    logger.info ("Stopping post import for user validation")
     return t
 
 def notify(msgfile):
@@ -952,14 +1011,14 @@ def notify(msgfile):
 			
 def part2(v,t):            
     '''if data has been validated transfer to final schema'''
-    print "Begining table mapping and final data import"
+    logger.info ("Begining table mapping and final data import")
     #if not t: t = _t
     v.versiontables(t,final=False)
     ###v.teardown()
     
 def part3(v,t):            
     '''if data has been validated transfer to final schema'''
-    print "Begining table mapping and final data import"
+    logger.info ("Begining table mapping and final data import")
     #if not t: t = _t
     v.versiontables(t,final=True)
     ###v.teardown()
@@ -972,34 +1031,44 @@ def partX(v):
 TODO
 file name reader, db overwrite
 '''
-def main():   
-    t = () 
-    _t = (('meshblock', ('statsnz_meshblock', 'statsnz_ta', 'meshblock_concordance')), ('nzlocalities', ('nz_locality',)))
+def main():  
+    global logger
+    
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "h", ["help"])
-    except getopt.error, msg:
-        print msg
-        print "for help use --help"
+        opts, args = getopt.getopt(sys.argv[1:], "vh", ["version","help"])
+    except getopt.error as msg:
+        print (msg+". For help use --help")
         sys.exit(2)
-        
         
     for opt, val in opts:
         if opt in ("-h", "--help"):
-            print __doc__
+            print (__doc__)
             sys.exit(0)
         elif opt in ("-v", "--version"):
-            print __version__
+            print (__version__)
             sys.exit(0)
+                    
+    logger = setupLogging()
+    if len(args)==0:
+        sui = SimpleUI()
+        #sui.mainframe.mainloop()
+        args = [sui.ret_val,]
+        
+    if args[0]: process(args)
             
+def process(args):
+    t = () 
+    _t = (('meshblock', ('statsnz_meshblock', 'statsnz_ta', 'meshblock_concordance')), ('nzlocalities', ('nz_locality',)))
+    
     c = ConfReader()
     m = ColumnMapper(c)
     v = Version(c,m)
     
     global SELECTION
-    with DB(c,'ogr') as ogrdb:           
+    with DB(c,'ogr') as ogrdb:
         #if a 't' value is stored we dont want to pre-clean the import schema 
         ###t = v.setup()
-        aopts = ('load','map','transfer','reject')
+        aopts = [a[1] for a in OPTS]
         if 'reject' in args: 
             partX(v)
             return
@@ -1011,10 +1080,8 @@ def main():
         if oneOrNone('transfer',aopts,args): 
             part3(v,t)
 
-    
 if __name__ == "__main__":
     main()
-    print 'finished'
 
 
 

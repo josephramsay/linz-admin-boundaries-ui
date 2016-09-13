@@ -37,6 +37,12 @@ import string
 import socket
 import getopt
 import psycopg2
+<<<<<<< HEAD
+import smtplib
+
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+=======
 import logging
 
 
@@ -61,6 +67,7 @@ else:
 #     import tkinter as TK
 #     from tkinter.constants import RAISED,SUNKEN,BOTTOM,RIGHT,LEFT,END,X,Y,W,E,N,S,ACTIVE  
 #     from configparser import SafeConfigParser
+>>>>>>> refs/remotes/origin/master
 
 import socket,time
 from zipfile import ZipFile
@@ -959,6 +966,49 @@ def part1(args,ogrdb,v,c,m):
     logger.info ("Stopping post import for user validation")
     return t
 
+def notify(msgfile):
+    '''Send a notification email to the recipients list to inform that New Admin Boundary Data Is Available'''
+	server = 'linzsmtp.ad.linz.govt.nz'
+	sender = 'no-reply@linz.govt.nz'
+	recipients =  ['djjones@linz.govt.nz','bpjones@linz.govt.nz','JBedford@linz.govt.nz','DSie@linz.govt.nz','wsneddon@linz.govt.nz','rfreeman@linz.govt.nz']
+
+	try:
+	# Create message container - the correct MIME type is multipart/alternative.
+		msg = MIMEMultipart('alternative')
+		msg['Subject'] = '*** New Admin Boundary Data Is Available ***'
+		msg['From'] = sender
+		msg['To'] = recipients
+
+	# Create the body of the message (HTML version).
+		html = """\
+		<html>
+			<head></head>
+			<body>
+				<p>New Admin Boundary Data Is Available<br>
+					Below is the link to approve submission of the new data to AIMS<br>
+					Link to web form <a href="http://144.66.6.164:8080/ab/">link</a> here.
+				</p>
+			</body>
+		</html>
+		"""
+
+		# Record the MIME type
+		content = MIMEText(html, 'html')
+		# Attach parts into message container.
+		msg.attach(content)
+		
+		# Send the message.
+		conn = smtplib.SMTP(server)
+
+		try:
+		# sendmail function takes 3 arguments: sender's address, recipient's address, and message to send.
+			conn.sendmail(sender, recipients, msg.as_string())
+		finally:	
+			conn.quit()
+			
+	except Exception as exc:
+			sys.exit( 'Email sending failed; {0}'.format(exc))		
+			
 def part2(v,t):            
     '''if data has been validated transfer to final schema'''
     logger.info ("Begining table mapping and final data import")

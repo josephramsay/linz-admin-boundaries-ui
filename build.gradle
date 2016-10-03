@@ -46,7 +46,20 @@ def warName = 'ab.war'
 def packName = 'AdminBoundaryDownloader'
 def packVersion = '0.1'
 
+//packages up everything in src/main/webapp
+
+task copyscripts(type: Copy) {
+     from('scripts') {
+         include '**/*.sh'
+         include '**/*.py'
+         include '**/*.ini'
+     }
+     into 'src/main/webapp/WEB-INF/scripts'
+}
+
+
 war {
+    dependsOn copyscripts
     manifest {
         attributes 'Implementation-Title': 'LINZ Admin Boundaries Downloader',
             'Implementation-Version': version
@@ -66,25 +79,26 @@ task cargosetup {
 	        file = file(warDir+warName)
 	        context = webContext
 	    }
-	
+	    
 	    remote {
 	       protocol = "${remoteProtocol}"
 	       hostname = "${remoteHost}"
 	       username = "${remoteUser}"
 	       password = "${remotePass}"
 	    }
-	
-	}
+	}    
 }
 
 task redeploy {
-    dependsOn cargosetup
-    shouldRunAfter cargoRedeployRemote
+    dependsOn cargosetup, cargoRedeployRemote
 }
 
 task deploy {
-    dependsOn cargosetup 
-    shouldRunAfter cargoDeployRemote
+    dependsOn cargosetup, cargoDeployRemote
+}
+
+task undeploy {
+    dependsOn cargosetup, cargoUndeployRemote
 }
 
 repositories {

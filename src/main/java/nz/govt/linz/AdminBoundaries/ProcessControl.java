@@ -11,6 +11,7 @@ package nz.govt.linz.AdminBoundaries;
  */
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -18,46 +19,70 @@ import java.io.InputStreamReader;
 public class ProcessControl {
 	
 	//this is the path where the debian packager puts the py part of the app
-	private static final String PROCESS = "/usr/local/share/AdminBoundaries/download_admin_bdys.sh";
+	//private final static String DABP = "/usr/local/share/AdminBoundaries/download_admin_bdys.sh";
+	private final static String DABP = "webapps/ab/WEB-INF/scripts/download_admin_bdys.py";
+	private final static String SHELL = "python";
 	
 	private ProcessBuilder processbuilder;
-
-	final static String FILENAME = "postgresql.properties";//config.txt"
+	private String processname;
+	
+	public ProcessControl(){
+		this(DABP);
+	}
+	public ProcessControl(String procarg){
+		File catalina_base = new File( System.getProperty( "catalina.base" ) ).getAbsoluteFile();
+		File proc_file = new File(catalina_base, procarg);
+		if (proc_file.canRead()) {
+			processname = proc_file.toString();
+		}
+		else {
+			processname = DABP;
+		}
+		System.setSecurityManager(null);
+	}
 	
 	/**
 	 * Initialises ProcessBuilder returning output from requested script 
-	 * @param stage Argument to the aims_extract.sh script indicating transfer, process or reject
+	 * @param part Argument to the aims_extract.sh script indicating transfer, process or reject
 	 * @return
 	 */
-	public String startProcessStage(String stage){
+	public String startProcessStage(String arg){ 
 		StringBuilder sb = new StringBuilder();
-		processbuilder = new ProcessBuilder("/bin/bash",PROCESS,stage);
+		sb.append(arg+"<br/>\n");
+		processbuilder = new ProcessBuilder(SHELL,processname,arg);
+		processbuilder.redirectErrorStream(true);
 		try {
 			Process process = processbuilder.start();
 			final InputStream is = process.getInputStream();
 			BufferedReader reader = new BufferedReader(new InputStreamReader(is));
 			String line;
 			while (process.isAlive()){
-				line = reader.readLine();
-				if (line != null) {
-					sb.append(line+"</br>\n");
+				while ((line = reader.readLine()) != null) {
+					sb.append(line+"<br/>\n");
 				}
 			}
-		} catch (IOException e) {
+			if (sb.length()==0){
+				sb.append("No return value. Process exit_code="+process.exitValue()+"<br/>\n");
+			}
+		} 
+		catch (IOException ioe) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+			sb.append("ProcessBuilder IO Failure. "+ioe.toString()+"<br/>\n");
+		} 
 		return sb.toString();
 	}
 	
 	public String toString(){
-		return "ProcessControl::"+processbuilder;
+		return "ProcessControl::" + processbuilder;
 	}
 	
 	public static void main(String[] args){
-		ProcessControl pc = new ProcessControl();
-		pc.startProcessStage("transfer");
+		ProcessControl pc = new ProcessControl("/home/<user>/git/AdminBoundaries/scripts/download_admin_bdys.sh");
+		System.out.println( pc.startProcessStage("load") );
+		System.out.println( pc.startProcessStage("map") );
+		System.out.println( pc.startProcessStage("transfer") );
 
 	}
 	
 }
+

@@ -26,21 +26,36 @@ public class DABServlet extends HttpServlet {
 	public String docType = "<!doctype html public \"-//w3c//dtd html 4.0 transitional//en\">\n";
 	
 	public void init() throws ServletException {
-		title = "DABs";
+		title = "DAB";
 		message = "Downloader for Admin Boundaries";
+	}
+	
+	protected String getLoading(){
+		return String.join("\n" 
+				,"<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js\"></script>"
+				,"<script src=\"https://github.com/Modernizr/Modernizr/raw/master/modernizr.js\"></script>"
+				,"<script>"
+				,"$(window).load(function() {"
+				,"$(\"#loader\").animate({"
+				,"top: -200"
+				,"}, 1500);"
+				,"});"
+				,"</script>\n");
+			
 	}
 	
 	protected String getHead(){
 		return String.join("\n"
-				,"<meta charset=\"utf-8\"/>\n" 
-				,"<link href=\"main.css\" rel=\"stylesheet\" type=\"text/css\"/>\n"
-				,"<title>",title,"</title>\n");
+				,"<meta charset=\"utf-8\"/>" 
+				,"<link href=\"main.css\" rel=\"stylesheet\" type=\"text/css\"/>"
+				,"<title>",title,"</title>"
+				,getLoading());
 	}
 	
 	
 	protected String getBodyTitle(){
 		return String.join("\n"
-				,"<h1 align=\"center\">"
+				,"<h1>"
 				,message,
 				"</h1>\n");
 	}
@@ -48,17 +63,29 @@ public class DABServlet extends HttpServlet {
 	protected String getBodyHeader(){
 		return String.join("\n"
 			,"<header>"
-			,"<div class=\"width\">"
-			,"<h1><a href=\"/\">LI<span>NZ</span></a></h1>"
-	    	,"<h2>land information new zealand</h2>"
-	    	,"</div>"
-	    	,"</header>");
-	}
+	    	,"<img src=\"http://www.linz.govt.nz/sites/all/themes/linz_osi/images/logo/logo-linz.png\">\n"
+	    	,"</header>\n");
+	}	
 	
+	protected String getBodyFooter(Date created, Date accessed, String user){
+		return String.join("\n"
+				,"<footer><ul>"
+				,"<li>Created : ",created.toString(),"</li>"
+				,"<li>Accessed : ",accessed.toString(),"</li>"
+				,"<li>User : ",user,"</li>"
+		    	,"</ul></footer>\n");
+		}
+	
+	
+	/**
+	 * Formats a set of key/val pairs into an itemised list 
+	 * @param kv
+	 * @return
+	 */
 	protected String getInfoMessage(Map<String,String> kv){
 		String li = "";
 		for (String k : kv.keySet()){
-			li += "<li><b>"+k+"</b>: "+kv.get(k)+"</li>\n";
+			li += "<li><b>"+k+"</b> : "+kv.get(k)+"</li>\n";
 		}
 		return String.join("\n" 
                 ,"<ul>\n"

@@ -34,6 +34,9 @@ public class DABConnector {
 	
 	//private Connector connector;
 	final static String FILENAME = "postgresql.properties";//config.txt"
+	Properties props = null;
+	String prefix = "";
+	String suffix = "";
 	
 	/**
 	 * Constructor for DAB database connector
@@ -41,7 +44,10 @@ public class DABConnector {
 	public DABConnector() {		
 		//Map<String, String> params = readParameters(FILENAME);
 		//connector = new PostgreSQLConnector();
-		//connector.init(params);
+		//connector.init(params);		
+		props = ResourceLoader.getAsProperties(FILENAME);
+		prefix = ConnectionDefinitions.POSTGRESQL.prefix();
+		suffix = String.format("//%s:%s/%s", props.get("host"),props.get("port"),props.get("dbname"));
 	}
 	
 	/**
@@ -89,23 +95,57 @@ public class DABConnector {
 	 * Fetches summary data from temp import schema, admin_bdys_import
 	 * @return
 	 */
-	public  List<List<String>> getExtractSummary(String query){
+	public List<List<String>> getExtractSummary(String query){
 		List<List<String>> result = null;
-		//try (Connection conn = connector.getConnection()) {
-		Properties props = ResourceLoader.getAsProperties(FILENAME);
-		String prefix = ConnectionDefinitions.POSTGRESQL.prefix();
-		String suffix = String.format("//%s:%s/%s", props.get("host"),props.get("port"),props.get("dbname"));
 		//System.out.println(String.format("### %s + %s", prefix,suffix));
-		try (Connection conn = DriverManager.getConnection(String.format("%s:%s",prefix,suffix),props)) {
-			Statement stmt = conn.createStatement();
-			result = parseResultSet(stmt.executeQuery(query));
-		} 
+		try {
+			ResultSet rs = exeQuery(query);
+			result = parseResultSet(rs);
+		}
+		//catch (PSQLException pqsle){//using drivermanager how do we catch exceptions now?}
 		catch (SQLException sqle) {
-			// TODO Auto-generated catch block
-			sqle.printStackTrace();
+			//Error is written to general log and result is returned
+			System.out.println("SQL error "+sqle);
+			//return the error to the user
+			result = new ArrayList<>();
+			List<String> line = new ArrayList<>();
+			line.add("SQLException");
+			line.add(sqle.toString());
+			result.add(line);
 		}
 		return result;
 	}
+	
+	protected boolean executeTFQuery(String query){
+		boolean result = false;
+		try {
+			ResultSet rs = exeQuery(query);
+			if (rs.next()){
+				result = rs.getBoolean(1);
+			}
+		}
+		catch (SQLException sqle) {
+			System.out.println("SQLError "+sqle);
+		}
+		return result;
+	}	
+	
+	/**
+	 * Local query wrapper
+	 * @param query
+	 * @return
+	 * @throws SQLException
+	 */
+	private ResultSet exeQuery(String query) throws SQLException {
+		ResultSet result = null;
+		try (Connection conn = DriverManager.getConnection(String.format("%s:%s",prefix,suffix),props)) {
+			Statement stmt = conn.createStatement();
+			result = stmt.executeQuery(query);			
+		}
+		return result;
+	}
+	
+	
 	
 	/**
 	 * Generic resultset-table to list-list formatter
@@ -137,6 +177,10 @@ public class DABConnector {
 		return "DABConnector::";//+connector;
 	}
 	
+	/**
+	 * main method used for testing
+	 * @param args
+	 */
 	public static void main(String[] args){
 		DABConnector dabc = new DABConnector();
 		//System.out.println(dabc.readConfig(FILENAME));

@@ -1,12 +1,17 @@
 #!/bin/sh
 
 action=$1
+pwddir=`pwd`
+subdir=scripts
+
+cd $subdir
 
 case "$action" in
-        load|reject|prepare|transfer ) 
-        	python download_admin_bdys.py $action;;
+        load|map|transfer|reject ) 
+			echo "Running action $action in $pwddir/$subdir"
+        	python $subdir/download_admin_bdys.py $action
+		;;
         * ) 
-        	echo "Empty request. Opening dialog"
-			python download_admin_bdys.py
-			;;
+        	echo "Unknown request $action"
+		;;
 esac

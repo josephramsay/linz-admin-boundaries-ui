@@ -34,35 +34,24 @@ import sys
 import re
 import json
 import string
-import socket
 import getopt
 import psycopg2
 import logging
-
+import datetime
 
 PYVER3 = sys.version_info > (3,)
 
-
 #2 to 3 imports
 if PYVER3:
-    import tkinter as TK
-    from tkinter.constants import RAISED,SUNKEN,BOTTOM,RIGHT,LEFT,END,X,Y,W,E,N,S,ACTIVE  
-    from configparser import SafeConfigParser
+     import tkinter as TK
+     from tkinter.constants import RAISED,SUNKEN,BOTTOM,RIGHT,LEFT,END,X,Y,W,E,N,S,ACTIVE  
+     from configparser import SafeConfigParser
 else:
-    import Tkinter as TK
-    from Tkconstants import RAISED,SUNKEN,BOTTOM,RIGHT,LEFT,END,X,Y,W,E,N,S,ACTIVE  
-    from ConfigParser import SafeConfigParser
+     import Tkinter as TK
+     from Tkconstants import RAISED,SUNKEN,BOTTOM,RIGHT,LEFT,END,X,Y,W,E,N,S,ACTIVE  
+     from ConfigParser import SafeConfigParser
 
-# try:
-#     import Tkinter as TK
-#     from Tkconstants import RAISED,SUNKEN,BOTTOM,RIGHT,LEFT,END,X,Y,W,E,N,S,ACTIVE  
-#     from ConfigParser import SafeConfigParser
-# except ImportError:
-#     import tkinter as TK
-#     from tkinter.constants import RAISED,SUNKEN,BOTTOM,RIGHT,LEFT,END,X,Y,W,E,N,S,ACTIVE  
-#     from configparser import SafeConfigParser
 
-import socket,time
 from zipfile import ZipFile
 
 #from paramiko import Transport, SFTPClient
@@ -81,7 +70,6 @@ from zipfile import ZipFile
 from subprocess import Popen,PIPE,check_output
 
 import pexpect
-
 
 from optparse import OptionParser
 
@@ -111,17 +99,17 @@ PREFIX = 'temp_'
 # Prefix for snapshot tables
 SNAP = 'snap_'
 # Use the temp schema to create snapshots to test against (won't overwrite admin_bdys tables)
-TEST = True
+TEST = False
 # Holds dataabse connection instances
 SELECTION = {'ogr':None,'psy':None}
 # Number of query attempts to make
 DEPTH = 5
 #Processing options
 OPTS = [('1. Load - Copy AB files from Servers','load',0),
-        ('2. Map - Match columns from import to final tables','map',1),
-        ('3. Transfer - Copy AB tables from import schema to final schema','transfer',2),
-        ('4. Reject - Drop import tables and quit','reject',3)]
-
+        ('2. Transfer - Copy AB tables from import schema to final schema','transfer',2),
+        ('3. Reject - Drop import tables and quit','reject',3)]
+#name of config file
+CONFIG = 'download_admin_bdys.ini'
 
 if PYVER3:
     def is_nonstr_iter(v):
@@ -225,7 +213,7 @@ class DataValidator(object):
 
 class ColumnMapperError(Exception):pass
 class ColumnMapper(object):
-    '''Acions the list of column mappings from conf file'''
+    '''Actions the list of column mappings defined in the conf file'''
     map = {}
     dra = {'drop':'ALTER TABLE {schema}.{table} DROP COLUMN IF EXISTS {drop}',
            'rename':'ALTER TABLE {schema}.{table} RENAME COLUMN {old} TO {new}',
@@ -234,6 +222,7 @@ class ColumnMapper(object):
     }
     
     def __init__(self,conf):
+        '''Init and read the column mapping definitions'''
         self.schema = conf.database_schema
         for attr in conf.__dict__:
             m = re.search('(\w+)_colmap',attr)
@@ -248,7 +237,7 @@ class ColumnMapper(object):
         return a.values() if type(a) in (dict,) else a
         
     def formqry(self,action,table,args):
-        #print action, table, args
+        '''Returns the formatted query string based on request type; drop, rename, add and cast'''
         if action == 'drop': return self.dra[action].format(schema=self.schema,table=table,drop=args)
         elif action == 'rename': return self.dra[action].format(schema=self.schema,table=table,old=args['old'],new=args['new'])
         elif action == 'add': return self.dra[action].format(schema=self.schema,table=table,add=args['add'],type=args['type'])
@@ -256,8 +245,7 @@ class ColumnMapper(object):
         raise ColumnMapperError('Unrecognised query type specifier, use drop/add/rename/cast')    
     
     def _formqry(self,f,d):
-        #print f,d
-        #print f.format(*d)
+        '''Maps variable arg list to format string'''
         return f.format(*d)
         
 class DBSelectionException(Exception):pass
@@ -273,7 +261,7 @@ class DB(object):
         else:raise DBSelectionException("Choose DB using 'ogr' or 'psy'")
 
     def get(self,q):
-        return bool(self.d.execute(q))
+        return bool(self.d.execute_query(q))
         
     def __enter__(self):
         return self
@@ -296,7 +284,7 @@ class DatabaseConn_psycopg2(object):
         self.pconn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
         self.pcur = self.pconn.cursor()
         
-    def execute(self,q):
+    def execute_query(self,q):
         '''Execute query q and return success/failure determined by fail=any error except no results'''
         res = True
         try:
@@ -342,19 +330,20 @@ class DatabaseConn_ogr(object):
             raise
             #sys.exit(1)
             
-    def execute(self,q):
+    def execute_query(self,q):
         return self.pg_ds.ExecuteSQL(q)
            
     def disconnect(self):
         del self.pg_ds
                    
 class ConfReader(object):
+    '''Configuration Reader reads (and writes temp objects) in cp format'''
     TEMP = 'temp'
     
     def __init__(self):
-
-        self.config_file = 'download_admin_bdys.ini'
-        
+        self.path = os.path.dirname(__file__)
+        self.config_file = os.path.join(self.path,CONFIG)
+        print (self.config_file)
         self.parser = SafeConfigParser()
         found = self.parser.read(self.config_file)
         if not found:
@@ -368,18 +357,18 @@ class ConfReader(object):
         logger.info('Starting DAB')
         
     def save(self,name,data):
-        '''configparser save for interrupted processing jobs'''
+        '''Configparser save for interrupted processing jobs'''
         if not self.parser.has_section(self.TEMP): 
             self.parser.add_section(self.TEMP)
         self.parser.set(self.TEMP,name,json.dumps(data))
         with open(self.config_file, 'w') as configfile: self.parser.write(configfile)
         
     def read(self,name):
-        '''configparser read for interrupted processing jobs'''
+        '''Configparser read for interrupted processing jobs, deletes requested entry after a read'''
         rv = ()
         if self.parser.has_section(self.TEMP) and self.parser.has_option(self.TEMP,name): 
             rv = json.loads(self.parser.get(self.TEMP,name))
-            #if clean is set the data will be deleted after this read so delete the section/option to prevent attempted reread
+            #if clean is set the data will be deleted after this read so delete the section/option to prevent attempted re-read
             self.parser.remove_option(self.TEMP,name)
             self.parser.remove_section(self.TEMP)
             with open(self.config_file, 'w') as configfile: self.parser.write(configfile)
@@ -433,11 +422,11 @@ class Processor(object):
     @classmethod
     def recent(cls,filelist,pattern='[a-zA-Z_]*(\d{8}).*'):
         '''get the latest date labelled file from a list'''
-        extract = {re.match(pattern,val.decode()).group(1):val for val in filelist if re.match(pattern,val.decode())} 
-        return extract[max(extract)]
+        exfiles = {re.match(pattern,val.decode()).group(1):val for val in filelist if re.match(pattern,val.decode())} 
+        return exfiles[max(exfiles)]
         
     def delete(self,file):
-        '''clean up unzipped shapefile'''
+        '''Clean up unzipped shapefile'''
         #for file in path:
         p,f = os.path.split(file)
         ff,fx = os.path.splitext(f)
@@ -446,9 +435,10 @@ class Processor(object):
             if re.match(ff,cf): os.remove(os.path.join(p,candidate))
             
     def query(self,schema,table,headers='',values='',op='insert'):
+        '''Builds data query'''
         h = ','.join([i.replace(' ','_') for i in headers]).lower() if is_nonstr_iter(headers) else headers
-        v = ','.join(values) if is_nonstr_iter(values) else values
-        return self.q[op].format(schema,table,h, v).replace('"','\'')
+        v = '"{}"'.format("','".join(values)) if is_nonstr_iter(values) else values
+        return self.q[op].format(schema,table,h,v).replace('"','\'')
     
     def layername(self,in_layer):
         '''Returns the name of the layer that inserting a shapefile would create'''
@@ -526,7 +516,8 @@ class Processor(object):
             
         return out_name
             
-    def insertcsv(self,mbfile):#TODO catch runtime errors
+    def insertcsv(self,mbfile):
+        #TODO catch runtime errors
         fp,ff = os.path.split(mbfile) 
         logger.info('Inserting csv {}'.format(ff))
         #self.db.connect()
@@ -540,20 +531,24 @@ class Processor(object):
                 if first: 
                     headers = [h.strip() for h in line.split(',')]
                     findqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],op='find')
-                    if self.execute(findqry).GetNextFeature().GetFieldAsInteger(0) == 0:
+                    if not self._attempt(findqry) or self._attempt(findqry).GetNextFeature().GetFieldAsInteger(0) == 0:
+                        #if import table doesnt exist, create it
                         storedheaders = ','.join(['{} VARCHAR'.format(m.replace(' ','_')) for m in csvhead[1]])
-                        createqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],storedheaders,op='create')
-                        self.execute(createqry)
+                        dataheaders   = ','.join(['{} VARCHAR'.format(m.replace(' ','_')) for m in headers])
+                        if storedheaders != dataheaders: logger.warn('Unexpected table column names, {}'.format(dataheaders))
+                        createqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],dataheaders,op='create')
+                        self._attempt(createqry)
                     else:
+                        #otherwise truncate the existing table
                         truncqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],op='trunc')
-                        self.execute(truncqry)
+                        self._attempt(truncqry)
                     first = False
                 else:
                     values = line.replace("'","''").split(',',len(headers)-1)
                     #if int(values[0])<47800:continue
                     if '"NULL"' in values: continue
                     insertqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],headers,values,op='insert')
-                    self.execute(insertqry)
+                    self._attempt(insertqry)
         #self.db.disconnect()            
         return csvhead[0]
                            
@@ -562,22 +557,25 @@ class Processor(object):
         actions = ('add','drop','rename','cast')
         for qlist in [self.cm.action(self.secname,tablename.lower(),adrc) for adrc in actions]: 
             for q in qlist: 
-                if q: self.execute(q)
+                if q: self._attempt(q)
                 
     def drop(self,table):
         '''Clean up any previous table instances. Doesn't work!''' 
-        return self.execute(self.q['drop'].format(self.conf.database_schema,table))
+        return self._attempt(self.q['drop'].format(self.conf.database_schema,table))
 
-
+    def _attempt(self,q):
+        '''Wrapper for static attempt'''
+        Processor.attempt(self.conf,q)
+        
     @staticmethod
-    def attempt(conf,q,select='ogr',depth=DEPTH):
+    def attempt(conf,q,select='ogr',depth=DEPTH,r=None):
         '''Attempt connection using ogr or psycopg drivers creating temp connection if conn object not stored'''
-        m,r = None,None
+        m = None
         while depth>0:
             try:
                 #if using active DB instance 
                 if SELECTION[select]:
-                    m = SELECTION[select].execute(q)
+                    m = SELECTION[select].execute_query(q)
                     return m
                 #otherwise setup/delete temporary connection
                 else:
@@ -587,21 +585,14 @@ class Processor(object):
             except RuntimeError as r:
                 logger.error('Attempt {} using {} failed, {}'.format(DEPTH-depth+1,select,m or r))
                 #if re.search('table_version.ver_apply_table_differences',q) and Processor.nonOGR(conf,q,depth-1): return
-                return Processor.attempt(conf, q, Processor._next(select), depth-1)
+                return Processor.attempt(conf, q, Processor._next(select), depth-1,r)
         if r: raise r
         
     @staticmethod
     def _next(s,slist=None):
+        '''Get next db connector in selection array'''
         slist = slist or SELECTION
-        return slist.keys()[(slist.keys().index(s)+1)%len(slist)]
-                              
-    def execute(self,q):  
-        try:
-            #logger.info('Executing SQL {}'.format(q))
-            #return self.db.pg_ds.ExecuteSQL(q)
-            return Processor.attempt(self.conf, q)
-        except Exception as e:
-            logger.error('Error executing query {}\n{}'.format(q,e))
+        return list(slist.keys())[(list(slist.keys()).index(s)+1)%len(slist)]
     
 class Meshblock(Processor):
     '''Extract and process the meshblock, concordance and boundaries layers'''
@@ -705,8 +696,7 @@ class Version(object):
                
     @staticmethod     
     def rebuild(conf):              
-        #self.db.pg_ds.ExecuteSQL('drop schema if exists {} cascade'.format(self.conf.database_schema))
-        #self.db.pg_ds.ExecuteSQL('create schema {}'.format(self.conf.database_schema))          
+        '''Drop and create import schema for fresh import'''         
         q1 = 'drop schema if exists {} cascade'.format(conf.database_schema)
         q2 = 'create schema {}'.format(conf.database_schema)
         Processor.attempt(conf, q1, select='psy')
@@ -714,7 +704,6 @@ class Version(object):
         
     def teardown(self):
         '''drop temp schema'''
-        #self.db.pg_ds.ExecuteSQL('drop schema if exists {}'.format(self.conf.database_schema)) 
         q3 = 'drop schema if exists {} cascade'.format(self.conf.database_schema)
         Processor.attempt(self.conf, q3, select='psy')
         #self.db.disconnect()
@@ -749,10 +738,15 @@ class Version(object):
         return q
         
     def _query(self,original,_,imported,pk,geom,srid,final):
-        '''run table version apply diffs'''
+        '''Run table version and apply diffs'''
         q = []
         if final:
-            q.append("select table_version.ver_apply_table_differences('{original}','{imported}','{pk}')".format(original=original,imported=imported,pk=pk))
+            transaction_str = ''
+            dstr = datetime.datetime.now().isoformat()
+            transaction_str += "select table_version.ver_create_revision('DAB:{}');".format(dstr)
+            transaction_str += "select table_version.ver_apply_table_differences('{original}','{imported}','{pk}');".format(original=original,imported=imported,pk=pk)
+            transaction_str += "select table_version.ver_complete_revision();"
+            q.append(transaction_str)
         else:
             si = imported.split('.')
             if not self._pktest(si[0],si[1]):
@@ -765,6 +759,7 @@ class Version(object):
         return q
         
     def versiontables(self,tablelist,final=False):
+        '''Build and execute the import queries for each import table'''
         for section in tablelist:
             sec, tab = section
             for t in tab:
@@ -773,13 +768,13 @@ class Version(object):
                 geom = self.cm.map[sec][t]['geom'] if 'geom' in self.cm.map[sec][t] else None
                 srid = self.cm.map[sec][t]['srid'] if 'srid' in self.cm.map[sec][t] else None
                 snap = '{}.{}{}'.format(self.conf.database_schema,SNAP,t)
-                original = '{}.x_{}'.format(self.conf.database_originschema,t2)
+                original = '{}.{}'.format(self.conf.database_originschema,t2)
                 imported = '{}.{}{}'.format(self.conf.database_schema,PREFIX,t)
                 for q in self.qset(original,snap,imported,pk,geom,srid,final):
                     logger.debug('pQ1 {}'.format(q))
                     Processor.attempt(self.conf,q)
-                dst_t = '{}{}'.format(SNAP,t) if TEST else 'x_{}'.format(t2)
-                self.gridtables(sec,t,dst_t)
+                dst_t = '{}{}'.format(SNAP,t) if TEST else '{}'.format(t2)
+                if final: self.gridtables(sec,t,dst_t)
                     
     def gridtables(self,sec,tab,tname):
         '''Look for grid specification and grid the table if found'''
@@ -787,7 +782,6 @@ class Version(object):
             e = External(self.conf)
             e.build(tname,self.cm.map[sec][tab]['grid'])
         
-
 class External(object):
     externals = (('table_grid.sql',"select public.create_table_polygon_grid('{schema}', '{table}', '{column}', {xres}, {yres})"),)
     
@@ -828,37 +822,23 @@ class PExpectSFTP(object):
         self.conf = conf
         self.target = '{}@{}:{}'.format(self.conf.connection_ftpuser,self.conf.connection_ftphost,self.conf.connection_ftppath)
         self.opts = ['-o','PasswordAuthentication=yes',self.target]
+        self.prompt = 'sftp> '
+        self.get_timeout = 60.0
         
     def fetch(self,dfile):
-        pattern = getattr(self.conf,'{}_filepattern'.format(dfile))
-        localpath,localfile = None,None
-        filelist = []
-        prompt = 'sftp> '
-        get_timeout = 60.0
+        '''Main fetch'''
+        localpath = None
         sftp = pexpect.spawn('sftp',self.opts)
+        #sftp.logfile = sys.stdout
         try:
-            if sftp.expect('(?i)password:')==0:
-                sftp.sendline(self.conf.connection_ftppass)
-                if sftp.expect(prompt) == 0:
-                    sftp.sendline('ls')
-                    if sftp.expect(prompt) == 0:
-                        for fname in sftp.before.split()[1:]:
-                            fmatch = re.match(pattern,fname.decode())
-                            if fmatch: filelist += [fname,]
-                        fname = Processor.recent(filelist,pattern)
-                        localfile = re.match(pattern,fname.decode()).group(0)
-                        #break
-                        if not localfile: 
-                            raise PExpectException('Cannot find matching file pattern')
-                    else:
-                        raise PExpectException('Unable to access or empty directory at {}'.format(self.conf.connection_ftppath))
-                    localpath = '{}/{}'.format(getattr(self.conf,'{}_localpath'.format(dfile)),localfile)
-                    sftp.sendline('get {}'.format(localfile))
-                    if sftp.expect(prompt,get_timeout) != 0:
-                        raise PExpectException('Cannot retrieve file, {}/{}'.format(self.conf.connection_ftppath,localfile))
-                    os.rename('./{}'.format(localfile),localpath)
-                else: 
-                    raise PExpectException('Password authentication failed')  
+            #while tomcat7 home is unwritable
+            index = sftp.expect(['(?i)continue connecting (yes/no)?','(?i)password:'])
+            if index == 0:
+                sftp.sendline('yes')
+                if sftp.expect('(?i)password:') == 0: 
+                    localpath = self.fetch2(sftp,dfile)
+            elif index == 1:
+                localpath = self.fetch2(sftp,dfile)
             else:
                 raise PExpectException('Cannot initiate session using {}'.format(selt.opts))  
                 
@@ -871,12 +851,43 @@ class PExpectSFTP(object):
             sftp.close()
             
         return localpath
+    
+    def fetch2(self,sftp,dfile):
+        '''First inner pexpect script'''
+        localpath,localfile = None,None
+        filelist = []
+        get_timeout = 60.0
+        pattern = getattr(self.conf,'{}_filepattern'.format(dfile))
+        sftp.sendline(self.conf.connection_ftppass)
+        if sftp.expect(self.prompt) == 0:
+            sftp.sendline('ls')
+            if sftp.expect(self.prompt) == 0:
+                for fname in sftp.before.split()[1:]:
+                    fmatch = re.match(pattern,fname.decode())
+                    if fmatch: filelist += [fname,]
+                fname = Processor.recent(filelist,pattern)
+                localfile = re.match(pattern,fname.decode()).group(0)
+                #break
+                if not localfile: 
+                    raise PExpectException('Cannot find matching file pattern')
+            else:
+                raise PExpectException('Unable to access or empty directory at {}'.format(self.conf.connection_ftppath))
+            localpath = '{}/{}'.format(getattr(self.conf,'{}_localpath'.format(dfile)),localfile)
+            sftp.sendline('get {}'.format(localfile))
+            if sftp.expect(self.prompt,self.get_timeout) != 0:
+                raise PExpectException('Cannot retrieve file, {}/{}'.format(self.conf.connection_ftppath,localfile))
+            os.rename('./{}'.format(localfile),localpath)
+        else: 
+            raise PExpectException('Password authentication failed')  
+        
+        return localpath
 
 class SimpleUI(object):
-    '''Simple UI component added to provide debian installer target'''
+    '''Simple UI component added mainly to provide debian installer target, also used if run locally'''
     H = 100
     W = 100
     R = RAISED
+    LAYOUT = '4x1' #2x2
     
     def __init__(self):
         self.master = TK.Tk()
@@ -888,10 +899,9 @@ class SimpleUI(object):
         self.mainframe.mainloop()
 
     def initWidgets(self):
-        layout = '4x1' #2x2
         title_row = 0
         select_row = 1
-        button_row = select_row + int(max(list(re.sub("[^0-9]", "",layout))))
+        button_row = select_row + int(max(list(re.sub("[^0-9]", "",self.LAYOUT))))
         
         #B U T T O N
         self.mainframe.selectbt = TK.Button(self.mainframe,  text='Start', command=self.start)
@@ -905,9 +915,9 @@ class SimpleUI(object):
         runlevel.set('reject')
         for text,selection,col in OPTS:
             self.mainframe.rlev = TK.Radiobutton(self.mainframe, text=text, variable=runlevel, value=selection)#,indicatoron=False)
-            if layout=='2x2':
+            if self.LAYOUT=='2x2':
                 self.mainframe.rlev.grid(row=int(select_row+abs(col/2)),column=int(col%2),sticky=W)
-            elif layout == '4x1':         
+            elif self.LAYOUT == '4x1':         
                 self.mainframe.rlev.grid(row=int(select_row+col),column=0,sticky=W)
         self.mainframe.rlev_var = runlevel   
         
@@ -917,16 +927,19 @@ class SimpleUI(object):
    
         
     def quit(self):
+        '''Quit action'''
         self.ret_val = None 
         self.master.withdraw()
         self.mainframe.quit()
         
     def start(self):
+        '''Start action, sets ret_val to cb selection'''
         self.ret_val = self.mainframe.rlev_var.get()
         self.master.withdraw()
         self.mainframe.quit()
         
     def _offset(self,window):
+        '''Reposition window to centre of screen'''
         window.update_idletasks()
         w = window.winfo_screenwidth()
         h = window.winfo_screenheight()
@@ -935,41 +948,41 @@ class SimpleUI(object):
         y = h/4 - size[1]/2
         window.geometry("%dx%d+%d+%d" % (size + (x, y)))
 
-   
 def oneOrNone(a,options,args):
     '''is A in args OR are none of the options in args'''
     return a in args or not any([True for i in options if i in args]) 
      
-def part1(args,ogrdb,v,c,m):            
+def part1(args,v,c,m):            
     '''fetch data from sources and prepare import schema'''
     logger.info("Beginning meshblock/localities file download")
     t = ()
-    SELECTION['ogr'] = ogrdb.d
+    #SELECTION['ogr'] = ogrdb.d
     #SELECTION['ogr'] = DatabaseConn_ogr(c)
     s = PExpectSFTP(c)
     v.setup()
     topts = ('meshblock','nzlocalities')
-    if oneOrNone('meshblock',topts,args): # len(args)==0 or 'meshblock' in args:
+    if oneOrNone('meshblock',topts,args): 
         mbk = Meshblock(c,SELECTION['ogr'],m,s)
         t += (mbk.run(),)
-    if oneOrNone('nzlocalities',topts,args): # len(args)==0 or 'localities' in args:
+    if oneOrNone('nzlocalities',topts,args): 
         nzl = NZLocalities(c,SELECTION['ogr'],m,s) 
         t += (nzl.run(),)
     c.save('t',t)
     logger.info ("Stopping post import for user validation")
     return t
 
+# def part2(v,t):
+#     '''map columns to final format'''
+#     logger.info ("Begining table mapping")
+#     #if not t: t = _t
+#     v.versiontables(t,final=False)
+#     ###v.teardown()
+    
 def part2(v,t):            
     '''if data has been validated transfer to final schema'''
-    logger.info ("Begining table mapping and final data import")
+    logger.info ("Begining final data import")
     #if not t: t = _t
     v.versiontables(t,final=False)
-    ###v.teardown()
-    
-def part3(v,t):            
-    '''if data has been validated transfer to final schema'''
-    logger.info ("Begining table mapping and final data import")
-    #if not t: t = _t
     v.versiontables(t,final=True)
     ###v.teardown()
     
@@ -1016,6 +1029,7 @@ def process(args):
     
     global SELECTION
     with DB(c,'ogr') as ogrdb:
+        SELECTION['ogr'] = ogrdb.d
         #if a 't' value is stored we dont want to pre-clean the import schema 
         ###t = v.setup()
         aopts = [a[1] for a in OPTS]
@@ -1023,12 +1037,14 @@ def process(args):
             partX(v)
             return
         #if prepare requested import files and recreate 't'
-        t = part1(args,ogrdb,v,c,m) if oneOrNone('load', aopts,args) else c.read('t')
+        t = part1(args,v,c,m) if oneOrNone('load', aopts,args) else c.read('t')
         #if transfer requested map and transfer using current 't'
-        if oneOrNone('map',aopts,args): 
-            part2(v,t)
+#         if oneOrNone('map',aopts,args): 
+#             t = _t
+#             part2(v,t)
         if oneOrNone('transfer',aopts,args): 
-            part3(v,t)
+            t = _t
+            part2(v,t)
 
 if __name__ == "__main__":
     main()

@@ -367,15 +367,16 @@ class ConfReader(object):
         self.parser.set(self.TEMP,name,json.dumps(data))
         with open(self.config_file, 'w') as configfile: self.parser.write(configfile)
         
-    def read(self,name):
+    def read(self,name,flush=True):
         '''Configparser read for interrupted processing jobs, deletes requested entry after a read'''
         rv = ()
         if self.parser.has_section(self.TEMP) and self.parser.has_option(self.TEMP,name): 
             rv = json.loads(self.parser.get(self.TEMP,name))
             #if clean is set the data will be deleted after this read so delete the section/option to prevent attempted re-read
-            self.parser.remove_option(self.TEMP,name)
-            self.parser.remove_section(self.TEMP)
-            with open(self.config_file, 'w') as configfile: self.parser.write(configfile)
+            if flush:
+                self.parser.remove_option(self.TEMP,name)
+                self.parser.remove_section(self.TEMP)
+                with open(self.config_file, 'w') as configfile: self.parser.write(configfile)
         return rv
         
     
@@ -964,7 +965,7 @@ def notify(c):
     	msg = MIMEMultipart('alternative')
     	msg['Subject'] = '*** New Admin Boundary Data Is Available ***'
     	msg['From'] = sender
-    	msg['To'] = recipients
+    	msg['To'] = ', '.join(recipients)
     
     # Create the body of the message (HTML version).
     	html = """\
@@ -973,11 +974,11 @@ def notify(c):
     		<body>
     			<p>New Admin Boundary Data Is Available<br>
     				Below is the link to approve submission of the new data to AIMS<br>
-    				Link to web form <a href="http://144.66.6.164:8080/ab/">link</a> here.
+    				Link to web form <a href="{link}">link</a> here.
     			</p>
     		</body>
     	</html>
-    	"""
+    	""".format(link=c.user_link)
     
     	# Record the MIME type
     	content = MIMEText(html, 'html')
@@ -1077,7 +1078,7 @@ def process(args):
     c = ConfReader()
     m = ColumnMapper(c)
     v = Version(c,m)
-    
+
     global SELECTION
     with DB(c,'ogr') as ogrdb:
         SELECTION['ogr'] = ogrdb.d
@@ -1088,7 +1089,7 @@ def process(args):
             partX(v)
             return
         #if prepare requested import files and recreate 't'
-        t = part1(args,v,c,m) if oneOrNone('load', aopts,args) else c.read('t')
+        t = part1(args,v,c,m) if oneOrNone('load', aopts,args) else c.read('t',flush=False)
         #if transfer requested map and transfer using current 't'
 #         if oneOrNone('map',aopts,args): 
 #             t = _t

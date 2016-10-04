@@ -11,6 +11,12 @@ password = <dbpass>
 schema = <temp_import_schema>
 originschema = <schema>
 
+[user]
+list=<user list as csv>
+domain=linz.govt.nz
+smtp=<smtp server>
+link=http://<AIMS server>:8080/ab/
+
 [layer]
 name = territorial_authority
 output_srid = 4167

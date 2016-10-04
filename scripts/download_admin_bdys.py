@@ -36,6 +36,11 @@ import json
 import string
 import getopt
 import psycopg2
+import smtplib
+
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
 import logging
 import datetime
 
@@ -50,7 +55,6 @@ else:
      import Tkinter as TK
      from Tkconstants import RAISED,SUNKEN,BOTTOM,RIGHT,LEFT,END,X,Y,W,E,N,S,ACTIVE  
      from ConfigParser import SafeConfigParser
-
 
 from zipfile import ZipFile
 
@@ -350,7 +354,7 @@ class ConfReader(object):
             raise Exception('Could not load config ' + self.config_file)
             #sys.exit('Could not load config ' + config_files[0] )
         
-        for section in ('connection','meshblock','nzlocalities','database','layer'):
+        for section in ('connection','meshblock','nzlocalities','database','layer','user'):
             for option in self.parser.options(section): 
                 setattr(self,'{}_{}'.format(section,option),self.parser.get(section,option))
     
@@ -948,6 +952,51 @@ class SimpleUI(object):
         y = h/4 - size[1]/2
         window.geometry("%dx%d+%d+%d" % (size + (x, y)))
 
+    
+def notify(c):
+    '''Send a notification email to the recipients list to inform that New Admin Boundary Data Is Available'''
+
+    sender = 'no-reply@{}'.format(c.user_domain)
+    recipients = ['{}@{}'.format(u,c.user_domain) for u in c.user_list.split(',')]
+
+    try:
+    # Create message container - the correct MIME type is multipart/alternative.
+    	msg = MIMEMultipart('alternative')
+    	msg['Subject'] = '*** New Admin Boundary Data Is Available ***'
+    	msg['From'] = sender
+    	msg['To'] = recipients
+    
+    # Create the body of the message (HTML version).
+    	html = """\
+    	<html>
+    		<head></head>
+    		<body>
+    			<p>New Admin Boundary Data Is Available<br>
+    				Below is the link to approve submission of the new data to AIMS<br>
+    				Link to web form <a href="http://144.66.6.164:8080/ab/">link</a> here.
+    			</p>
+    		</body>
+    	</html>
+    	"""
+    
+    	# Record the MIME type
+    	content = MIMEText(html, 'html')
+    	# Attach parts into message container.
+    	msg.attach(content)
+    	
+    	# Send the message.
+    	conn = smtplib.SMTP(c.user_smtp)
+    
+    	try:
+    	# sendmail function takes 3 arguments: sender's address, recipient's address, and message to send.
+    		conn.sendmail(sender, recipients, msg.as_string())
+    	finally:	
+    		conn.quit()
+    		
+    except Exception as exc:
+    		sys.exit( 'Email sending failed; {0}'.format(exc))		
+	
+    
 def oneOrNone(a,options,args):
     '''is A in args OR are none of the options in args'''
     return a in args or not any([True for i in options if i in args]) 
@@ -968,7 +1017,9 @@ def part1(args,v,c,m):
         nzl = NZLocalities(c,SELECTION['ogr'],m,s) 
         t += (nzl.run(),)
     c.save('t',t)
-    logger.info ("Stopping post import for user validation")
+    logger.info ("Stopping post import for user validation and notifying users")
+    notify(c)
+
     return t
 
 # def part2(v,t):
@@ -977,7 +1028,7 @@ def part1(args,v,c,m):
 #     #if not t: t = _t
 #     v.versiontables(t,final=False)
 #     ###v.teardown()
-    
+		
 def part2(v,t):            
     '''if data has been validated transfer to final schema'''
     logger.info ("Begining final data import")

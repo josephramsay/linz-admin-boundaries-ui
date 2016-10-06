@@ -19,7 +19,9 @@ import javax.servlet.http.*;
 
 
 public class DABServletSummary extends DABServlet {
-	private static String DEF_TABLE = "<table><thead><tr><th>DABS</th></tr></thead><tbody><tr><td>DATA UNAVAILABLE</td></tr></tbody></table>";
+	private static String DEF_TABLE = "<table><caption>no table</caption>"
+			+"<thead><tr><th><i>dabs</i></th></tr></thead>"
+			+"<tbody><tr><td><i>data unavailable</i></td></tr></tbody></table>";
 	
 	/**
 	 * Enum representing stages of import
@@ -88,6 +90,7 @@ public class DABServletSummary extends DABServlet {
 	 * Initialise servlet class setting status and getting formatter + connector instances
 	 */
 	public void init() throws ServletException {
+		super.init();
 		title = "DAB";
 		message = "Downloader for Admin Boundarys";
 		dabc = new DABConnector();
@@ -105,29 +108,37 @@ public class DABServletSummary extends DABServlet {
 		}
 		lowstatus = status.values().stream().sorted().findFirst().get();
 	}
-	
+
 	/**
 	 * Determine state of database by testing for tables temp_X, snap_X and dst=snap
 	 * @return ImportStatus for selected table
 	 * TODO rewrite test for mapped status reflecting geo ops instead of snap build 
 	 */
 	public ImportStatus getStatus(TableMapping tm){
-		//temp files exist
-		String tquery = String.format("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='%s' AND table_name='%s')",ABIs,tm.tmp());
-		//System.out.println("1TQ "+tquery+" / "+dabc.executeTFQuery(tquery));
-		if (dabc.executeTFQuery(tquery)){
+		//check that imported temp files exist
+		String exist_query = String.format("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='%s' AND table_name='%s')",ABIs,tm.tmp());
+		//System.out.println("1TQ "+exist_query+" / "+dabc.executeTFQuery(exist_query));
+		if (dabc.executeTFQuery(exist_query)){
+			//get original column names (so column order isn't considered in comparison
+			String col_query = String.format("select array_to_string(array_agg(column_name::text),',') " +
+					"from information_schema.columns " +
+					"where table_schema='%s' " +
+					"and table_name='%s'", ABs, tm.dst());
+			String columns = dabc.executeSTRQuery(col_query);
+			//System.out.println("2CQ "+col_query+" / "+columns);
 			//tmp files match dst files
-			String tt = String.format("SELECT * FROM %s.%s", ABIs,tm.tmp());
-			String dt = String.format("SELECT * FROM %s.%s", ABs,tm.dst());
-			String cquery = String.format("SELECT NOT EXISTS (%s EXCEPT %s UNION %s EXCEPT %s)",tt,dt,dt,tt);
-			//System.out.println("2CQ "+cquery+" / "+dabc.executeTFQuery(cquery));
-			if (dabc.executeTFQuery(cquery)){
+			String tt = String.format("SELECT %s FROM %s.%s", columns, ABIs, tm.tmp());
+			String dt = String.format("SELECT %s FROM %s.%s", columns, ABs,  tm.dst());
+			String cmp_query = String.format("SELECT NOT EXISTS (%s EXCEPT %s UNION %s EXCEPT %s)",tt,dt,dt,tt);
+			//System.out.println("3CQ "+cmp_query+" / "+dabc.executeTFQuery(cmp_query));
+			if (dabc.executeTFQuery(cmp_query)){
 				return ImportStatus.COMPLETE;
 			}
 			return ImportStatus.LOADED;
 		}
 		return ImportStatus.BLANK;
 	}
+	
 	
 	
 	/**
@@ -241,9 +252,7 @@ public class DABServletSummary extends DABServlet {
                 getBodyHeader() +
                 getBodyTitle() +
                 infomessage +
-                "<hr/>\n" +
                 summarytable +
-                "<hr/>\n" +
                 accdectable +
                 getBodyFooter(created,accessed,user) +
                 "</div>\n</body>\n</html>");
@@ -260,18 +269,23 @@ public class DABServletSummary extends DABServlet {
 	}
 	
 	protected String getSummarySection(TableMapping tablemapping){
+		ImportStatus is = status.get(tablemapping);
+		String b_colour = "b_green";
+		if (is == ImportStatus.BLANK){
+			b_colour = "b_red";
+		}
 		String detail = String.join("\n"
 				,"<section class=\"detail\">"
-				,"<p><a href=\"sum?compare="+tablemapping.toString()+"\" class=\"button\">Compare "+tablemapping.toString()+" Tables</a>"
-				,tablemapping.ttl(status.get(tablemapping))+"</p>"
+				,"<p><a href=\"sum?compare="+tablemapping.toString()+"\" class=\""+b_colour+"\">Compare "+tablemapping.toString()+" Tables</a>"
+				,tablemapping.ttl(is)+"</p>"
 				,"</section>\n");
 	    String left = String.join("\n"
 	    		,"<section class=\"box\">"
 	    		,readChangesetSummary(ABs,tablemapping.dst())
-	    		,"</section>\n");	 
+	    		,"</section>\n");
 	    String right = String.join("\n"
 	    	    ,"<section class=\"box\">"
-	    	    ,readChangesetSummary(ABIs,tablemapping.dsp(status.get(tablemapping)))
+	    	    ,is == ImportStatus.BLANK ? tablemapping.dsp(is) : readChangesetSummary(ABIs,tablemapping.dsp(is))
 	    	    ,"</section>\n");
 	    
 	    return "<article>\n" + left + right + detail + "</article>\n";

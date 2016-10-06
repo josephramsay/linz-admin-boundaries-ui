@@ -66,13 +66,13 @@ public class DABFormatter {
 		int count = 0;
 		String page = "sum";
 		String msg = "<nav><ul>\n";
-		String butcol = "buttonred";
+		String b_col = "b_yellow";
 
 		Iterator<Map.Entry<String,String>> lmtr_i = lmtr.entrySet().iterator();
 		while (lmtr_i.hasNext()){
 			Map.Entry<String,String> pair = (Map.Entry<String,String>)lmtr_i.next();
-			if (count >= lowsts) {butcol="button";}
-			msg += "<li><a href=\""+page+"?action="+pair.getKey().toLowerCase()+"\" class=\""+butcol+"\">"+pair.getKey()+"</a>"+pair.getValue()+"</li>\n";
+			if (count >= lowsts) {b_col="b_green";}
+			msg += "<li><a href=\""+page+"?action="+pair.getKey().toLowerCase()+"\" class=\""+b_col+"\">"+pair.getKey()+"</a>"+pair.getValue()+"</li>\n";
 			count ++;
 		}
 		msg += "</ul></nav>\n";

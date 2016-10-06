@@ -116,12 +116,27 @@ public class DABConnector {
 		return result;
 	}
 	
+	//TODO something less ugly
 	protected boolean executeTFQuery(String query){
 		boolean result = false;
 		try {
 			ResultSet rs = exeQuery(query);
 			if (rs.next()){
 				result = rs.getBoolean(1);
+			}
+		}
+		catch (SQLException sqle) {
+			System.out.println("SQLError "+sqle);
+		}
+		return result;
+	}		
+	
+	protected String executeSTRQuery(String query){
+		String result = "";
+		try {
+			ResultSet rs = exeQuery(query);
+			if (rs.next()){
+				result = rs.getString(1);
 			}
 		}
 		catch (SQLException sqle) {

@@ -120,9 +120,13 @@ if PYVER3:
         if isinstance(v, str):
             return False
         return hasattr(v, '__iter__')
+    dec = lambda d: d
+    enc = lambda e: e
 else:
     def is_nonstr_iter(v):
         return hasattr(v, '__iter__')
+    dec = lambda d: d.decode()
+    enc = lambda e: e.encode()
     
 def shift_geom ( geom ):
     '''translate geometry to 0-360 longitude space'''
@@ -426,9 +430,9 @@ class Processor(object):
     
     @classmethod
     def recent(cls,filelist,pattern='[a-zA-Z_]*(\d{8}).*'):
-        '''get the latest date labelled file from a list'''
+        '''Get the latest date labelled file from a list using the datestring in the filename as a key'''
         exfiles = {re.match(pattern,val.decode()).group(1):val for val in filelist if re.match(pattern,val.decode())} 
-        return exfiles[max(exfiles)]
+        return exfiles[max(exfiles)] if len(exfiles)>0 else ''
         
     def delete(self,file):
         '''Clean up unzipped shapefile'''
@@ -870,8 +874,9 @@ class PExpectSFTP(object):
                 for fname in sftp.before.split()[1:]:
                     fmatch = re.match(pattern,fname.decode())
                     if fmatch: filelist += [fname,]
-                fname = Processor.recent(filelist,pattern)
-                localfile = re.match(pattern,fname.decode()).group(0)
+                if filelist:
+                    fname = Processor.recent(filelist,pattern)
+                    localfile = re.match(pattern,fname.decode()).group(0)
                 #break
                 if not localfile: 
                     raise PExpectException('Cannot find matching file pattern')

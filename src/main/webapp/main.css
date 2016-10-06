@@ -4,12 +4,12 @@
 .js #loader { display: block; position: absolute; left: 100px; top: 0; }
 
 body {
-    background: #fff;
-    margin-bottom: 1000px;
+    background: white;
+    margin: 10px 10px 200px 10px;
     padding: 0;
     font-family: Arial, Helvetica, sans-serif;
     font-size: 16px;
-    color: #666;
+    color: dimgrey;
 }
 
 * {
@@ -27,12 +27,13 @@ th, td {
 }
 
 th {
-    color: #666;
-    background: #ccc none repeat-x scroll left top;
+    color: white;
+    background: lightgrey none repeat-x scroll left top;
+    border-radius: 5px;
 }
 
 td {
-    border-bottom: 1px solid #ccc;
+    border-bottom: 1px solid lightgrey;
 }
 
 table.result {
@@ -58,10 +59,10 @@ a:focus {
 }
 
 
-a.button { 
+a.b_green, a.b_yellow, a.b_red { 
     background-color: dodgerblue;
     border-radius: 5px 5px 5px 5px;
-    color: #FFFFFF;
+    color: white;
     display: inline-block;
     font-size: 13px;
     font-weight: bold;
@@ -72,40 +73,30 @@ a.button {
     text-align: center;
 }
 
-a.buttonred { 
-    background-color: dodgerblue;
-    border-radius: 5px 5px 5px 5px;
-    color: #FFFFFF;
-    display: inline-block;
-    font-size: 13px;
-    font-weight: bold;
-    padding: 8px 15px;
-    text-decoration: none;
-    text-transform: uppercase;
-    width: 180px;
-    text-align: center;
-}
-
-a.button:hover {
+a.b_green:hover {
+    color: white;
     background-color: lightseagreen;
 }
 
-a.buttonred:hover {
-    background-color: lightcoral;
+a.b_yellow:hover {
+    color: white;
+    background-color: goldenrod;
 }
 
-span.required {
-    color: #ff0000;
+a.b_red:hover {
+    color: white;
+    background-color: lightcoral;
+    /*pointer-events: none;*/
+    cursor: default;
 }
 
 h1 {
-    color: #666;
     font-size: 35px;
     font-family: Helvetica, Arial, sans-serif;
 }
 
 h2 {
-    color: #666;
+    color: darkgrey;
     font-size: 32px;
     letter-spacing: 0px;
     font-weight: normal;
@@ -135,7 +126,7 @@ h4 {
 h5 {
     padding-bottom: 10px;
     font-size: 16px;
-    color: #999;
+    color: lightseagreen;
 }
 
 ul, ol {
@@ -157,13 +148,11 @@ li ol, li ul {
     margin: 0 auto;
 }
 
-#container {
-    background-color: #fff;
-}
+
 
 header {
     padding: 20px 2px;
-    background: #fff;
+    background: white;
     margin: 0 auto;
     text-align:left;
 }
@@ -182,7 +171,7 @@ header h1 a span {
 }
 
 header h2 {
-    color: #c0c0c0;
+    color: darkgrey;
     font-size: 13px;
     position: relative;
     top: -5px;
@@ -190,7 +179,7 @@ header h2 {
 }
 
 nav {
-    background-color: #FFF;
+    background-color: white;
     height: 45px;
 }
 
@@ -207,7 +196,7 @@ nav ul li {
 }
 
 nav ul li a {
-    color: #999;
+    color: darkgrey;
     display: block;
     font-family: Helvetica,Arial,sans-serif;
     font-size: 13px;
@@ -221,30 +210,17 @@ nav ul li a {
 nav ul li.selected a,
 nav ul li.selected a:hover { 
     background-color: dodgerblue;
-    color: #fff; 
+    color: white; 
     font-weight:bold;
 }
 
 
 nav ul li a:hover {
-    color: #eee;
+    color: dimgrey;
     text-decoration: none;
 }
 
-img.header-image { padding-top: 10px;
-            margin-bottom: -3px; }
 
-#body {
-    background: none;
-    margin: 5px auto 0;
-    padding: 0;
-    clear: both;
-}
-
-#content {
-    float: left;
-    width: 71%;
-}
 
 section.box {
     display: inline-block;
@@ -257,30 +233,36 @@ section.box {
 
 section.detail {
     display: inline-block;
-    position:relative;
-    padding: 5px;
+    position: relative;
     float: left;
     width: 100%;
     background-color: aliceblue;
 }
+
 section.detail p a {
     margin: 0px 20px 5px 10px;
     padding: 5px 15px;
 }
 
 article {
+    display: inline-block;
+    width: 98%;
+    background-color: aliceblue;
+    border: 10px solid aliceblue;
+    border-radius: 10px;
     padding: 0px;
+    margin: 5px;
  }
 
 footer {
-    position:fixed;
+    position: fixed;
     left: 0;
     bottom: 0;
     height: 75px;
     width: 100%;
     margin:100px auto 0;
     padding 25px 0px auto 0px;
-    background: #ccc;
+    background: lightgrey;
     border-top: 1px dashed dodgerblue;
 }
 

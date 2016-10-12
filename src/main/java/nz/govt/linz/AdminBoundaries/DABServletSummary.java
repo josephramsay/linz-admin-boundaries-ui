@@ -154,7 +154,7 @@ public class DABServletSummary extends DABServlet {
 		}
 		else {
 			String query = String.format("SELECT COUNT(*) count FROM %s.%s",schema,table);
-			return dabf.getSummaryAsTable(table,dabc.getExtractSummary(query));
+			return dabf.getSummaryAsTable(table,dabc.executeQuery(query));
 		}
 	}
 	
@@ -163,12 +163,13 @@ public class DABServletSummary extends DABServlet {
 	 * @param table
 	 * @return
 	 */
-	public String readImportDifference(TableMapping table){
+	public String compareTables(TableMapping table){
 		//read table diffs
 		String t1 = String.format("%s.%s", ABs, table.dst());
 		String t2 = String.format("%s.%s", ABIs, table.tmp());
-		String query = String.format("SELECT table_version.ver_get_table_differences('%s','%s','%s')",t1,t2,table.key());
-		return dabf.getSummaryAsTable(table.dst(),dabc.getExtractSummary(query));
+		String rec = "res(code char(1), id varchar)";
+		String query = String.format("SELECT * FROM table_version.ver_get_table_differences('%s','%s','%s') as %s",t1,t2,table.key(),rec);
+		return "<article>" + dabf.getSummaryAsTable(table.dst(),dabc.executeQuery(query)) + "</article>";
 	}
 	
 	/**
@@ -206,40 +207,39 @@ public class DABServletSummary extends DABServlet {
          * Otherwise return the standard summary table
          */
         
-        Map<String, String> info = new HashMap<>();
-        
-        switch (lowstatus){
-        case BLANK: 
-        	//show dst table  - <blank>
-        	summarytable = DEF_TABLE;
-        case LOADED:
-        	//show tab;e diffs
-        	summarytable = getFullSummary();        	
-        	//summarytable = readImportDifference(tm);
-        case COMPLETE:
-        	//show counts match
-        	summarytable = getFullSummary();
-        default:
-        }
-
-        
+        Map<String, String> info = new HashMap<>(); 
         
         if (compare != null) {
         	//s = per table compare, a = 1
         	TableMapping tm = TableMapping.valueOf(compare.toUpperCase());
         	info.put("COMPARE",compare);
         	info.put("RESULT",tm.dst()+" &larr; "+tm.tmp());
+        	summarytable = compareTables(tm);
+        	accdectable = dabf.getAlternateNav();
         }
         else if (action != null) {
         	//s = summary, a = 1
             info.put("ACTION",action);
             info.put("RESULT",readProcessOutput(action));
+            summarytable = getFullSummary();
+            accdectable = dabf.getAcceptDeclineNav(lowstatus.ordinal());
+        }
+        else {
+            switch (lowstatus){
+            case BLANK: 
+            	//show dst table  - <blank>
+            	summarytable = DEF_TABLE;
+            case LOADED:
+            case COMPLETE:
+            	//show counts match
+            	summarytable = getFullSummary();
+            default:
+            }
+            accdectable = dabf.getAcceptDeclineNav(lowstatus.ordinal());
          
         }
         
         infomessage = getInfoMessage(info);
-        	
-        accdectable = dabf.getAcceptDeclineNav(lowstatus.ordinal());
         
         //OUTPUT
         
@@ -259,7 +259,8 @@ public class DABServletSummary extends DABServlet {
 
 
 	}
-	protected String getFullSummary(){
+	
+	private String getFullSummary(){
 		return String.join(""
 				,getSummarySection(TableMapping.MB)
 				,getSummarySection(TableMapping.MBC)
@@ -268,7 +269,12 @@ public class DABServletSummary extends DABServlet {
 			);
 	}
 	
-	protected String getSummarySection(TableMapping tablemapping){
+	/**
+	 * Builds table comparison section for a particular tablemapping type
+	 * @param tablemapping
+	 * @return
+	 */
+	private String getSummarySection(TableMapping tablemapping){
 		ImportStatus is = status.get(tablemapping);
 		String b_colour = "b_green";
 		if (is == ImportStatus.BLANK){

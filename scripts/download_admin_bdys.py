@@ -37,6 +37,7 @@ import string
 import getopt
 import psycopg2
 import smtplib
+import collections
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -100,8 +101,6 @@ logger = None
 
 # Prefix for imported temp tables
 PREFIX = 'temp_'
-# Prefix for snapshot tables
-SNAP = 'snap_'
 # Use the temp schema to create snapshots to test against (won't overwrite admin_bdys tables)
 TEST = False
 # Holds dataabse connection instances
@@ -226,7 +225,10 @@ class ColumnMapper(object):
     dra = {'drop':'ALTER TABLE {schema}.{table} DROP COLUMN IF EXISTS {drop}',
            'rename':'ALTER TABLE {schema}.{table} RENAME COLUMN {old} TO {new}',
            'add':'ALTER TABLE {schema}.{table} ADD COLUMN {add} {type}',
-           'cast':'ALTER TABLE {schema}.{table} ALTER COLUMN {cast} SET DATA TYPE {type}'
+           'cast':'ALTER TABLE {schema}.{table} ALTER COLUMN {cast} SET DATA TYPE {type}',
+           'srid':'SELECT UpdateGeometrySRID(\'{schema}\',\'{table}\', \'{geom}\', {srid})',
+           'trans':'UPDATE {schema}.{table} SET {geom} = ST_Transform({geom}::geometry,{srid}::integer)',
+           'primary':'ALTER TABLE {schema}.{table} ADD PRIMARY KEY ({primary})'
     }
     
     def __init__(self,conf):
@@ -236,22 +238,43 @@ class ColumnMapper(object):
             m = re.search('(\w+)_colmap',attr)
             if m: self.map[m.group(1)] = json.loads(getattr(conf,attr))
             
-    def action(self,section,tablename,action):
+    def flatten(self,lol):
+        if not isinstance(lol,str) and isinstance(lol, collections.Iterable): return [a for i in lol for a in self.flatten(i)]
+        else: return [lol]
+         
+    def action(self,section,table,action):
         '''Generate queries from the column map'''
-        _test = section in self.map and tablename in self.map[section] and action in self.map[section][tablename]
-        return [self.formqry(action,PREFIX+tablename, sta) for sta in self.map[section][tablename][action]] if _test else []
+        if section in self.map and table in self.map[section]:
+            if action == 'trans' and 'geom' in self.map[section][table] and 'srid' in self.map[section][table]:
+                return self.flatten(self.formqry(action,section,table, ''))
+            elif action == 'primary' and 'primary' in self.map[section][table]:
+                return self.flatten(self.formqry(action,section,table, ''))
+            elif action in self.map[section][table]:
+                return self.flatten([self.formqry(action,section,table, sta) for sta in self.map[section][table][action]])
+        return []
     
     def _getArgs(self,a):
         return a.values() if type(a) in (dict,) else a
         
-    def formqry(self,action,table,args):
-        '''Returns the formatted query string based on request type; drop, rename, add and cast'''
-        if action == 'drop': return self.dra[action].format(schema=self.schema,table=table,drop=args)
-        elif action == 'rename': return self.dra[action].format(schema=self.schema,table=table,old=args['old'],new=args['new'])
-        elif action == 'add': return self.dra[action].format(schema=self.schema,table=table,add=args['add'],type=args['type'])
-        elif action == 'cast': return self.dra[action].format(schema=self.schema,table=table,cast=args['cast'],type=args['type'])
-        raise ColumnMapperError('Unrecognised query type specifier, use drop/add/rename/cast')    
-    
+    def formqry(self,action,section,table,args):
+        '''Returns the formatted query string based on request type; drop, rename, add, cast and proj'''
+        queries = []
+        ptable = PREFIX+table
+        if action == 'drop': queries.append(self.dra[action].format(schema=self.schema,table=ptable,drop=args))
+        elif action == 'rename': queries.append(self.dra[action].format(schema=self.schema,table=ptable,old=args['old'],new=args['new']))
+        elif action == 'add': queries.append(self.dra[action].format(schema=self.schema,table=ptable,add=args['add'],type=args['type']))
+        elif action == 'cast': queries.append(self.dra[action].format(schema=self.schema,table=ptable,cast=args['cast'],type=args['type']))
+        elif action == 'trans': 
+            g = self.map[section][table]['geom']
+            s = self.map[section][table]['srid']
+            queries.append(self.dra['srid'].format(schema=self.schema,table=ptable,geom=g,srid=s))
+            queries.append(self.dra['trans'].format(schema=self.schema,table=ptable,geom=g,srid=s))
+        elif action == 'primary':
+            p = self.map[section][table]['primary']
+            queries.append(self.dra['primary'].format(schema=self.schema,table=ptable,primary=p))
+        else: raise ColumnMapperError('Unrecognised query type specifier, use drop/add/rename/cast/proj')    
+        return queries
+        
     def _formqry(self,f,d):
         '''Maps variable arg list to format string'''
         return f.format(*d)
@@ -343,7 +366,7 @@ class DatabaseConn_ogr(object):
            
     def disconnect(self):
         del self.pg_ds
-                   
+                          
 class ConfReader(object):
     '''Configuration Reader reads (and writes temp objects) in cp format'''
     TEMP = 'temp'
@@ -351,7 +374,6 @@ class ConfReader(object):
     def __init__(self):
         self.path = os.path.dirname(__file__)
         self.config_file = os.path.join(self.path,CONFIG)
-        print (self.config_file)
         self.parser = SafeConfigParser()
         found = self.parser.read(self.config_file)
         if not found:
@@ -418,6 +440,16 @@ class Processor(object):
         self.driver = ogr.GetDriverByName('ESRI Shapefile')
         self.sftp = sf
         self.secname = type(self).__name__.lower()
+        
+    def _pktest(self,s,t):
+        '''Check whether the table had a primary key already. ExecuteSQL returns layer if successful OR null on error/no-result'''
+        q = "select * from information_schema.table_constraints \
+             where table_schema like '{s}' \
+             and table_name like '{t}' \
+             and constraint_type like 'PRIMARY KEY'".format(s=s,t=t)
+        logger.debug('pQ2 {}'.format(q))
+        #return bool(self.db.pg_ds.ExecuteSQL(q).GetFeatureCount())
+        return Processor.attempt(self.conf, q, select='psy')
 
     def extract(self,file):
         '''Takes a zip path/filename input and returns the path/names of any unzipped files'''
@@ -425,7 +457,7 @@ class Processor(object):
         with ZipFile(file,'r') as h:
             nl = h.namelist()
             for fname in nl:
-                h.extract(fname)
+                h.extract(fname,path=os.path.dirname(file))
         return ['{}/{}'.format(getattr(self.conf,'{}_localpath'.format(self.secname)),n) for n in nl] 
     
     @classmethod
@@ -534,7 +566,7 @@ class Processor(object):
         first = True
         # this is a hack while using temptables
         csvhead = self.f2t[ff]
-        with open(ff,'r') as fh:
+        with open(mbfile,'r') as fh:
             for line in fh:
                 line = line.strip().encode('ascii','ignore').decode(self.enc) if PYVER3 else line.strip().decode(self.enc)
                 if first: 
@@ -563,10 +595,14 @@ class Processor(object):
                            
     def mapcolumns(self,tablename):
         '''Perform input to final column mapping'''
-        actions = ('add','drop','rename','cast')
+        actions = ('add','drop','rename','cast','primary','trans')
+        #primary key check only checks pk before structure changes, needs to check afterward
+        #if self._pktest(self.conf.database_schema, PREFIX+tablename):
+        #    actions = tuple(x for x in actions if x!='primary')
         for qlist in [self.cm.action(self.secname,tablename.lower(),adrc) for adrc in actions]: 
             for q in qlist: 
-                if q: self._attempt(q)
+                if q and (q.find('PRIMARY KEY')<0 or not self._pktest(self.conf.database_schema, PREFIX+tablename)):
+                    self._attempt(q)
                 
     def drop(self,table):
         '''Clean up any previous table instances. Doesn't work!''' 
@@ -638,8 +674,7 @@ class Meshblock(Processor):
                 self.insertshp(mblayer)
                 self.mapcolumns(tname)
                 tlist += (tname,)
-                mbhandle.Destroy()
-                
+                mbhandle.Destroy()                
             #extract the concordance csv
             elif re.match('.*\.csv$',mbfile):
                 tname = self.insertcsv(mbfile)
@@ -691,14 +726,6 @@ class Version(object):
         self.conf = conf
         self.cm = cm
         
-        global SNAP
-        if TEST:
-            self.qset = self._testquery
-            SNAP = 'snap_'
-        else:
-            self.qset = self._query
-            SNAP = ''
-        
     def setup(self):
         '''Create temp schema'''
         self.rebuild(self.conf)
@@ -717,73 +744,29 @@ class Version(object):
         Processor.attempt(self.conf, q3, select='psy')
         #self.db.disconnect()
         
-    def _pktest(self,s,t):
-        '''Check whether the table had a primary key already. ExecuteSQL returns layer if successful OR null on error/no-result'''
-        q = "select * from information_schema.table_constraints \
-             where table_schema like '{s}' \
-             and table_name like '{t}' \
-             and constraint_type like 'PRIMARY KEY'".format(s=s,t=t)
-        logger.debug('pQ2 {}'.format(q))
-        #return bool(self.db.pg_ds.ExecuteSQL(q).GetFeatureCount())
-        return Processor.attempt(self.conf, q, select='psy')
-        
-    def _testquery(self,original,snap,imported,pk,geom,srid,final):
-        '''Temp setup to create temporary tables without interfering with in-use admin_bdy tables'''
-        q = []        
-        if final:
-            q.append("select table_version.ver_apply_table_differences('{original}','{imported}','{pk}')".format(original=original,imported=imported,pk=pk))
-        else:
-            si = imported.split('.')
-            q.append('create table {snap} as select * from {orig}'.format(snap=snap,orig=original))
-            if not self._pktest(si[0],snap.split('.')[1]):
-                q.append('alter table {snap} add primary key ({pk})'.format(snap=snap,pk=pk))
-            if not self._pktest(si[0],si[1]):
-                q.append('alter table {imported} add primary key ({pk})'.format(imported=imported,pk=pk))
-            if geom and srid:
-                q.append("select UpdateGeometrySRID('{schema}','{imported}', '{geom}', {srid})".format(schema=si[0],imported=si[1],geom=geom,srid=srid))
-                q.append("update {imported} set shape = ST_Transform({geom}::geometry,{srid}::integer)".format(imported=imported,geom=geom,srid=srid))
-            #q.append("select table_version.ver_apply_table_differences('{snap}','{imported}','{pk}')".format(snap=snap,imported=imported,pk=pk))
-            #for i in q: print i
-        return q
-        
-    def _query(self,original,_,imported,pk,geom,srid,final):
+    def qset(self,original,imported,pk):
         '''Run table version and apply diffs'''
-        q = []
-        if final:
-            transaction_str = ''
-            dstr = datetime.datetime.now().isoformat()
-            transaction_str += "select table_version.ver_create_revision('DAB:{}');".format(dstr)
-            transaction_str += "select table_version.ver_apply_table_differences('{original}','{imported}','{pk}');".format(original=original,imported=imported,pk=pk)
-            transaction_str += "select table_version.ver_complete_revision();"
-            q.append(transaction_str)
-        else:
-            si = imported.split('.')
-            if not self._pktest(si[0],si[1]):
-                q.append('alter table {imported} add primary key ({pk})'.format(imported=imported,pk=pk))
-            if geom and srid:
-                q.append("select UpdateGeometrySRID('{schema}','{imported}', '{geom}', {srid})".format(schema=si[0],imported=si[1],geom=geom,srid=srid))
-                q.append("update {imported} set {geom} = ST_Transform({geom}::geometry,{srid}::integer)".format(imported=imported,geom=geom,srid=srid))
-            #q.append("select table_version.ver_apply_table_differences('{original}','{imported}','{pk}')".format(original=original,imported=imported,pk=pk))
-            #for i in q: print i
-        return q
+        q = ''
+        dstr = datetime.datetime.now().isoformat()
+        #table_version operations must be done in one active cursor
+        q += "select table_version.ver_create_revision('DAB:{}');".format(dstr)
+        q += "select table_version.ver_apply_table_differences('{original}','{imported}','{pk}');".format(original=original,imported=imported,pk=pk)
+        q += "select table_version.ver_complete_revision();"
+        return [q,]
         
-    def versiontables(self,tablelist,final=False):
+    def versiontables(self,tablelist):
         '''Build and execute the import queries for each import table'''
         for section in tablelist:
             sec, tab = section
             for t in tab:
                 t2 = self.cm.map[sec][t]['table']
                 pk = self.cm.map[sec][t]['primary']
-                geom = self.cm.map[sec][t]['geom'] if 'geom' in self.cm.map[sec][t] else None
-                srid = self.cm.map[sec][t]['srid'] if 'srid' in self.cm.map[sec][t] else None
-                snap = '{}.{}{}'.format(self.conf.database_schema,SNAP,t)
                 original = '{}.{}'.format(self.conf.database_originschema,t2)
                 imported = '{}.{}{}'.format(self.conf.database_schema,PREFIX,t)
-                for q in self.qset(original,snap,imported,pk,geom,srid,final):
+                for q in self.qset(original,imported,pk):
                     logger.debug('pQ1 {}'.format(q))
                     Processor.attempt(self.conf,q)
-                dst_t = '{}{}'.format(SNAP,t) if TEST else '{}'.format(t2)
-                if final: self.gridtables(sec,t,dst_t)
+                self.gridtables(sec,t,t2)
                     
     def gridtables(self,sec,tab,tname):
         '''Look for grid specification and grid the table if found'''
@@ -883,10 +866,10 @@ class PExpectSFTP(object):
             else:
                 raise PExpectException('Unable to access or empty directory at {}'.format(self.conf.connection_ftppath))
             localpath = '{}/{}'.format(getattr(self.conf,'{}_localpath'.format(dfile)),localfile)
-            sftp.sendline('get {}'.format(localfile))
+            sftp.sendline('get {} {}'.format(localfile,localpath))
             if sftp.expect(self.prompt,self.get_timeout) != 0:
                 raise PExpectException('Cannot retrieve file, {}/{}'.format(self.conf.connection_ftppath,localfile))
-            os.rename('./{}'.format(localfile),localpath)
+            #os.rename('./{}'.format(localfile),localpath)
         else: 
             raise PExpectException('Password authentication failed')  
         
@@ -1007,7 +990,7 @@ def oneOrNone(a,options,args):
     '''is A in args OR are none of the options in args'''
     return a in args or not any([True for i in options if i in args]) 
      
-def part1(args,v,c,m):            
+def gather(args,v,c,m):            
     '''fetch data from sources and prepare import schema'''
     logger.info("Beginning meshblock/localities file download")
     t = ()
@@ -1027,25 +1010,6 @@ def part1(args,v,c,m):
     notify(c)
 
     return t
-
-# def part2(v,t):
-#     '''map columns to final format'''
-#     logger.info ("Begining table mapping")
-#     #if not t: t = _t
-#     v.versiontables(t,final=False)
-#     ###v.teardown()
-		
-def part2(v,t):            
-    '''if data has been validated transfer to final schema'''
-    logger.info ("Begining final data import")
-    #if not t: t = _t
-    v.versiontables(t,final=False)
-    v.versiontables(t,final=True)
-    ###v.teardown()
-    
-def partX(v):
-    '''User has signalled that this data load is corrupt, so delete it'''
-    v.teardown()
     
 '''
 TODO
@@ -1088,20 +1052,18 @@ def process(args):
     with DB(c,'ogr') as ogrdb:
         SELECTION['ogr'] = ogrdb.d
         #if a 't' value is stored we dont want to pre-clean the import schema 
-        ###t = v.setup()
         aopts = [a[1] for a in OPTS]
         if 'reject' in args: 
-            partX(v)
+            v.teardown()
             return
-        #if prepare requested import files and recreate 't'
-        t = part1(args,v,c,m) if oneOrNone('load', aopts,args) else c.read('t',flush=False)
-        #if transfer requested map and transfer using current 't'
-#         if oneOrNone('map',aopts,args): 
-#             t = _t
-#             part2(v,t)
+        #if "load" requested, import files and recreate+save 'T'
+        if oneOrNone('load', aopts,args):
+            t = gather(args,v,c,m) 
+        else:
+            t = c.read('t',flush=False)
+        #if "transfer" requested read saved 'T' and transfer to dest
         if oneOrNone('transfer',aopts,args): 
-            t = _t
-            part2(v,t)
+            v.versiontables(t)
 
 if __name__ == "__main__":
     main()

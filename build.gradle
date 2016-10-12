@@ -101,6 +101,10 @@ task undeploy {
     dependsOn cargosetup, cargoUndeployRemote
 }
 
+task xdeploy {
+	dependsOn undeploy, deploy
+}
+
 repositories {
     mavenCentral()
 }

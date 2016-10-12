@@ -30,6 +30,11 @@ import java.util.Set;
 import nz.govt.linz.AdminBoundaries.DBConnection.ConnectionDefinitions;
 //import nz.govt.linz.AdminBoundaries.DBConnection.Connector;
 
+/**
+ * Connector intermediate class handles database connectivity and file read/write. Also does minimal post processing
+ * @author jramsay
+ *
+ */
 public class DABConnector {
 	
 	//private Connector connector;
@@ -93,25 +98,17 @@ public class DABConnector {
 	
 	/**
 	 * Fetches summary data from temp import schema, admin_bdys_import
-	 * @return
+	 * @return List<List<String>> representing a table
 	 */
-	public List<List<String>> getExtractSummary(String query){
+	public List<List<String>> executeQuery(String query){
 		List<List<String>> result = null;
 		//System.out.println(String.format("### %s + %s", prefix,suffix));
 		try {
 			ResultSet rs = exeQuery(query);
 			result = parseResultSet(rs);
 		}
-		//catch (PSQLException pqsle){//using drivermanager how do we catch exceptions now?}
 		catch (SQLException sqle) {
-			//Error is written to general log and result is returned
-			System.out.println("SQL error "+sqle);
-			//return the error to the user
-			result = new ArrayList<>();
-			List<String> line = new ArrayList<>();
-			line.add("SQLException");
-			line.add(sqle.toString());
-			result.add(line);
+			result = parseSQLException(sqle);
 		}
 		return result;
 	}
@@ -188,6 +185,20 @@ public class DABConnector {
 		return table;
 	}
 	
+	private List<List<String>> parseSQLException(SQLException sqle){		
+		List<List<String>> result = null;	
+		//Error is written to general log and result is returned
+		System.out.println("SQL error "+sqle);
+		//return the error to the user
+		result = new ArrayList<>();
+		List<String> line = new ArrayList<>();
+		line.add("SQLException");
+		line.add(sqle.toString());
+		result.add(line);
+		return result;
+	}
+	
+	
 	public String toString(){
 		return "DABConnector::";//+connector;
 	}
@@ -200,7 +211,7 @@ public class DABConnector {
 		DABConnector dabc = new DABConnector();
 		//System.out.println(dabc.readConfig(FILENAME));
 		//System.out.println(dabc.readProps(FILENAME));
-		System.out.println(dabc.getExtractSummary("select 1"));
+		System.out.println(dabc.executeQuery("select 1"));
 		
 
 	}

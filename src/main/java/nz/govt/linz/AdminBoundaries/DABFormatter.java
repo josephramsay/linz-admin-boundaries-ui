@@ -77,6 +77,13 @@ public class DABFormatter {
 		}
 		msg += "</ul></nav>\n";
 		return msg;
+	}	
+	
+	public String getAlternateNav(){   
+		String msg = "<nav><ul>\n";
+		msg += "<li><a href=\"sum\" class=\"b_green\">BACK</a>Return to Main page</li>\n";
+		msg += "</ul></nav>\n";
+		return msg;
 	}
 	
 	

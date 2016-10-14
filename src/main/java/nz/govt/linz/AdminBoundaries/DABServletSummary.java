@@ -74,7 +74,7 @@ public class DABServletSummary extends DABServlet {
 
 	
 	static final long serialVersionUID = 1;
-	DABConnector dabc;		
+	DABConnector2 dabc;		
 	DABFormatter dabf;
 	//ImportStatus status = ImportStatus.BLANK;
 	
@@ -93,7 +93,7 @@ public class DABServletSummary extends DABServlet {
 		super.init();
 		title = "DAB";
 		message = "Downloader for Admin Boundarys";
-		dabc = new DABConnector();
+		dabc = new DABConnector2();
 		dabf = new DABFormatter();
 		initStatus();
 
@@ -167,7 +167,7 @@ public class DABServletSummary extends DABServlet {
 		//read table diffs
 		String t1 = String.format("%s.%s", ABs, table.dst());
 		String t2 = String.format("%s.%s", ABIs, table.tmp());
-		String rec = "res(code char(1), id varchar)";
+		String rec = "res(code char(1), ref int)";
 		String query = String.format("SELECT * FROM table_version.ver_get_table_differences('%s','%s','%s') as %s",t1,t2,table.key(),rec);
 		return "<article>" + dabf.getSummaryAsTable(table.dst(),dabc.executeQuery(query)) + "</article>";
 	}

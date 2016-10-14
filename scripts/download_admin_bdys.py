@@ -278,6 +278,10 @@ class ColumnMapper(object):
     def _formqry(self,f,d):
         '''Maps variable arg list to format string'''
         return f.format(*d)
+    
+    def _replaceUnderScore(self,uscolname):
+        '''Replace underscores in column names with spaces and quote the result'''
+        return '"{}"'.format(uscolname.replace('_',' '))
         
 class DBSelectionException(Exception):pass
 class DB(object):
@@ -322,7 +326,7 @@ class DatabaseConn_psycopg2(object):
             self.pcur.execute(q)
             res = self.pcur.rowcount or None
         except psycopg2.ProgrammingError as pe: 
-            if pe.message=='no results to fetch': res = True
+            if hasattr(pe,'message') and pe.message=='no results to fetch': res = True
             else: raise 
         except Exception as e: 
             raise DatabaseConnectionException('Database query error, {}'.format(e))
@@ -477,9 +481,11 @@ class Processor(object):
             
     def query(self,schema,table,headers='',values='',op='insert'):
         '''Builds data query'''
-        h = ','.join([i.replace(' ','_') for i in headers]).lower() if is_nonstr_iter(headers) else headers
-        v = '"{}"'.format("','".join(values)) if is_nonstr_iter(values) else values
-        return self.q[op].format(schema,table,h,v).replace('"','\'')
+        #h = ','.join([i.replace(' ','_') for i in headers]).lower() if is_nonstr_iter(headers) else headers
+        h = ','.join(headers).lower() if is_nonstr_iter(headers) else headers
+        v = "'{}'".format("','".join(values)) if is_nonstr_iter(values) else values
+        #return self.q[op].format(schema,table,h,v).replace('"','\'')
+        return self.q[op].format(schema,table,h,v)
     
     def layername(self,in_layer):
         '''Returns the name of the layer that inserting a shapefile would create'''
@@ -571,13 +577,16 @@ class Processor(object):
                 line = line.strip().encode('ascii','ignore').decode(self.enc) if PYVER3 else line.strip().decode(self.enc)
                 if first: 
                     headers = [h.strip() for h in line.split(',')]
+                    createheaders   = ','.join(['"{}" VARCHAR'.format(m) if m.find(' ')>0 else '{} VARCHAR'.format(m) for m in headers])
+                    storedheaders = ','.join(['"{}" VARCHAR'.format(m) if m.find(' ')>0 else '{} VARCHAR'.format(m) for m in csvhead[1]])
+                    insertheaders   = ','.join(['"{}"'.format(m) if m.find(' ')>0 else '{}'.format(m) for m in headers])
                     findqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],op='find')
                     if not self._attempt(findqry) or self._attempt(findqry).GetNextFeature().GetFieldAsInteger(0) == 0:
                         #if import table doesnt exist, create it
-                        storedheaders = ','.join(['{} VARCHAR'.format(m.replace(' ','_')) for m in csvhead[1]])
-                        dataheaders   = ','.join(['{} VARCHAR'.format(m.replace(' ','_')) for m in headers])
-                        if storedheaders != dataheaders: logger.warn('Unexpected table column names, {}'.format(dataheaders))
-                        createqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],dataheaders,op='create')
+                        #storedheaders = ','.join(['{} VARCHAR'.format(m.replace(' ','_')) for m in csvhead[1]])
+                        #createheaders   = ','.join(['{} VARCHAR'.format(m.replace(' ','_')) for m in headers])
+                        if storedheaders != createheaders: logger.warn('Unexpected table column names, {}'.format(createheaders))
+                        createqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],createheaders,op='create')
                         self._attempt(createqry)
                     else:
                         #otherwise truncate the existing table
@@ -588,7 +597,7 @@ class Processor(object):
                     values = line.replace("'","''").split(',',len(headers)-1)
                     #if int(values[0])<47800:continue
                     if '"NULL"' in values: continue
-                    insertqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],headers,values,op='insert')
+                    insertqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],insertheaders,values,op='insert')
                     self._attempt(insertqry)
         #self.db.disconnect()            
         return csvhead[0]
@@ -601,7 +610,7 @@ class Processor(object):
         #    actions = tuple(x for x in actions if x!='primary')
         for qlist in [self.cm.action(self.secname,tablename.lower(),adrc) for adrc in actions]: 
             for q in qlist: 
-                if q and (q.find('PRIMARY KEY')<0 or not self._pktest(self.conf.database_schema, PREFIX+tablename)):
+                if q and (q.find('ADD PRIMARY KEY')<0 or not self._pktest(self.conf.database_schema, PREFIX+tablename)):
                     self._attempt(q)
                 
     def drop(self,table):

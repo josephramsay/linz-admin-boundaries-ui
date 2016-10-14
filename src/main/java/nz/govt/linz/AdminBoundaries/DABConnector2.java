@@ -15,7 +15,6 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -31,34 +30,27 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
 
-import nz.govt.linz.AdminBoundaries.DBConnection.ConnectionDefinitions;
-//import nz.govt.linz.AdminBoundaries.DBConnection.Connector;
-
 /**
  * Connector intermediate class handles database connectivity and file read/write. Also does minimal post processing
  * @author jramsay
  *
  */
-public class DABConnector {
+public class DABConnector2 {
 	
 	//private Connector connector;
-	final static String FILENAME = "postgresql.properties";//config.txt"
-	Properties props = null;
-	String prefix = "";
-	String suffix = "";
+	DataSource datasource = null;
 	
 	/**
 	 * Constructor for DAB database connector
 	 */
-	public DABConnector() {		
-		//Map<String, String> params = readParameters(FILENAME);
-		//connector = new PostgreSQLConnector();
-		//connector.init(params);		
-		props = ResourceLoader.getAsProperties(FILENAME);
-		prefix = ConnectionDefinitions.POSTGRESQL.prefix();
-		suffix = String.format("//%s:%s/%s", props.get("host"),props.get("port"),props.get("dbname"));
+	public DABConnector2() {			
+		try {
+			datasource = (DataSource) new InitialContext().lookup("java:comp/env/jdbc/linz/aims");
+		}
+		catch (NamingException ne){
+			System.out.println(ne);
+		}
 	}
-	
 	
 	/**
 	 * Reads a named properties file using resourceloader class returning a map
@@ -155,7 +147,7 @@ public class DABConnector {
 	 */
 	private ResultSet exeQuery(String query) throws SQLException {
 		ResultSet result = null;
-		try (Connection conn = DriverManager.getConnection(String.format("%s:%s",prefix,suffix),props)) {
+		try (Connection conn = datasource.getConnection()){
 			Statement stmt = conn.createStatement();
 			result = stmt.executeQuery(query);			
 		}
@@ -213,7 +205,7 @@ public class DABConnector {
 	 * @param args
 	 */
 	public static void main(String[] args){
-		DABConnector dabc = new DABConnector();
+		DABConnector2 dabc = new DABConnector2();
 		//System.out.println(dabc.readConfig(FILENAME));
 		//System.out.println(dabc.readProps(FILENAME));
 		System.out.println(dabc.executeQuery("select 1"));

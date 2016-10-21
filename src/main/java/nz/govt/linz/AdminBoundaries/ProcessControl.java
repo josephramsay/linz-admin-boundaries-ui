@@ -16,6 +16,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
+/**
+ * Class to initiate and run system processes, n this case the included python script, download_admin_bdys.py
+ * @author jramsay
+ *
+ */
 public class ProcessControl {
 	
 	//this is the path where the debian packager puts the py part of the app
@@ -43,7 +48,7 @@ public class ProcessControl {
 	
 	/**
 	 * Initialises ProcessBuilder returning output from requested script 
-	 * @param part Argument to the aims_extract.sh script indicating transfer, process or reject
+	 * @param arg Argument to the aims_extract.sh script indicating transfer, process or reject
 	 * @return
 	 */
 	public String startProcessStage(String arg){ 

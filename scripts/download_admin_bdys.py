@@ -412,9 +412,9 @@ class ConfReader(object):
     
 class ProcessorException(Exception):pass
 class Processor(object):
-    mbcc = ('OBJECTID','Meshblock','TA','TA Ward','Community Board','TA Subdivision','TA Maori_Ward','Region', \
-            'Region Constituency','Region Maori Constituency','DHB','DHB Constituency','GED 2007','MED 2007', \
-            'High Court','District Court','GED','MED','Licensing Trust Ward')
+    mbcc = ('objectid','meshblock','ta','ta ward','community board','ta subdivision','ta maori_ward','region', \
+            'region constituency','region maori constituency','dhb','dhb constituency','ged 2007','med 2007', \
+            'high court','district court','ged','med','licensing trust ward')
     #filename to table+column name translations
     f2t = {'Stats_MB_WKT.csv':['meshblock','<todo create columns>'], \
            'Stats_Meshblock_concordance.csv':['meshblock_concordance',mbcc], \
@@ -433,7 +433,10 @@ class Processor(object):
          'create':'create table {}.{} ({})',
          'insert':'insert into {}.{} ({}) values ({})',
          'trunc':'truncate table {}.{}',
-         'drop':'drop table if exists {}.{}'}
+         'drop':'drop table if exists {}.{}',
+         'permit_t':'grant select on table {}.{} to {}',
+         'permit_s':'grant usage on schema {} to {}'
+    }
     
     enc = 'utf-8-sig'
     
@@ -576,7 +579,7 @@ class Processor(object):
             for line in fh:
                 line = line.strip().encode('ascii','ignore').decode(self.enc) if PYVER3 else line.strip().decode(self.enc)
                 if first: 
-                    headers = [h.strip() for h in line.split(',')]
+                    headers = [h.strip().lower() for h in line.split(',')]
                     createheaders   = ','.join(['"{}" VARCHAR'.format(m) if m.find(' ')>0 else '{} VARCHAR'.format(m) for m in headers])
                     storedheaders = ','.join(['"{}" VARCHAR'.format(m) if m.find(' ')>0 else '{} VARCHAR'.format(m) for m in csvhead[1]])
                     insertheaders   = ','.join(['"{}"'.format(m) if m.find(' ')>0 else '{}'.format(m) for m in headers])
@@ -612,6 +615,12 @@ class Processor(object):
             for q in qlist: 
                 if q and (q.find('ADD PRIMARY KEY')<0 or not self._pktest(self.conf.database_schema, PREFIX+tablename)):
                     self._attempt(q)
+                    
+    def assignperms(self,tablename):
+        '''Give select-on-table and usage-on-schema for all named users'''
+        for user in self.cm.map[self.secname][tablename]['permission']:
+            self._attempt(self.q['permit_t'].format(self.conf.database_schema,PREFIX+tablename,user))
+            self._attempt(self.q['permit_s'].format(self.conf.database_schema,user))
                 
     def drop(self,table):
         '''Clean up any previous table instances. Doesn't work!''' 
@@ -682,12 +691,14 @@ class Meshblock(Processor):
                 #self.deletelyr(tname)
                 self.insertshp(mblayer)
                 self.mapcolumns(tname)
+                self.assignperms(tname)
                 tlist += (tname,)
                 mbhandle.Destroy()                
             #extract the concordance csv
             elif re.match('.*\.csv$',mbfile):
                 tname = self.insertcsv(mbfile)
                 self.mapcolumns(tname)
+                self.assignperms(tname)
                 tlist += (tname,)
             
             self.delete(mbfile)
@@ -719,6 +730,7 @@ class NZLocalities(Processor):
             tname = self.layername(nzlayer)
             self.insertshp(nzlayer)
             self.mapcolumns(tname)
+            self.assignperms(tname)
             tlist += (tname,)
             ds.Destroy()
         else:

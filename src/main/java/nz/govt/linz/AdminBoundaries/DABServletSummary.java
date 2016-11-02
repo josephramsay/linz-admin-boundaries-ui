@@ -17,160 +17,53 @@ import java.util.*;
 import javax.servlet.*;
 import javax.servlet.http.*;
 
+import nz.govt.linz.AdminBoundaries.DABContainerComp.TableInfo;
+import nz.govt.linz.AdminBoundaries.DABContainerComp.ImportStatus;
+
+import static nz.govt.linz.AdminBoundaries.DABFormatter.BRED;
+import static nz.govt.linz.AdminBoundaries.DABFormatter.BGRN;
+//import static nz.govt.linz.AdminBoundaries.DABFormatter.BYLW;
 
 public class DABServletSummary extends DABServlet {
-	private static String DEF_TABLE = "<table><caption>no table</caption>"
-			+"<thead><tr><th><i>dabs</i></th></tr></thead>"
-			+"<tbody><tr><td><i>data unavailable</i></td></tr></tbody></table>";
-	
-	/**
-	 * Enum representing stages of import
-	 * @author jramsay
-	 */
-	public enum ImportStatus {BLANK,LOADED,COMPLETE}
-	
-	/**
-	 * Inner Enumeration matching imported tables to the final reference tables in the admni_bdys schema
-	 * @author jramsay
-	 */
-	public enum TableMapping {
-		MB("meshblock","statsnz_meshblock","code"),
-		MBC("meshblock_concordance","meshblock_concordance","meshblock"),
-		NZL("nz_locality","nz_locality","id"),
-	    TA("territorial_authority","statsnz_ta","ogc_fid");
-		
-		private final String dst;
-		private final String tmp;		
-		private final String key;	
-
-		private TableMapping(String dst, String tmp, String key){
-				this.dst = dst;
-				this.tmp = "temp_"+tmp;
-				this.key = key;
-		}
-		public String dst(){return dst;}
-		public String tmp(){return tmp;}
-		public String key(){return key;}
-		//Get status message for this table
-		public String ttl(ImportStatus status){
-			switch (status) {
-				case BLANK: return "Import: "+tmp+"("+key+") &larr; SFTP";
-				case LOADED: return "Transfer: "+dst+"("+key+") &larr; "+tmp+"("+key+")";
-				case COMPLETE: return "Complete: "+dst+"("+key+") == "+tmp+"("+key+")";
-				default: return "Load: "+dst+" Unavailable";
-			}
-		}
-		//get table name to display on right of summary
-		public String dsp(ImportStatus status){
-			switch (status) {
-				case BLANK: return DEF_TABLE;
-				case LOADED: return tmp();
-				case COMPLETE: return tmp();
-				default: return "";
-			} 
-
-		}
-	}
 
 	
 	static final long serialVersionUID = 1;
-	DABConnector2 dabc;		
-	DABFormatter dabf;
-	//ImportStatus status = ImportStatus.BLANK;
 	
-	Map<TableMapping,ImportStatus> status = new HashMap<>();
-	ImportStatus lowstatus = ImportStatus.BLANK;
+	/** Database connector and query wrapper */
+	private DABConnector dabc;		
+	/** Formatter class for converting data-maps to html strings */
+	private DABFormatter dabf;
+	/** Class holding info on tables for comparson */
+	private DABContainerComp ccomp;
 	
-	private final static String ABs = "admin_bdys";
-    private final static String ABIs = "admin_bdys_import";
-
-	public String docType = "<!doctype html public \"-//w3c//dtd html 4.0 transitional//en\">\n";
+	/** Map of the status for each table pair */ 
+	private Map<TableInfo,ImportStatus> status = new HashMap<>();
+	
+	/** Lowest status value across tables for button colouring*/
+	private ImportStatus lowstatus = ImportStatus.BLANK;
 	
 	/**
 	 * Initialise servlet class setting status and getting formatter + connector instances
 	 */
 	public void init() throws ServletException {
 		super.init();
-		title = "DAB";
 		message = "Downloader for Admin Boundarys";
-		dabc = new DABConnector2();
+		dabc = new DABConnector();
 		dabf = new DABFormatter();
-		initStatus();
-
+		ccomp = new DABContainerComp();
+		//updateStatus();
 	}
 	
 	/**
-	 * Initialises the status array reading table availability
+	 * Initialises the status array, reading table availability
 	 */
-	private void initStatus(){
-		for (TableMapping tm : TableMapping.values()){
-			status.put(tm, getStatus(tm));
+	private void updateStatus(){
+		for (TableInfo ti : ccomp.values()){
+			status.put(ti, dabc.getStatus(ti));
 		}
 		lowstatus = status.values().stream().sorted().findFirst().get();
 	}
 
-	/**
-	 * Determine state of database by testing for tables temp_X, snap_X and dst=snap
-	 * @return ImportStatus for selected table
-	 * TODO rewrite test for mapped status reflecting geo ops instead of snap build 
-	 */
-	public ImportStatus getStatus(TableMapping tm){
-		//check that imported temp files exist
-		String exist_query = String.format("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='%s' AND table_name='%s')",ABIs,tm.tmp());
-		//System.out.println("1TQ "+exist_query+" / "+dabc.executeTFQuery(exist_query));
-		if (dabc.executeTFQuery(exist_query)){
-			//get original column names (so column order isn't considered in comparison
-			String col_query = String.format("select array_to_string(array_agg(column_name::text),',') " +
-					"from information_schema.columns " +
-					"where table_schema='%s' " +
-					"and table_name='%s'", ABs, tm.dst());
-			String columns = dabc.executeSTRQuery(col_query);
-			//System.out.println("2CQ "+col_query+" / "+columns);
-			//tmp files match dst files
-			String tt = String.format("SELECT %s FROM %s.%s", columns, ABIs, tm.tmp());
-			String dt = String.format("SELECT %s FROM %s.%s", columns, ABs,  tm.dst());
-			String cmp_query = String.format("SELECT NOT EXISTS (%s EXCEPT %s UNION %s EXCEPT %s)",tt,dt,dt,tt);
-			//System.out.println("3CQ "+cmp_query+" / "+dabc.executeTFQuery(cmp_query));
-			if (dabc.executeTFQuery(cmp_query)){
-				return ImportStatus.COMPLETE;
-			}
-			return ImportStatus.LOADED;
-		}
-		return ImportStatus.BLANK;
-	}
-	
-	
-	
-	/**
-	 * Return htmltable containing table row count 
-	 * @param schema
-	 * @param table
-	 * @return
-	 */
-	public String readChangesetSummary(String schema, String table){
-		//read admin_bdys diffs
-		if (table == null){
-			return DEF_TABLE;
-		}
-		else {
-			String query = String.format("SELECT COUNT(*) count FROM %s.%s",schema,table);
-			return dabf.getSummaryAsTable(table,dabc.executeQuery(query));
-		}
-	}
-	
-	/**
-	 * Use table_version get_diff func to return differences between the temp and destination tables
-	 * @param table
-	 * @return
-	 */
-	public String compareTables(TableMapping table){
-		//read table diffs
-		String t1 = String.format("%s.%s", ABs, table.dst());
-		String t2 = String.format("%s.%s", ABIs, table.tmp());
-		String rec = "res(code char(1), ref int)";
-		String query = String.format("SELECT * FROM table_version.ver_get_table_differences('%s','%s','%s') as %s",t1,t2,table.key(),rec);
-		return "<article>" + dabf.getSummaryAsTable(table.dst(),dabc.executeQuery(query)) + "</article>";
-	}
 	
 	/**
 	 * Starts a new process controller returning the output from the executed script
@@ -183,6 +76,11 @@ public class DABServletSummary extends DABServlet {
 		return pc.startProcessStage(action);
 	}
 	
+	/**
+	 * Servlet doGet
+	 * @param request
+	 * @param response
+	 */
 	public void doGet(HttpServletRequest request, HttpServletResponse response)
 		    throws IOException, ServletException {
 		String summarytable = "";
@@ -197,8 +95,9 @@ public class DABServletSummary extends DABServlet {
 
         Date created = new Date(session.getCreationTime());
         Date accessed = new Date(session.getLastAccessedTime());
-        
-        String user = request.getParameter("user");
+        String user = (String) request.getAttribute("currentSessionUser");
+
+        //String user = request.getParameter("user");
         String compare = request.getParameter("compare");
         String action = request.getParameter("action");
         
@@ -211,24 +110,26 @@ public class DABServletSummary extends DABServlet {
         
         if (compare != null) {
         	//s = per table compare, a = 1
-        	TableMapping tm = TableMapping.valueOf(compare.toUpperCase());
+        	TableInfo ti = ccomp.keyOf(compare.toUpperCase());
         	info.put("COMPARE",compare);
-        	info.put("RESULT",tm.dst()+" &larr; "+tm.tmp());
-        	summarytable = compareTables(tm);
+        	info.put("RESULT",ti.dst()+" &larr; "+ti.tmp());
+        	summarytable = dabc.compareTableData(ti);
         	accdectable = dabf.getAlternateNav();
         }
         else if (action != null) {
         	//s = summary, a = 1
             info.put("ACTION",action);
             info.put("RESULT",readProcessOutput(action));
+            updateStatus();
             summarytable = getFullSummary();
             accdectable = dabf.getAcceptDeclineNav(lowstatus.ordinal());
         }
         else {
+        	updateStatus();
             switch (lowstatus){
             case BLANK: 
             	//show dst table  - <blank>
-            	summarytable = DEF_TABLE;
+            	summarytable = ccomp.DEF_TABLE;
             case LOADED:
             case COMPLETE:
             	//show counts match
@@ -236,62 +137,62 @@ public class DABServletSummary extends DABServlet {
             default:
             }
             accdectable = dabf.getAcceptDeclineNav(lowstatus.ordinal());
-         
         }
         
-        infomessage = getInfoMessage(info);
+        infomessage = dabf.getInfoMessage(info);
         
         //OUTPUT
-        
-        out.println(docType +
-                "<html>\n<head>\n" +
-                getHead() +
-                "</head>\n<body>\n" +
-                //"<img src=\"loading.gif\" id=\"loader\" align=\"middle\" height=\"100\" width=\"100\"/>" +
-                "<div id=\"container\">\n" +
-                getBodyHeader() +
-                getBodyTitle() +
-                infomessage +
-                summarytable +
-                accdectable +
-                getBodyFooter(created,accessed,user) +
-                "</div>\n</body>\n</html>");
-
-
-	}
-	
-	private String getFullSummary(){
-		return String.join(""
-				,getSummarySection(TableMapping.MB)
-				,getSummarySection(TableMapping.MBC)
-				,getSummarySection(TableMapping.NZL)
-				,getSummarySection(TableMapping.TA)
-			);
+        out.println(getHTMLWrapper(                
+        		getHead(),
+                getBodyHeader(),
+                getBodyTitle(),
+                getBodyContent(infomessage,summarytable,accdectable),
+                getBodyFooter(created,accessed,user)
+                )
+        	);
 	}
 	
 	/**
-	 * Builds table comparison section for a particular tablemapping type
-	 * @param tablemapping
+	 * Get all table side-by-side comparison articles
 	 * @return
 	 */
-	private String getSummarySection(TableMapping tablemapping){
-		ImportStatus is = status.get(tablemapping);
-		String b_colour = "b_green";
+	private String getFullSummary(){
+		String res = "";
+		for (String tm_str : ccomp.TABV.keySet()){
+			res = res.concat(getSummarySection(ccomp.valueOf(tm_str)));
+		}
+		return res;
+		
+	}
+	
+	/**
+	 * Builds table comparison article for a particular tableinfo type
+	 * @param ti
+	 * @return
+	 */
+	private String getSummarySection(TableInfo ti){
+		ImportStatus is = status.get(ti);
+		String b_col,href;
 		if (is == ImportStatus.BLANK){
-			b_colour = "b_red";
+			b_col = BRED;
+			href = "/ab";
+		}
+		else {
+			b_col = BGRN;
+			href = "sum?compare="+ti.abv();
 		}
 		String detail = String.join("\n"
 				,"<section class=\"detail\">"
-				,"<p><a href=\"sum?compare="+tablemapping.toString()+"\" class=\""+b_colour+"\">Compare "+tablemapping.toString()+" Tables</a>"
-				,tablemapping.ttl(is)+"</p>"
+				,"<p><a href=\"" + href + "\" class=\""+b_col+"\">Compare "+ti.abv().toUpperCase()+" Tables</a>"
+				,ti.ttl(is)+"</p>"
 				,"</section>\n");
 	    String left = String.join("\n"
 	    		,"<section class=\"box\">"
-	    		,readChangesetSummary(ABs,tablemapping.dst())
+	    		,dabc.compareTableCount(ABs,ti.dst())
 	    		,"</section>\n");
 	    String right = String.join("\n"
 	    	    ,"<section class=\"box\">"
-	    	    ,is == ImportStatus.BLANK ? tablemapping.dsp(is) : readChangesetSummary(ABIs,tablemapping.dsp(is))
+	    	    ,is == ImportStatus.BLANK ? ti.dsp(is) : dabc.compareTableCount(ABIs,ti.dsp(is))
 	    	    ,"</section>\n");
 	    
 	    return "<article>\n" + left + right + detail + "</article>\n";

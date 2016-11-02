@@ -114,6 +114,9 @@ OPTS = [('1. Load - Copy AB files from Servers','load',0),
 #name of config file
 CONFIG = 'download_admin_bdys.ini'
 
+#max number of retries in recursive loop (insertshp in this case
+MAX_RETRY = 10
+
 if PYVER3:
     def is_nonstr_iter(v):
         if isinstance(v, str):
@@ -189,10 +192,10 @@ def setupLogging(lf='DEBUG',ll=logging.DEBUG,ff=1):
     log = logging.getLogger(lf)
     log.setLevel(ll)
     
-    path = os.path.normpath(os.path.join(os.path.dirname(__file__), "../log/"))
-    if not os.path.exists(path):
-        os.mkdir(path)
-    df = os.path.join(path,lf.lower()+'.log')
+    #path = os.path.normpath(os.path.join(os.path.dirname(__file__), "../log/"))
+    #if not os.path.exists(path):
+    #    os.mkdir(path)
+    df = os.path.join(os.path.dirname(__file__),lf.lower()+'.log')
     
     fh = logging.FileHandler(df,'w')
     fh.setLevel(logging.DEBUG)
@@ -266,7 +269,7 @@ class ColumnMapper(object):
         elif action == 'cast': queries.append(self.dra[action].format(schema=self.schema,table=ptable,cast=args['cast'],type=args['type']))
         elif action == 'trans': 
             g = self.map[section][table]['geom']
-            s = self.map[section][table]['srid']
+            s = self.map[section][table]['srid'] #4167
             queries.append(self.dra['srid'].format(schema=self.schema,table=ptable,geom=g,srid=s))
             queries.append(self.dra['trans'].format(schema=self.schema,table=ptable,geom=g,srid=s))
         elif action == 'primary':
@@ -293,7 +296,8 @@ class DB(object):
         elif drv == 'psy':
             self.d = DatabaseConn_psycopg2(self.conf)
             self.d.connect()
-        else:raise DBSelectionException("Choose DB using 'ogr' or 'psy'")
+        else: 
+            raise DBSelectionException("Choose DB using 'ogr' or 'psy'")
 
     def get(self,q):
         return bool(self.d.execute_query(q))
@@ -412,9 +416,9 @@ class ConfReader(object):
     
 class ProcessorException(Exception):pass
 class Processor(object):
-    mbcc = ('OBJECTID','Meshblock','TA','TA Ward','Community Board','TA Subdivision','TA Maori_Ward','Region', \
-            'Region Constituency','Region Maori Constituency','DHB','DHB Constituency','GED 2007','MED 2007', \
-            'High Court','District Court','GED','MED','Licensing Trust Ward')
+    mbcc = ('objectid','meshblock','ta','ta ward','community board','ta subdivision','ta maori_ward','region', \
+            'region constituency','region maori constituency','dhb','dhb constituency','ged 2007','med 2007', \
+            'high court','district court','ged','med','licensing trust ward')
     #filename to table+column name translations
     f2t = {'Stats_MB_WKT.csv':['meshblock','<todo create columns>'], \
            'Stats_Meshblock_concordance.csv':['meshblock_concordance',mbcc], \
@@ -433,7 +437,10 @@ class Processor(object):
          'create':'create table {}.{} ({})',
          'insert':'insert into {}.{} ({}) values ({})',
          'trunc':'truncate table {}.{}',
-         'drop':'drop table if exists {}.{}'}
+         'drop':'drop table if exists {}.{}',
+         'permit_t':'grant select on table {}.{} to {}',
+         'permit_s':'grant usage on schema {} to {}'
+    }
     
     enc = 'utf-8-sig'
     
@@ -453,7 +460,7 @@ class Processor(object):
              and constraint_type like 'PRIMARY KEY'".format(s=s,t=t)
         logger.debug('pQ2 {}'.format(q))
         #return bool(self.db.pg_ds.ExecuteSQL(q).GetFeatureCount())
-        return Processor.attempt(self.conf, q, select='psy')
+        return Processor.attempt(self.conf, q, driver_type='psy')
 
     def extract(self,file):
         '''Takes a zip path/filename input and returns the path/names of any unzipped files'''
@@ -497,7 +504,7 @@ class Processor(object):
         #self.db.pg_ds.DeleteLayer(dlayer.GetName())
         self.db.pg_ds.DeleteLayer('{}.{}{}'.format(self.conf.database_schema,PREFIX,tname))
         
-    def insertshp(self,in_layer):
+    def insertshp(self,in_layer,retry=0):
         if not in_layer: raise ProcessorException('Attempt to process Empty Datasource')
         in_name,out_name = None,None
 
@@ -528,8 +535,8 @@ class Processor(object):
             #Version.rebuild(self.conf) If a problem occurs any previously created tables are deleted
             logger.warn('Error creating layer {}, drop and rebuild. {}'.format(out_name,r))
             q1 = 'drop table if exists {} cascade'.format(out_name)
-            Processor.attempt(self.conf, q1, select='psy')
-            return self.insertshp(in_layer)
+            Processor.attempt(self.conf, q1, driver_type='psy')
+            return self.insertshp(in_layer,retry+1) if retry<10 else None
         except Exception as e:
             logger.fatal('Can not create {} output table. {}'.format(out_name,e))
             raise
@@ -543,7 +550,11 @@ class Processor(object):
             while in_feat:
                 out_feat = ogr.Feature(out_ldef)
                 for i in range(0, out_ldef.GetFieldCount()):
-                    out_feat.SetField(out_ldef.GetFieldDefn(i).GetNameRef(), in_feat.GetField(i))
+                    value = in_feat.GetField(i)
+                    if value == None:
+                        out_feat.UnsetField(out_ldef.GetFieldDefn(i).GetNameRef())
+                    else:
+                        out_feat.SetField(out_ldef.GetFieldDefn(i).GetNameRef(), value)
                 geom = in_feat.GetGeometryRef()
                 #1. fix_esri_polygon (no longer needed?)
                 #geom = fix_esri_polyon(geom)
@@ -576,7 +587,7 @@ class Processor(object):
             for line in fh:
                 line = line.strip().encode('ascii','ignore').decode(self.enc) if PYVER3 else line.strip().decode(self.enc)
                 if first: 
-                    headers = [h.strip() for h in line.split(',')]
+                    headers = [h.strip().lower() for h in line.split(',')]
                     createheaders   = ','.join(['"{}" VARCHAR'.format(m) if m.find(' ')>0 else '{} VARCHAR'.format(m) for m in headers])
                     storedheaders = ','.join(['"{}" VARCHAR'.format(m) if m.find(' ')>0 else '{} VARCHAR'.format(m) for m in csvhead[1]])
                     insertheaders   = ','.join(['"{}"'.format(m) if m.find(' ')>0 else '{}'.format(m) for m in headers])
@@ -612,6 +623,12 @@ class Processor(object):
             for q in qlist: 
                 if q and (q.find('ADD PRIMARY KEY')<0 or not self._pktest(self.conf.database_schema, PREFIX+tablename)):
                     self._attempt(q)
+                    
+    def assignperms(self,tablename):
+        '''Give select-on-table and usage-on-schema for all named users'''
+        for user in self.cm.map[self.secname][tablename]['permission']:
+            self._attempt(self.q['permit_t'].format(self.conf.database_schema,PREFIX+tablename,user))
+            self._attempt(self.q['permit_s'].format(self.conf.database_schema,user))
                 
     def drop(self,table):
         '''Clean up any previous table instances. Doesn't work!''' 
@@ -622,24 +639,27 @@ class Processor(object):
         Processor.attempt(self.conf,q)
         
     @staticmethod
-    def attempt(conf,q,select='ogr',depth=DEPTH,r=None):
+    def attempt(conf,q,driver_type='ogr',depth=0,r=None):
         '''Attempt connection using ogr or psycopg drivers creating temp connection if conn object not stored'''
         m = None
-        while depth>0:
+        while depth<DEPTH:
             try:
+                logger.info('{} <- {}'.format(driver_type,q))
                 #if using active DB instance 
-                if SELECTION[select]:
-                    m = SELECTION[select].execute_query(q)
+                if SELECTION[driver_type]:
+                    m = SELECTION[driver_type].execute_query(q)
                     return m
                 #otherwise setup/delete temporary connection
                 else:
-                    with DB(conf,select) as conn:
+                    with DB(conf,driver_type) as conn:
                         m = conn.get(q)
                         return m
             except RuntimeError as r:
-                logger.error('Attempt {} using {} failed, {}'.format(DEPTH-depth+1,select,m or r))
+                logger.error('Attempt {} using {} failed, {}'.format(depth,driver_type,m or r))
                 #if re.search('table_version.ver_apply_table_differences',q) and Processor.nonOGR(conf,q,depth-1): return
-                return Processor.attempt(conf, q, Processor._next(select), depth-1,r)
+                rv = Processor.attempt(conf, q, Processor._next(driver_type), depth+1,r)
+                logger.debug('Success {}'.format(rv))
+                return rv
         if r: raise r
         
     @staticmethod
@@ -682,12 +702,14 @@ class Meshblock(Processor):
                 #self.deletelyr(tname)
                 self.insertshp(mblayer)
                 self.mapcolumns(tname)
+                self.assignperms(tname)
                 tlist += (tname,)
                 mbhandle.Destroy()                
             #extract the concordance csv
             elif re.match('.*\.csv$',mbfile):
                 tname = self.insertcsv(mbfile)
                 self.mapcolumns(tname)
+                self.assignperms(tname)
                 tlist += (tname,)
             
             self.delete(mbfile)
@@ -719,6 +741,7 @@ class NZLocalities(Processor):
             tname = self.layername(nzlayer)
             self.insertshp(nzlayer)
             self.mapcolumns(tname)
+            self.assignperms(tname)
             tlist += (tname,)
             ds.Destroy()
         else:
@@ -744,13 +767,13 @@ class Version(object):
         '''Drop and create import schema for fresh import'''         
         q1 = 'drop schema if exists {} cascade'.format(conf.database_schema)
         q2 = 'create schema {}'.format(conf.database_schema)
-        Processor.attempt(conf, q1, select='psy')
-        Processor.attempt(conf, q2, select='psy')
+        Processor.attempt(conf, q1, driver_type='psy')
+        Processor.attempt(conf, q2, driver_type='psy')
         
     def teardown(self):
         '''drop temp schema'''
         q3 = 'drop schema if exists {} cascade'.format(self.conf.database_schema)
-        Processor.attempt(self.conf, q3, select='psy')
+        Processor.attempt(self.conf, q3, driver_type='psy')
         #self.db.disconnect()
         
     def qset(self,original,imported,pk):
@@ -1073,6 +1096,8 @@ def process(args):
         #if "transfer" requested read saved 'T' and transfer to dest
         if oneOrNone('transfer',aopts,args): 
             v.versiontables(t)
+        if oneOrNone('notify',aopts,args): 
+            notify(c)
 
 if __name__ == "__main__":
     main()

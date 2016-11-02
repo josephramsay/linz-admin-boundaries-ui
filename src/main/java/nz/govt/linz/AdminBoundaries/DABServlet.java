@@ -1,6 +1,8 @@
 package nz.govt.linz.AdminBoundaries;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 /**
  * AdminBoundaries
@@ -23,12 +25,22 @@ public class DABServlet extends HttpServlet {
 	protected String message;
 	protected String title;	
 	protected String description;	
+	public String hostname;
 	
 	public String docType = "<!doctype html public \"-//w3c//dtd html 4.0 transitional//en\">\n";
 	
+	protected final static String ABs = "admin_bdys";
+    protected final static String ABIs = "admin_bdys_import";
+
 	public void init() throws ServletException {
-		title = "DAB";
-		message = "Downloader for Admin Boundaries";
+		try {
+			hostname = InetAddress.getLocalHost().getHostName();
+		} catch (UnknownHostException uhe) {
+			System.out.println("Cannot get Server hostname. "+uhe);
+			hostname = "___";
+		}
+		title = "DAB."+hostname.substring(0, 3);
+		message = "Admin Boundaries application";
 		description = "The downloader interface queries the four destination admin boundary tables comparing them against their temporary source "
 				+ "counterparts. Each table-set can be in one of three states, Vacant, Loaded or Transferred. If a table-set is Vacant no temporary "
 				+ "tables exist and the import tables must be populated from file.\n"
@@ -42,6 +54,16 @@ public class DABServlet extends HttpServlet {
 				+ "LOAD - Load import tables from file\n"
 				+ "TRANSFER - Transfer import tables to destination tables.\n"
 				+ "REJECT - Delete import tables.\n";
+	}
+	
+	
+	protected String getHTMLWrapper(String... values){
+		StringBuilder sb = new StringBuilder();
+		sb.append(docType);
+		sb.append("<html>\n");
+		for (String s : values){sb.append(s);}
+		sb.append("</html>");
+		return sb.toString();
 	}
 	
 	protected String getLoading(){
@@ -58,25 +80,42 @@ public class DABServlet extends HttpServlet {
 			
 	}
 	
+	protected String getFavIcon(){return "<link rel=\"icon\" type=\"image/png\" href=\"/ab/linz.dab.png\"/>";}
+	protected String getScript(){return "<script src=\"https://code.jquery.com/jquery-3.1.1.js\" type=\"text/javascript\"></script>";}
+	protected String getLoaderDiv(){return "<div id=\"loader\"></div>";}
+	protected String getLoadScript(){return "<script>$(window).load(function(){$(\"#loader\").fadeOut(\"slow\");});</script>";}
+	
 	protected String getHead(){
 		return String.join("\n"
+				,"<head profile=\"http://www.w3.org/2005/10/profile\">"
 				,"<meta charset=\"utf-8\"/>" 
 				,"<link href=\"main.css\" rel=\"stylesheet\" type=\"text/css\"/>"
 				,"<title>",title,"</title>"
-				,getLoading());
+				,getScript()
+				,getLoadScript()
+				,getFavIcon()
+				,"</head>");
 	}
 	
+	protected String getBodyHeader(){
+		return String.join("\n"
+			,"<body>"
+			,getLoaderDiv()
+			,"<!-- <div id=\"container\"> -->"
+			,"<header>"
+	    	,"<img src=\"http://www.linz.govt.nz/sites/all/themes/linz_osi/images/logo/logo-linz.png\">\n"
+	    	,"</header>\n");
+	}
 	
 	protected String getBodyTitle(){
 		return String.join("\n","<h1>",message,"</h1>","<p>",description.replace("\n","</br>\n"),"</p>");
 	}
 	
-	protected String getBodyHeader(){
-		return String.join("\n"
-			,"<header>"
-	    	,"<img src=\"http://www.linz.govt.nz/sites/all/themes/linz_osi/images/logo/logo-linz.png\">\n"
-	    	,"</header>\n");
-	}	
+	protected String getBodyContent(String... values){
+		StringBuilder sb = new StringBuilder();
+		for (String s : values){sb.append(s);}
+		return sb.toString();
+	}
 	
 	protected String getBodyFooter(Date created, Date accessed, String user){
 		return String.join("\n"
@@ -84,27 +123,10 @@ public class DABServlet extends HttpServlet {
 				,"<li>Created : ",created.toString(),"</li>"
 				,"<li>Accessed : ",accessed.toString(),"</li>"
 				,"<li>User : ",user,"</li>"
-		    	,"</ul></footer>\n");
-		}
-	
-	
-	/**
-	 * Formats a set of key/val pairs into an itemised list 
-	 * @param kv
-	 * @return
-	 */
-	protected String getInfoMessage(Map<String,String> kv){
-		String li_str = "";
-		if (kv.size()>0){
-			for (String k : kv.keySet()){
-				li_str += "<li><b>"+k+"</b> : "+kv.get(k)+"</li>\n";
-			}
-			return String.join("\n","<article>\n<ul>",li_str,"</ul>\n</article>\n");
-		}
-		else {
-			return "";
-		}
-	}  
+		    	,"</ul></footer>"
+		    	,"<!-- </div> -->"
+		    	,"</body>\n");
+	}
 	
 	/**
 	 * Redirect post requests to get handler

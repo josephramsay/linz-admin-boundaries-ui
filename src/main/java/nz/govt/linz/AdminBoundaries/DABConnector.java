@@ -10,29 +10,24 @@ package nz.govt.linz.AdminBoundaries;
  * LICENSE file for more information.
  */
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
 
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
 
-import nz.govt.linz.AdminBoundaries.DBConnection.ConnectionDefinitions;
-//import nz.govt.linz.AdminBoundaries.DBConnection.Connector;
+
+import static nz.govt.linz.AdminBoundaries.DABServlet.ABs;
+import static nz.govt.linz.AdminBoundaries.DABServlet.ABIs;
+
+import nz.govt.linz.AdminBoundaries.DABContainerComp.ImportStatus;
+import nz.govt.linz.AdminBoundaries.DABContainerComp.TableInfo;
 
 /**
  * Connector intermediate class handles database connectivity and file read/write. Also does minimal post processing
@@ -42,93 +37,46 @@ import nz.govt.linz.AdminBoundaries.DBConnection.ConnectionDefinitions;
 public class DABConnector {
 	
 	//private Connector connector;
-	final static String FILENAME = "postgresql.properties";//config.txt"
-	Properties props = null;
-	String prefix = "";
-	String suffix = "";
+	DataSource datasource = null;
 	
 	/**
 	 * Constructor for DAB database connector
 	 */
-	public DABConnector() {		
-		//Map<String, String> params = readParameters(FILENAME);
-		//connector = new PostgreSQLConnector();
-		//connector.init(params);		
-		props = ResourceLoader.getAsProperties(FILENAME);
-		prefix = ConnectionDefinitions.POSTGRESQL.prefix();
-		suffix = String.format("//%s:%s/%s", props.get("host"),props.get("port"),props.get("dbname"));
-	}
-	
-	
-	/**
-	 * Reads a named properties file using resourceloader class returning a map
-	 * @param fname
-	 * @return
-	 */
-	public Map<String,String> readParameters(String fname){
-		Map<String, String> params = new HashMap<>();
-		Properties prop = ResourceLoader.getAsProperties(fname);
-		Set<String> propnames = prop.stringPropertyNames();
-		for (String p : propnames){
-			params.put(p, prop.getProperty(p));
+	public DABConnector() {			
+		try {
+			datasource = (DataSource) new InitialContext().lookup("java:comp/env/jdbc/linz/aims");
 		}
-		return params;
-	}	
-	
-	/**
-	 * readConfig reads configproperties-like flat file 
-	 * @param fname
-	 * @return
-	 */
-	public Map<String,String> readConfig(String fname){
-		String delim = "[=:]";
-		Map<String, String> params = new HashMap<>();
-		try(BufferedReader br = new BufferedReader(new FileReader(fname))) {
-		    String line = br.readLine();
-		    while (line != null) {
-		    	String[] kv = line.split(delim);
-		        params.put(kv[0], kv[1]);
-		        line = br.readLine();
-		    }
-		}		
-		catch (FileNotFoundException fnfe){
-			fnfe.printStackTrace();
+		catch (NamingException ne){
+			System.out.println("Cannot locate datasource. "+ne);
 		}
-		catch (IOException ioe){
-			ioe.printStackTrace();
-		}
-
-		return params;
 	}
 	
 	/**
 	 * Fetches summary data from temp import schema, admin_bdys_import
-	 * @return List<List<String>> representing a table
+	 * @return {@codeList<List<String>> representing a MxN data table}
 	 */
 	public List<List<String>> executeQuery(String query){
 		List<List<String>> result = null;
-		//System.out.println(String.format("### %s + %s", prefix,suffix));
+		//System.out.println(String.format("### QRY ### %s", query));
 		try {
 			ResultSet rs = exeQuery(query);
 			result = parseResultSet(rs);
 		}
 		catch (SQLException sqle) {
+			//System.out.println(String.format("### ERR ### %s", sqle));
 			result = parseSQLException(sqle);
 		}
 		return result;
 	}
-	
-	//TODO something less ugly
+
 	public boolean executeTFQuery(String query){
 		boolean result = false;
 		try {
 			ResultSet rs = exeQuery(query);
-			if (rs.next()){
-				result = rs.getBoolean(1);
-			}
+			if (rs.next()){ result = rs.getBoolean(1); }
 		}
 		catch (SQLException sqle) {
-			System.out.println("SQLError "+sqle);
+			System.out.println("SQLError TFQ "+sqle+"\n"+query);
 		}
 		return result;
 	}		
@@ -137,15 +85,14 @@ public class DABConnector {
 		String result = "";
 		try {
 			ResultSet rs = exeQuery(query);
-			if (rs.next()){
-				result = rs.getString(1);
-			}
+			if (rs.next()){ result = rs.getString(1); }
 		}
 		catch (SQLException sqle) {
-			System.out.println("SQLError "+sqle);
+			System.out.println("SQLError STQ "+sqle+"\n"+query);
 		}
 		return result;
-	}	
+	}
+
 	
 	/**
 	 * Local query wrapper
@@ -155,15 +102,13 @@ public class DABConnector {
 	 */
 	private ResultSet exeQuery(String query) throws SQLException {
 		ResultSet result = null;
-		try (Connection conn = DriverManager.getConnection(String.format("%s:%s",prefix,suffix),props)) {
+		try (Connection conn = datasource.getConnection()){
 			Statement stmt = conn.createStatement();
 			result = stmt.executeQuery(query);			
 		}
 		return result;
 	}
-	
-	
-	
+
 	/**
 	 * Generic resultset-table to list-list formatter
 	 * @param rs
@@ -192,6 +137,7 @@ public class DABConnector {
 	
 	private List<List<String>> parseSQLException(SQLException sqle){		
 		List<List<String>> result = null;	
+		
 		//Error is written to general log and result is returned
 		System.out.println("SQL error "+sqle);
 		//return the error to the user
@@ -202,6 +148,95 @@ public class DABConnector {
 		result.add(line);
 		return result;
 	}
+	
+	/**
+	 * Double quotes column names with spaces in them
+	 * @param columns
+	 * @return
+	 */
+	protected String quoteSpace(String columns){
+		StringBuilder res = new StringBuilder(); 
+		for (String col : columns.split(",")){
+		    if (col.trim().indexOf(" ")>0){
+		        res.append("'"+col+"'");
+		    } 
+		    else {
+		        res.append(col);
+		    }
+		    res.append(",");
+		}
+		return res.deleteCharAt(res.lastIndexOf(",")).toString();
+	}
+	
+	protected String colType(String tablename, String colname){
+		String query = String.format("SELECT table_version.ver_table_key_datatype('%s','%s')",tablename,colname);
+		return executeSTRQuery(query);
+	}
+	
+	//-------------------------------------------------------------------------
+	
+	/**
+	 * Return htmltable containing table row count 
+	 * @param schema
+	 * @param table
+	 * @return
+	 */
+	public String compareTableCount(String schema, String table){
+		//read admin_bdys diffs
+		if (table == null){
+			return DABContainerComp.DEF_TABLE;
+		}
+		else {
+			String query = String.format("SELECT COUNT(*) count FROM %s.%s",schema,table);
+			return DABFormatter.getSummaryAsTable(table,executeQuery(query));
+		}
+	}
+	
+	/**
+	 * Use table_version get_diff func to return differences between the temp and destination tables
+	 * @param ti
+	 * @return
+	 */
+	public String compareTableData(TableInfo ti){
+		//read table diffs
+		String t1 = String.format("%s.%s", ABs, ti.dst());
+		String t2 = String.format("%s.%s", ABIs, ti.tmp());
+		String rec = String.format("T(code char(1), id %s)",colType(ABs+"."+ti.dst(),ti.key()));
+		String query = String.format("SELECT T.id, T.code FROM table_version.ver_get_table_differences('%s','%s','%s') as %s",t1,t2,ti.key(),rec);
+		return "<article>" + DABFormatter.getSummaryAsTable(ti.dst(),executeQuery(query)) + "</article>";
+	}
+	
+	
+	/**
+	 * Determine state of database by testing for tables temp_X, snap_X and dst=snap
+	 * @return ImportStatus for selected table
+	 * TODO rewrite test for mapped status reflecting geo ops instead of snap build 
+	 */
+	public ImportStatus getStatus(TableInfo ti){
+		//check that imported temp files exist
+		String exist_query = String.format("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='%s' AND table_name='%s')",ABIs,ti.tmp());
+		System.out.println("1TQ "+exist_query+" / "+executeTFQuery(exist_query));
+		if (executeTFQuery(exist_query)){
+			//get original column names (so column order isn't considered in comparison
+			String col_query = String.format("select array_to_string(array_agg(column_name::text),',') " +
+					"from information_schema.columns " +
+					"where table_schema='%s' " +
+					"and table_name='%s'", ABs, ti.dst());
+			String columns = quoteSpace(executeSTRQuery(col_query));
+			System.out.println("2CQ "+col_query+" / "+columns);
+			//tmp files match dst files
+			String tt = String.format("SELECT %s FROM %s.%s", columns, ABIs, ti.tmp());
+			String dt = String.format("SELECT %s FROM %s.%s", columns, ABs,  ti.dst());
+			String cmp_query = String.format("SELECT NOT EXISTS (%s EXCEPT %s UNION %s EXCEPT %s)",tt,dt,dt,tt);
+			System.out.println("3CQ "+cmp_query+" / "+executeTFQuery(cmp_query));
+			if (executeTFQuery(cmp_query)){
+				return ImportStatus.COMPLETE;
+			}
+			return ImportStatus.LOADED;
+		}
+		return ImportStatus.BLANK;
+	}
+	
 	
 	
 	public String toString(){
@@ -214,8 +249,6 @@ public class DABConnector {
 	 */
 	public static void main(String[] args){
 		DABConnector dabc = new DABConnector();
-		//System.out.println(dabc.readConfig(FILENAME));
-		//System.out.println(dabc.readProps(FILENAME));
 		System.out.println(dabc.executeQuery("select 1"));
 		
 

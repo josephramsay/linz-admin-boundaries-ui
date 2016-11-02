@@ -550,7 +550,11 @@ class Processor(object):
             while in_feat:
                 out_feat = ogr.Feature(out_ldef)
                 for i in range(0, out_ldef.GetFieldCount()):
-                    out_feat.SetField(out_ldef.GetFieldDefn(i).GetNameRef(), in_feat.GetField(i))
+                    value = in_feat.GetField(i)
+                    if value == None:
+                        out_feat.UnsetField(out_ldef.GetFieldDefn(i).GetNameRef())
+                    else:
+                        out_feat.SetField(out_ldef.GetFieldDefn(i).GetNameRef(), value)
                 geom = in_feat.GetGeometryRef()
                 #1. fix_esri_polygon (no longer needed?)
                 #geom = fix_esri_polyon(geom)

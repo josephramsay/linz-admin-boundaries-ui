@@ -2,7 +2,9 @@ package nz.govt.linz.AdminBoundaries;
 
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -66,6 +68,19 @@ public class IniReader {
 	   }
    }
    
+   public void dump(String path) throws IOException {
+	   try( BufferedWriter bw = new BufferedWriter( new FileWriter( path ))) {
+		   for (String section : entries.keySet()){
+			   bw.write("["+section+"]");
+			   Map<String,String> detail = entries.get(section);
+			   for (String option : detail.keySet()){
+				   bw.write(option+" = "+detail.get(option));
+				   
+			   }
+		   } 
+	   }
+   }
+   
    private void set(String section, String option, String value){
 	   Map< String, String > opt_val = entries.get(section);
 	   if( opt_val == null ) {
@@ -74,13 +89,17 @@ public class IniReader {
 	   opt_val.put( option, value );
    }
 
-   public String getString( String section, String option, String defaultvalue ) {
-      Map< String, String > opt_val = entries.get( section );
-      if( opt_val == null ) {
-         return defaultvalue;
-      }
-      return opt_val.get( option );
+   public void put( String section, String option, String value) {
+      //write value to config file
    }
+   
+   public String getString( String section, String option, String defaultvalue ) {
+	      Map< String, String > opt_val = entries.get( section );
+	      if( opt_val == null ) {
+	         return defaultvalue;
+	      }
+	      return opt_val.get( option );
+	   }
 
    public int getInt( String section, String option, int defaultvalue ) {
       Map< String, String > opt_val = entries.get( section );

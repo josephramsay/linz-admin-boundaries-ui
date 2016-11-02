@@ -1,7 +1,16 @@
 /* CSS for LINZ Admin Boundary Downloader */
 
 .no-js #loader { display: none; }
-.js #loader { display: block; position: absolute; left: 100px; top: 0; }
+.js #loader {
+    z-index: 999999;
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url(loading.gif) 50% 50% no-repeat #fff;
+}
 
 body {
     background: white;
@@ -58,7 +67,6 @@ a:focus {
     outline: none;
 }
 
-
 a.b_green, a.b_yellow, a.b_red { 
     background-color: dodgerblue;
     border-radius: 5px 5px 5px 5px;
@@ -86,8 +94,6 @@ a.b_yellow:hover {
 a.b_red:hover {
     color: white;
     background-color: lightcoral;
-    /*pointer-events: none;*/
-    cursor: default;
 }
 
 h1 {

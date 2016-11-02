@@ -4,18 +4,18 @@ base_uri = http://maps.stats.govt.nz/wss/service/arcgis1/guest/Boundaries
 [database]
 name = <dbname>
 rolename = <role?>
-host = localhost
-user = <dbuser>
-port = <port>
-password = <dbpass>
+host = <database host>
+user = <database user>
+port = <database port>
+password = <database user password>
 schema = <temp_import_schema>
-originschema = <schema>
+originschema = <destination schema>
 
 [user]
-list=<user list as csv>
+list=<user list as csv, email recipients>
 domain=linz.govt.nz
 smtp=<smtp server>
-link=http://<AIMS server>:8080/ab/
+link=http://<DAB API server>:8080/ab/
 
 [layer]
 name = territorial_authority

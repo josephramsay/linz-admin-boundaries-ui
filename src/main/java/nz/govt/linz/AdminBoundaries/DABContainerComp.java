@@ -20,16 +20,16 @@ import java.util.*;
  * @author jramsay
  * TODO. Better name
  */
-public class TableMapList {
+public class DABContainerComp {
 	
 	//protected final static String[] TML = new String[]{"meshblock","meshblock_concordance","territorial_authority","nz_locality"};
 	
-	protected final static Map<String,String> TMM = new HashMap<>();
+	protected final static Map<String,String> TABV = new HashMap<>();
 	static {
-		TMM.put("meshblock","MB");
-		TMM.put("meshblock_concordance","MBC");
-		TMM.put("territorial_authority","TA");
-		TMM.put("nz_locality","NZL");
+		TABV.put("meshblock","MB");
+		TABV.put("meshblock_concordance","MBC");
+		TABV.put("territorial_authority","TA");
+		TABV.put("nz_locality","NZL");
 	}
 	
 	protected final static String DEF_TABLE = "<table><caption>no table</caption>"
@@ -48,16 +48,16 @@ public class TableMapList {
 	 * @author jramsay
 	 *
 	 */
-	public class TableMap {
+	public class TableInfo {
 		private String dst; 
 		private String tmp;
 		private String key;
 		private String abv;
-		public TableMap(String dst, String tmp, String key){
+		public TableInfo(String dst, String tmp, String key){
 			this.dst = dst;
 			this.tmp = "temp_"+tmp;
 			this.key = key;
-			this.abv = TMM.get(dst);
+			this.abv = TABV.get(dst);
 		}
 		public String dst(){return dst;}
 		public String tmp(){return tmp;}
@@ -85,15 +85,15 @@ public class TableMapList {
 	}
 	//</inner>------------------------------
 	
-	private Map<String,TableMap> tm_map;
+	private Map<String,TableInfo> ti_map;
 	private DABIniReader reader;
 	
-	public TableMapList(){
-		tm_map = new HashMap<>();
-		readConfig(new ArrayList<TableMap>());
+	public DABContainerComp(){
+		ti_map = new HashMap<>();
+		readConfig(new ArrayList<TableInfo>());
 	}
 	
-	private void readConfig(List<TableMap> tablemap){
+	private void readConfig(List<TableInfo> tablemap){
 		try {
 			reader = new DABIniReader();
 			initTMI();
@@ -108,33 +108,33 @@ public class TableMapList {
 	 * @param tm_name
 	 * @return
 	 */
-	private TableMap getTMInstance(String tm_name){
+	private TableInfo getTMInstance(String tm_name){
 		Map<String,String> triple = reader.getTriple(tm_name);
-		return new TableMap(triple.get("dst"),triple.get("tmp"),triple.get("key"));
+		return new TableInfo(triple.get("dst"),triple.get("tmp"),triple.get("key"));
 	}
 	
 	private void initTMI(){
-		for (String tm_name : TMM.keySet()){
-			tm_map.put(tm_name,getTMInstance(tm_name));
+		for (String tm_name : TABV.keySet()){
+			ti_map.put(tm_name,getTMInstance(tm_name));
 		}
 	}
 	/**
 	 * Public accessor method
 	 * @param i
 	 */
-	public TableMap getTM(int i){
-		return tm_map.get(i);
+	public TableInfo getTM(int i){
+		return ti_map.get(i);
 	}
-	public Collection<TableMap> values(){
-		return tm_map.values();
+	public Collection<TableInfo> values(){
+		return ti_map.values();
 	}
-	public TableMap valueOf(String tm_str){
-		return tm_map.get(tm_str);
+	public TableInfo valueOf(String tm_str){
+		return ti_map.get(tm_str);
 	}
-	public TableMap keyOf(String val){
-		for (Object o : TMM.keySet()) {
-            if (TMM.get(o).equals(val)) {
-              return tm_map.get((String) o);
+	public TableInfo keyOf(String val){
+		for (Object o : TABV.keySet()) {
+            if (TABV.get(o).equals(val)) {
+              return ti_map.get((String) o);
             }
         }
 		return null;

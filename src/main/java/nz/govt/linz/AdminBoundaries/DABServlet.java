@@ -27,7 +27,7 @@ public class DABServlet extends HttpServlet {
 	protected String description;	
 	public String hostname;
 	
-	public String docType = "<!doctype html public \"-//w3c//dtd html 4.0 transitional//en\">\n";
+	public String docType = "<!DOCTYPE html public \"-//w3c//dtd html 4.0 transitional//en\">\n";
 	
 	protected final static String ABs = "admin_bdys";
     protected final static String ABIs = "admin_bdys_import";
@@ -108,7 +108,7 @@ public class DABServlet extends HttpServlet {
 	}
 	
 	protected String getBodyTitle(){
-		return String.join("\n","<h1>",message,"</h1>","<p>",description.replace("\n","</br>\n"),"</p>");
+		return String.join("\n","<h1>",message,"</h1>","<p>",description.replace("\n","<br/>\n"),"</p>");
 	}
 	
 	protected String getBodyContent(String... values){

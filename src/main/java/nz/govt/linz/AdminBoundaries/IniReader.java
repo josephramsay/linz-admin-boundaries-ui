@@ -68,6 +68,14 @@ public class IniReader {
 	   }
    }
    
+   protected Map<String, Map<String, String>> getEntries(){
+	   return entries;
+   }
+   
+   protected void setEntries(Map<String, Map<String, String>> trialentries){
+	   entries = trialentries;
+   }
+   
    public void dump(String path) throws IOException {
 	   try( BufferedWriter bw = new BufferedWriter( new FileWriter( path ))) {
 		   for (String section : entries.keySet()){

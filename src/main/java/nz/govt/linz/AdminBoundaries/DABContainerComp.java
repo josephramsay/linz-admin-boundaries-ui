@@ -103,6 +103,14 @@ public class DABContainerComp {
 		}
 	}
 	
+	protected Map<String, Map<String, String>> getConfig(){
+		return reader.getEntries();
+	}
+	protected void setConfig(Map<String, Map<String, String>> config){
+		reader.setEntries(config);
+	}
+	
+	
 	/**
 	 * Instantiate a TableMap from config values
 	 * @param tm_name

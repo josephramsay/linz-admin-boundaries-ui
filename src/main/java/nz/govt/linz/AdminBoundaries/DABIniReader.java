@@ -16,6 +16,7 @@ import java.util.regex.Pattern;
  */
 public class DABIniReader extends IniReader{
 	
+	//TODO relative path
 	private final static String CONF_PATH = "/opt/apache-tomcat/webapps/ab/WEB-INF/scripts/download_admin_bdys.ini";
    
 	private Pattern file_p = Pattern.compile( "\\\"(\\w+)\\\"\\:\\{\\\"table\\\"" );

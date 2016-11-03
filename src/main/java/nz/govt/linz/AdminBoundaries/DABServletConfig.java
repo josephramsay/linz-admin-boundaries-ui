@@ -25,7 +25,7 @@ import nz.govt.linz.AdminBoundaries.DABContainerComp.ImportStatus;
  * @author jramsay
  *
  */
-public class DABServletConfigEdit extends DABServlet {
+public class DABServletConfig extends DABServlet {
 
 	
 	static final long serialVersionUID = 1;
@@ -33,7 +33,8 @@ public class DABServletConfigEdit extends DABServlet {
 	/** Formatter class for converting data-maps to html strings */
 	private DABFormatter dabf;
 	
-	private DABIniReader reader;
+	/** Class holding info on tables for comparson */
+	private DABContainerComp ccomp;
 
 	public String docType = "<!doctype html public \"-//w3c//dtd html 4.0 transitional//en\">\n";
 	
@@ -44,12 +45,8 @@ public class DABServletConfigEdit extends DABServlet {
 		super.init();
 		message = "Config Editor for Admin Boundarys";
 		dabf = new DABFormatter();
-		try {
-			reader = new DABIniReader();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		ccomp = new DABContainerComp();
+
 	}
 	
 
@@ -94,20 +91,26 @@ public class DABServletConfigEdit extends DABServlet {
          
         }
         
+        String configform = getConfigForm();
+        
         infomessage = dabf.getInfoMessage(info);
+        accdectable = dabf.getAlternateNav();
         
         //OUTPUT
         
-        out.println(docType +
-                "<html>\n<head>\n" +
-                getHead() +
-                "</head>\n<body>\n" +
-                getBodyHeader() +
-                getBodyTitle() +
-                getBodyContent(infomessage,summarytable,accdectable) +
-                getBodyFooter(created,accessed,user) +
-                "</body>\n</html>");
+        out.println(getHTMLWrapper(
+                getHead(),
+                getBodyHeader(),
+                getBodyTitle(),
+                getBodyContent(infomessage,configform,accdectable),
+                getBodyFooter(created,accessed,user)
+        		)
+        	);
 
+	}
+	
+	private String getConfigForm(){
+		return DABFormatter.formatForm("CAPTION",ccomp.getConfig());//ccomp.getConfig();
 	}
 
 

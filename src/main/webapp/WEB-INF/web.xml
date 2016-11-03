@@ -43,8 +43,8 @@
     </servlet>    
     
     <servlet>
-        <servlet-name>action</servlet-name>
-        <servlet-class>nz.govt.linz.AdminBoundaries.DABServletAction</servlet-class>
+        <servlet-name>config</servlet-name>
+        <servlet-class>nz.govt.linz.AdminBoundaries.DABServletConfig</servlet-class>
     </servlet>    
     
     <!-- 
@@ -60,8 +60,8 @@
     </servlet-mapping>    
     
     <servlet-mapping>
-        <servlet-name>action</servlet-name>
-        <url-pattern>/act</url-pattern>
+        <servlet-name>config</servlet-name>
+        <url-pattern>/cfg</url-pattern>
     </servlet-mapping> 
        
     <!-- 

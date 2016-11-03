@@ -188,7 +188,7 @@ public class DABConnector {
 		}
 		else {
 			String query = String.format("SELECT COUNT(*) count FROM %s.%s",schema,table);
-			return DABFormatter.getSummaryAsTable(table,executeQuery(query));
+			return DABFormatter.formatTable(table,executeQuery(query));
 		}
 	}
 	
@@ -203,7 +203,7 @@ public class DABConnector {
 		String t2 = String.format("%s.%s", ABIs, ti.tmp());
 		String rec = String.format("T(code char(1), id %s)",colType(ABs+"."+ti.dst(),ti.key()));
 		String query = String.format("SELECT T.id, T.code FROM table_version.ver_get_table_differences('%s','%s','%s') as %s",t1,t2,ti.key(),rec);
-		return "<article>" + DABFormatter.getSummaryAsTable(ti.dst(),executeQuery(query)) + "</article>";
+		return "<article>" + DABFormatter.formatTable(ti.dst(),executeQuery(query)) + "</article>";
 	}
 	
 	

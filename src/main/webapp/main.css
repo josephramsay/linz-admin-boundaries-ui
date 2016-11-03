@@ -237,6 +237,31 @@ section.box {
     background-color: aliceblue;
 }
 
+section.form {
+    display: inline-block;
+    position: relative;
+    float: unset;
+    width: 100%;
+    background-color: aliceblue;
+}
+
+section.form label {
+    float: left;
+    width: 100%;
+    margin: 5px 0px 0px 10px;
+    padding: 1px;
+    background-color: aliceblue;
+}
+
+section.form input {
+    width: 100%;
+    float: left;
+    margin: 5px 10px 10px 10px;
+    padding: 0px;
+    color: black;
+    background-color: white;
+}
+
 section.detail {
     display: inline-block;
     position: relative;
@@ -248,6 +273,27 @@ section.detail {
 section.detail p a {
     margin: 0px 20px 5px 10px;
     padding: 5px 15px;
+}
+
+input[type=submit] {
+    margin-top: 20;
+    background-color: dodgerblue;
+    color: white;
+    width: 210px;
+    border-radius: 5px 5px 5px 5px;
+    display: inline-block;
+    font-size: 14px;
+    font-weight: bold;
+    padding: 8px 15px;
+    text-decoration: none;
+    text-transform: uppercase;
+    border: 0;
+    text-align: center;
+}
+
+input[type=submit]:hover {
+    color: white;
+    background-color: lightseagreen;
 }
 
 article {

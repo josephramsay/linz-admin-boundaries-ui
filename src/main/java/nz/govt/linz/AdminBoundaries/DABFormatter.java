@@ -3,6 +3,7 @@ package nz.govt.linz.AdminBoundaries;
 import static nz.govt.linz.AdminBoundaries.DABServlet.ABs;
 import static nz.govt.linz.AdminBoundaries.DABServlet.ABIs;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -59,7 +60,7 @@ public class DABFormatter {
 	 * @param result
 	 * @return
 	 */	
-	public static String getSummaryAsTable(String tname, List<List<String>> result) {
+	public static String formatTable(String tname, List<List<String>> result) {
 		String table = "";
 	    table += "<table>";
 	    table += "<caption>"+tname+"</caption>";
@@ -80,6 +81,37 @@ public class DABFormatter {
 
 	    table += "</tbody></table>";
 	    return table;
+	}		
+	
+	/**
+	 * Reformats a list/list/string as an html table with the caption tname
+	 * @param tname
+	 * @param config
+	 * @return
+	 */	
+	public static String formatForm(String tname, Map<String, Map<String, String>> config) {
+		String SEP = "_";
+		String form = "";
+		String itype;
+	    form += "<article><form method=\"post\">\n";
+	    form += "<legend>"+tname+"</legend>\n";
+
+    	for (String section : config.keySet()) {
+    		if ("temp".equals(section)) continue;//HACK
+    		Map<String, String> opt_val = config.get(section);
+    		form += "<label>"+section.toUpperCase()+"</label>";
+    		form += "<section class=\"form\">\n";
+    		for (String option : opt_val.keySet()) {
+    			itype = "text";
+    			if ("colmap".equals(option)) itype = "textarea";
+    			form += "<label for=\""+section+SEP+option+"\">"+section+SEP+option+"</label>\n";
+    			form += "<input name=\""+section+SEP+option+"\" value='"+opt_val.get(option)+"' type=\""+itype+"\"/><br/>\n";
+    		}
+    		form += "</section>\n";
+	    }
+    	form += "<section><input type=\"submit\" value=\"save\"/></section>";
+	    form += "</form>\n</article>\n";
+	    return form;
 	}	
 	
 	public String getAcceptDeclineNav(int lowsts){   
@@ -135,6 +167,17 @@ public class DABFormatter {
 	
 	public String toString(){
 		return "DABFormatter";
+	}
+	
+	public static void main(String[] args){
+		Map<String,Map<String,String>> ftest = new LinkedHashMap<>();
+		ftest.put("SECTION1",new HashMap<String,String>(){{put("OPTION1", "value aaa");put("OPTION2", "value bbb");}});
+		ftest.put("temp",new HashMap<String,String>(){{put("OPTION3", "value ccc");put("OPTION4", "value ddd");}});
+		ftest.put("SECTION2",new HashMap<String,String>(){{put("OPTION5", "value eee");put("OPTION6", "value fff");}});
+		ftest.put("SECTION_CM",new HashMap<String,String>(){{put("colmap", "value ggg");put("OPTION8", "value hhh");}});
+		ftest.put("SECTION3",new HashMap<String,String>(){{put("OPTION9", "value iii");put("OPTION0", "value jjj");}});
+		System.out.println(DABFormatter.formatForm("TEST", ftest));
+
 	}
 	
 }

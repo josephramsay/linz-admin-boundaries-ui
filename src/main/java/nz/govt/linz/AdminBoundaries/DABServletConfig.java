@@ -70,10 +70,18 @@ public class DABServletConfig extends DABServlet {
         Date created = new Date(session.getCreationTime());
         Date accessed = new Date(session.getLastAccessedTime());
         String user = (String) request.getAttribute("currentSessionUser");
-
-        //String user = request.getParameter("user");
-        String compare = request.getParameter("compare");
-        String action = request.getParameter("action");
+        
+        Map<String, Map<String,String>> config = new LinkedHashMap<>();
+        Map<String,String> section = new LinkedHashMap<>();
+        Enumeration<String> params = request.getParameterNames(); 
+        while (params.hasMoreElements()) {
+        	String pname = params.nextElement();
+        	String[] parts = pname.split("_");
+        	section = new LinkedHashMap<String,String>(){{put(parts[1],request.getParameterValues(pname)[0]);}};
+        	config.put(parts[0], section);
+        }
+        	
+        
         
         /* If compare action requested for table generate a diff table.
          * If action requested start processcontrol and return result.
@@ -82,16 +90,19 @@ public class DABServletConfig extends DABServlet {
         
         Map<String, String> info = new HashMap<>(); 
         
-        if (action != null) {
+        
+        String configform;
+        if (!config.isEmpty()) {
         	//s = summary, a = 1
-            info.put("ACTION",action);
-            info.put("RESULT",action);
+            info.put("ACTION","submit");
+            info.put("RESULT",config.toString());
+            ccomp.setConfig(config);
+            configform = DABFormatter.formatForm("DAB Configuration",config);
         }
         else {
-         
+        	configform = DABFormatter.formatForm("DAB Configuration (saved)",ccomp.getConfig());
         }
-        
-        String configform = getConfigForm();
+
         
         infomessage = dabf.getInfoMessage(info);
         accdectable = dabf.getAlternateNav();
@@ -99,19 +110,9 @@ public class DABServletConfig extends DABServlet {
         //OUTPUT
         
         out.println(getHTMLWrapper(
-                getHead(),
-                getBodyHeader(),
-                getBodyTitle(),
                 getBodyContent(infomessage,configform,accdectable),
                 getBodyFooter(created,accessed,user)
         		)
         	);
-
 	}
-	
-	private String getConfigForm(){
-		return DABFormatter.formatForm("CAPTION",ccomp.getConfig());//ccomp.getConfig();
-	}
-
-
 }

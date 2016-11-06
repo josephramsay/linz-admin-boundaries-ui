@@ -23,8 +23,8 @@ public class DABIniReader extends IniReader{
 	private Pattern table_p = Pattern.compile( "\\\"table\\\"\\:\\\"(\\w+)\\\"" );
 	private Pattern primary_p = Pattern.compile( "\\\"primary\\\"\\:\\\"(\\w+)\\\"" );
    
-	//private Map<String, Map<String, String>>  entries  = new HashMap<>();
-	private Map<String, Map<String,String>>  colmap  = new HashMap<>();
+	//private Map<String, Map<String, String>> entries = new HashMap<>();
+	private Map<String, Map<String,String>> colmap = new HashMap<>();
 
 	/**
 	 * Null constructor setting up on default confg path
@@ -40,7 +40,8 @@ public class DABIniReader extends IniReader{
 	 * @throws IOException
 	 */
 	public DABIniReader(String path) throws IOException {
-		super(path);
+		super();
+		load(path);
 		parse(entries.get("meshblock").get("colmap"));
 		parse(entries.get("nzlocalities").get("colmap"));
 	}
@@ -72,8 +73,33 @@ public class DABIniReader extends IniReader{
 
    
 	public static void main(String[] args){
+		String p = "testconfig.ini";
 		try {
-			DABIniReader reader = new DABIniReader();
+			DABIniReader reader1 = new DABIniReader(p);
+			//Map<String, Map<String,String>> entries = reader1.getEntries();
+			for (String sec : reader1.getSections()){
+				for (String opt : reader1.getOptions(sec)){
+					String val = reader1.getEntry(sec, opt);
+					System.out.println(String.format("READ FROM >>> s=%s, o=%s, v=%s", sec,opt,val));
+					
+					if ("output_srid".equals(opt)){
+						//increment val
+						reader1.setEntry(sec, opt, Integer.toString(Integer.valueOf(val)+1));
+					}
+				}
+			}
+			//reader.setEntries(entries);
+			reader1.dump(p);
+			
+			DABIniReader reader2 = new DABIniReader(p);
+			//Map<String, Map<String,String>> entries2 = reader2.getEntries();
+			for (String sec : reader2.getSections()){
+				for (String opt : reader2.getOptions(sec)){
+					String val = reader2.getEntry(sec, opt);
+					System.out.println(String.format("WRITTEN TO >> s=%s, o=%s, v=%s", sec,opt,val));
+				}
+			}
+			
 		} 
 		catch (IOException e) {
 			// TODO Auto-generated catch block

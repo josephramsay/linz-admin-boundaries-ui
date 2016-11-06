@@ -1,9 +1,5 @@
 package nz.govt.linz.AdminBoundaries;
 
-import static nz.govt.linz.AdminBoundaries.DABServlet.ABs;
-import static nz.govt.linz.AdminBoundaries.DABServlet.ABIs;
-
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -85,27 +81,32 @@ public class DABFormatter {
 	
 	/**
 	 * Reformats a list/list/string as an html table with the caption tname
-	 * @param tname
+	 * @param fname
 	 * @param config
 	 * @return
 	 */	
-	public static String formatForm(String tname, Map<String, Map<String, String>> config) {
+	public static String formatForm(String fname, Map<String, Map<String, String>> config) {
 		String SEP = "_";
 		String form = "";
-		String itype;
 	    form += "<article><form method=\"post\">\n";
-	    form += "<legend>"+tname+"</legend>\n";
+	    form += "<legend>"+fname+"</legend>\n";
 
     	for (String section : config.keySet()) {
     		if ("temp".equals(section)) continue;//HACK
     		Map<String, String> opt_val = config.get(section);
-    		form += "<label>"+section.toUpperCase()+"</label>";
+    		form += "<label class=\"sec\">"+section+"</label>";
     		form += "<section class=\"form\">\n";
     		for (String option : opt_val.keySet()) {
-    			itype = "text";
-    			if ("colmap".equals(option)) itype = "textarea";
-    			form += "<label for=\""+section+SEP+option+"\">"+section+SEP+option+"</label>\n";
-    			form += "<input name=\""+section+SEP+option+"\" value='"+opt_val.get(option)+"' type=\""+itype+"\"/><br/>\n";
+    			//itype = "text";
+    			//if ("colmap".equals(option)) itype = "textarea";
+    			form += "<label for=\""+section+SEP+option+"\">"+section+"  "+option+"</label>\n";
+    			
+    			if ("colmap".equals(option)) {
+    				form += "<textarea name=\""+section+SEP+option+"\">"+opt_val.get(option)+"</textarea><br/>\n";
+    			}
+    			else {
+    				form += "<input name=\""+section+SEP+option+"\" value='"+opt_val.get(option)+"' type=\"text\"/><br/>\n";
+    			}
     		}
     		form += "</section>\n";
 	    }
@@ -114,7 +115,7 @@ public class DABFormatter {
 	    return form;
 	}	
 	
-	public String getAcceptDeclineNav(int lowsts){   
+	public String getNavigation(int lowsts){   
 		int count = 0;
 		String page = "sum";
 		String msg = "<nav><ul>\n";

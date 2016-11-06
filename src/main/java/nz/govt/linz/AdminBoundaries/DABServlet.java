@@ -61,6 +61,9 @@ public class DABServlet extends HttpServlet {
 		StringBuilder sb = new StringBuilder();
 		sb.append(docType);
 		sb.append("<html>\n");
+		sb.append(getHead());
+		sb.append(getBodyHeader());
+		sb.append(getBodyTitle());
 		for (String s : values){sb.append(s);}
 		sb.append("</html>");
 		return sb.toString();

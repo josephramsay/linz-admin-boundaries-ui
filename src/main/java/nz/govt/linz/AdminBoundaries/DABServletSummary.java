@@ -122,7 +122,7 @@ public class DABServletSummary extends DABServlet {
             info.put("RESULT",readProcessOutput(action));
             updateStatus();
             summarytable = getFullSummary();
-            accdectable = dabf.getAcceptDeclineNav(lowstatus.ordinal());
+            accdectable = dabf.getNavigation(lowstatus.ordinal());
         }
         else {
         	updateStatus();
@@ -136,16 +136,13 @@ public class DABServletSummary extends DABServlet {
             	summarytable = getFullSummary();
             default:
             }
-            accdectable = dabf.getAcceptDeclineNav(lowstatus.ordinal());
+            accdectable = dabf.getNavigation(lowstatus.ordinal());
         }
         
         infomessage = dabf.getInfoMessage(info);
         
         //OUTPUT
-        out.println(getHTMLWrapper(                
-        		getHead(),
-                getBodyHeader(),
-                getBodyTitle(),
+        out.println(getHTMLWrapper(
                 getBodyContent(infomessage,summarytable,accdectable),
                 getBodyFooter(created,accessed,user)
                 )

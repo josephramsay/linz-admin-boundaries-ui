@@ -114,7 +114,7 @@ public class DABServletSummary extends DABServlet {
         	info.put("COMPARE",compare);
         	info.put("RESULT",ti.dst()+" &larr; "+ti.tmp());
         	summarytable = dabc.compareTableData(ti);
-        	accdectable = dabf.getAlternateNav();
+        	accdectable = dabf.getBackNav();
         }
         else if (action != null) {
         	//s = summary, a = 1

@@ -57,7 +57,7 @@ public class DABServletConfig extends DABServlet {
 	 */
 	public void doGet(HttpServletRequest request, HttpServletResponse response)
 		    throws IOException, ServletException {
-		String summarytable = "";
+        String configform = "";
 		String accdectable = "";
 		String infomessage = "";
 		String sp = request.getServletPath();//  getServletContext().getRealPath("/");
@@ -71,27 +71,22 @@ public class DABServletConfig extends DABServlet {
         Date accessed = new Date(session.getLastAccessedTime());
         String user = (String) request.getAttribute("currentSessionUser");
         
+        /** check parameters list, if anything parse, store and redisplay */
         Map<String, Map<String,String>> config = new LinkedHashMap<>();
-        Map<String,String> section = new LinkedHashMap<>();
         Enumeration<String> params = request.getParameterNames(); 
         while (params.hasMoreElements()) {
         	String pname = params.nextElement();
         	String[] parts = pname.split("_");
-        	section = new LinkedHashMap<String,String>(){{put(parts[1],request.getParameterValues(pname)[0]);}};
-        	config.put(parts[0], section);
+        	if (config.containsKey(parts[0])) {
+        		config.get(parts[0]).put(parts[1], request.getParameterValues(pname)[0]);
+        	}
+        	else {
+        		config.put(parts[0], new LinkedHashMap<String,String>(){{put(parts[1],request.getParameterValues(pname)[0]);}});
+        	}
         }
-        	
-        
-        
-        /* If compare action requested for table generate a diff table.
-         * If action requested start processcontrol and return result.
-         * Otherwise return the standard summary table
-         */
         
         Map<String, String> info = new HashMap<>(); 
         
-        
-        String configform;
         if (!config.isEmpty()) {
         	//s = summary, a = 1
             info.put("ACTION","submit");
@@ -103,9 +98,8 @@ public class DABServletConfig extends DABServlet {
         	configform = DABFormatter.formatForm("DAB Configuration (saved)",ccomp.getConfig());
         }
 
-        
         infomessage = dabf.getInfoMessage(info);
-        accdectable = dabf.getAlternateNav();
+        accdectable = dabf.getBackNav();
         
         //OUTPUT
         

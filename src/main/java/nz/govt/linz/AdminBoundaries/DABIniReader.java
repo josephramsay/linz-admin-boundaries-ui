@@ -18,6 +18,7 @@ public class DABIniReader extends IniReader{
 	
 	//TODO relative path
 	private final static String CONF_PATH = "/opt/apache-tomcat/webapps/ab/WEB-INF/scripts/download_admin_bdys.ini";
+	//private final static String CONF_PATH = "WEB-INF/scripts/download_admin_bdys.ini";
    
 	private Pattern file_p = Pattern.compile( "\\\"(\\w+)\\\"\\:\\{\\\"table\\\"" );
 	private Pattern table_p = Pattern.compile( "\\\"table\\\"\\:\\\"(\\w+)\\\"" );
@@ -40,8 +41,8 @@ public class DABIniReader extends IniReader{
 	 * @throws IOException
 	 */
 	public DABIniReader(String path) throws IOException {
-		super();
-		load(path);
+		super(path);
+		load();
 		parse(entries.get("meshblock").get("colmap"));
 		parse(entries.get("nzlocalities").get("colmap"));
 	}
@@ -89,7 +90,7 @@ public class DABIniReader extends IniReader{
 				}
 			}
 			//reader.setEntries(entries);
-			reader1.dump(p);
+			reader1.dump();
 			
 			DABIniReader reader2 = new DABIniReader(p);
 			//Map<String, Map<String,String>> entries2 = reader2.getEntries();

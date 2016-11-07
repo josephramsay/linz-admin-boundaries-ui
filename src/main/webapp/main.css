@@ -86,7 +86,7 @@ a.b_red {
     cursor: default;
 }
 
-a.b_green:hover {
+a.b_green:hover, a.b_nav:hover {
     color: white;
     background-color: lightseagreen;
 }
@@ -99,6 +99,19 @@ a.b_yellow:hover {
 a.b_red:hover {
     color: white;
     background-color: lightcoral;
+}
+
+a.b_nav {
+    background-color: dodgerblue;
+    border-radius: 25px;
+    color: white;
+    display: inline-block;
+    font-size: 13px;
+    font-weight: bold;
+    padding: 8px 12px;
+    text-decoration: none;
+    text-transform: uppercase;
+    text-align: center;
 }
 
 input[type=submit] {
@@ -320,6 +333,23 @@ section.detail p a {
     padding: 5px 15px;
 }
 
+section.l_foot {
+    display: inline-block;
+    position: relative;
+    padding: 0px;
+    float: left;
+    width: calc(50% - 10px);
+    text-align: left;
+}
+
+section.r_foot {
+    display: inline-block;
+    position: relative;
+    padding: 10px;
+    float: left;
+    width: calc(50% - 10px);
+    text-align: right;
+}
 
 
 article {

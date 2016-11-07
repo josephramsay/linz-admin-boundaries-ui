@@ -97,17 +97,24 @@ public class DABContainerComp {
 		try {
 			reader = new DABIniReader();
 			initTMI();
-		} catch (IOException e) {
+		} catch (IOException ioe) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			ioe.printStackTrace();
 		}
 	}
 	
 	protected Map<String, Map<String, String>> getConfig(){
 		return reader.getEntries();
 	}
-	protected void setConfig(Map<String, Map<String, String>> config){
-		reader.setEntries(config);
+	
+	protected void setConfig(Map<String, Map<String, String>> config) {
+		try {
+			reader.setEntries(config);
+			reader.dump();		
+		} catch (IOException ioe) {
+				// TODO Auto-generated catch block
+				ioe.printStackTrace();
+		}
 	}
 	
 	

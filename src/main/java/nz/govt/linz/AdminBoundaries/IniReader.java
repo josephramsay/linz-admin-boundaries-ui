@@ -29,10 +29,19 @@ public class IniReader {
 
    	private String path;
    	
-	//public IniReader() throws IOException {}
+	/*public IniReader() throws IOException {
+		setPath(".");
+	}*/
 	
-    public void load(String p) throws IOException {
-    	path = p;
+	public IniReader(String p) throws IOException {
+		setPath(p);
+	}
+	
+	public void setPath(String p){
+		path = p;
+	}
+	
+    public void load() throws IOException {
 		try( BufferedReader br = new BufferedReader( new FileReader( path ))) {
 			boolean save_flag = false;
 			String line;
@@ -98,7 +107,7 @@ public class IniReader {
 	
 	//------------------------------------------------
 	
-	public void dump(String path) throws IOException {
+	public void dump() throws IOException {
 		try( BufferedWriter bw = new BufferedWriter( new FileWriter( path ))) {
 			for (String section : entries.keySet()){
 				bw.write("["+section+"]\n");

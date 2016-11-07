@@ -122,11 +122,14 @@ public class DABServlet extends HttpServlet {
 	
 	protected String getBodyFooter(Date created, Date accessed, String user){
 		return String.join("\n"
-				,"<footer><ul>"
+				,"<footer><section class=\"l_foot\"><ul>"
 				,"<li>Created : ",created.toString(),"</li>"
 				,"<li>Accessed : ",accessed.toString(),"</li>"
 				,"<li>User : ",user,"</li>"
-		    	,"</ul></footer>"
+		    	,"</ul></section>\n<section class=\"r_foot\">\n"
+				,"<a href=\"sum\" class=\"b_nav\">S</a>\n"
+				,"<a href=\"cfg\" class=\"b_nav\">C</a>\n"
+				,"</section>\n</footer>"
 		    	,"<!-- </div> -->"
 		    	,"</body>\n");
 	}

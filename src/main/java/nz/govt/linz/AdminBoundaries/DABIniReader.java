@@ -15,15 +15,15 @@ import java.util.regex.Pattern;
  *
  */
 public class DABIniReader extends IniReader{
-	
+
 	//TODO relative path
 	private final static String CONF_PATH = "/opt/apache-tomcat/webapps/ab/WEB-INF/scripts/download_admin_bdys.ini";
 	//private final static String CONF_PATH = "WEB-INF/scripts/download_admin_bdys.ini";
-   
+
 	private Pattern file_p = Pattern.compile( "\\\"(\\w+)\\\"\\:\\{\\\"table\\\"" );
 	private Pattern table_p = Pattern.compile( "\\\"table\\\"\\:\\\"(\\w+)\\\"" );
 	private Pattern primary_p = Pattern.compile( "\\\"primary\\\"\\:\\\"(\\w+)\\\"" );
-   
+
 	//private Map<String, Map<String, String>> entries = new HashMap<>();
 	private Map<String, Map<String,String>> colmap = new HashMap<>();
 
@@ -34,7 +34,7 @@ public class DABIniReader extends IniReader{
 	public DABIniReader() throws IOException {
 		this(CONF_PATH);
 	}
-	
+
 	/**
 	 * Constructor reads config file parsing meshblock and localities file blocks
 	 * @param path
@@ -46,9 +46,9 @@ public class DABIniReader extends IniReader{
 		parse(entries.get("meshblock").get("colmap"));
 		parse(entries.get("nzlocalities").get("colmap"));
 	}
-   
+
 	/**
-	 * Limited parsing of JSON like strings fetching src/dst/primary/type
+	 * Limited parsing of JSON like strings fetching src/dst/primary/type for use in TableInfo constructor
 	 * @return
 	 */
 	private void parse(String raw){
@@ -67,12 +67,17 @@ public class DABIniReader extends IniReader{
 			colmap.put(dst,entry);
 		}
 	}
-   
+
+	/**
+	 * Returns dst/tmp/key triple for the active colmap 
+	 * @param name
+	 * @return
+	 */
 	public Map<String,String> getTriple(String name){
 		return colmap.get(name);
 	}
 
-   
+
 	public static void main(String[] args){
 		String p = "testconfig.ini";
 		try {
@@ -82,7 +87,7 @@ public class DABIniReader extends IniReader{
 				for (String opt : reader1.getOptions(sec)){
 					String val = reader1.getEntry(sec, opt);
 					System.out.println(String.format("READ FROM >>> s=%s, o=%s, v=%s", sec,opt,val));
-					
+
 					if ("output_srid".equals(opt)){
 						//increment val
 						reader1.setEntry(sec, opt, Integer.toString(Integer.valueOf(val)+1));
@@ -91,7 +96,7 @@ public class DABIniReader extends IniReader{
 			}
 			//reader.setEntries(entries);
 			reader1.dump();
-			
+
 			DABIniReader reader2 = new DABIniReader(p);
 			//Map<String, Map<String,String>> entries2 = reader2.getEntries();
 			for (String sec : reader2.getSections()){
@@ -100,12 +105,12 @@ public class DABIniReader extends IniReader{
 					System.out.println(String.format("WRITTEN TO >> s=%s, o=%s, v=%s", sec,opt,val));
 				}
 			}
-			
+
 		} 
 		catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 	}
 }

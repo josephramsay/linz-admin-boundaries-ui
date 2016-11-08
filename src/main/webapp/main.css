@@ -271,13 +271,33 @@ legend {
     color:black;
 }
 
+article {
+    display: inline-block;
+    width: 98%;
+    background-color: ghostwhite;
+    border: 10px solid ghostwhite;
+    border-radius: 10px;
+    padding: 0px;
+    margin: 5px;
+ }
+
+article.desc {
+    display: inline-block;
+    width: 96%;
+    background-color: ghostwhite;
+    border-color: ghostwhite;
+    border-radius: 10px;
+    padding: 15px;
+    margin: 5px;
+ }
+ 
 section.box {
     display: inline-block;
     position: relative;
     padding: 5px;
     float: left;
     width: calc(50% - 10px);
-    background-color: aliceblue;
+    background-color: ghostwhite;
 }
 
 section.form {
@@ -285,7 +305,7 @@ section.form {
     position: relative;
     float: unset;
     width: 100%;
-    background-color: aliceblue;
+    background-color: ghostwhite;
 }
 
 section.form label {
@@ -293,7 +313,7 @@ section.form label {
     float: left;
     width: 99%;
     margin: 5px 0px 0px 10px;
-    background-color: aliceblue;
+    background-color: ghostwhite;
 }
 
 label.sec {
@@ -325,7 +345,7 @@ section.detail {
     position: relative;
     float: left;
     width: 100%;
-    background-color: aliceblue;
+    background-color: ghostwhite;
 }
 
 section.detail p a {
@@ -350,17 +370,6 @@ section.r_foot {
     width: calc(50% - 10px);
     text-align: right;
 }
-
-
-article {
-    display: inline-block;
-    width: 98%;
-    background-color: aliceblue;
-    border: 10px solid aliceblue;
-    border-radius: 10px;
-    padding: 0px;
-    margin: 5px;
- }
 
 footer {
     position: fixed;

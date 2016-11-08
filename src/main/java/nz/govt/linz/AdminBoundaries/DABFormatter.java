@@ -22,20 +22,28 @@ import java.util.Map;
 import nz.govt.linz.AdminBoundaries.DABContainerComp.ImportStatus;
 import nz.govt.linz.AdminBoundaries.DABContainerComp.TableInfo;
 
-
+/**
+ * Formatter class whose main function is to map resultset data into html tables/forms. Other
+ * formatting functions also added include button arrays and info messages
+ * @author jramsay
+ *
+ */
 public class DABFormatter {
 	
-	/**
-	 * Creates out put formatted text from table data
-	 */
+	/** Main function button text array*/
 	private static Map<String,String> lmtr;
 	
+	/** Colouration of function buttons array */
 	private static Map<Integer,List<String>> colourmap;
 	
 	protected static String BRED = "b_red";
 	protected static String BGRN = "b_green";
 	protected static String BYLW = "b_yellow";
+	protected static String BNAV = "b_nav";
 
+	/**
+	 * Formatter constructor sets up colourmap and button text
+	 */
 	public DABFormatter(){
 		lmtr = new LinkedHashMap<>(); //NB LMH preserves order
 		lmtr.put("Load","Download new files from SFTP directory and build import tables");
@@ -115,6 +123,11 @@ public class DABFormatter {
 	    return form;
 	}	
 	
+	/**
+	 * Returns main navigation/function buttons
+	 * @param lowsts
+	 * @return
+	 */
 	public String getNavigation(int lowsts){   
 		int count = 0;
 		String page = "sum";
@@ -140,6 +153,10 @@ public class DABFormatter {
 		return msg;
 	}	
 	
+	/**
+	 * Simple back button html
+	 * @return
+	 */
 	public String getBackNav(){   
 		String msg = "<nav><ul>\n";
 		msg += "<li><a href=\"sum\" class=\"b_green\">BACK</a>Return to Main page</li>\n";

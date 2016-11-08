@@ -46,7 +46,6 @@ public class DABContainerComp {
 	/**
 	 * Container for a set of table mappings, emulating an enum but read from file
 	 * @author jramsay
-	 *
 	 */
 	public class TableInfo {
 		private String dst; 
@@ -85,14 +84,22 @@ public class DABContainerComp {
 	}
 	//</inner>------------------------------
 	
+	/** Map of destination table names to TableInfo enum */
 	private Map<String,TableInfo> ti_map;
 	private DABIniReader reader;
 	
+	/**
+	 * Container constructor initialises and populates TI map
+	 */
 	public DABContainerComp(){
 		ti_map = new HashMap<>();
 		readConfig(new ArrayList<TableInfo>());
 	}
 	
+	/**
+	 * Initialises Reader
+	 * @param tablemap
+	 */
 	private void readConfig(List<TableInfo> tablemap){
 		try {
 			reader = new DABIniReader();
@@ -103,10 +110,18 @@ public class DABContainerComp {
 		}
 	}
 	
+	/**
+	 * Wrapper for fetching entries array
+	 * @return
+	 */
 	protected Map<String, Map<String, String>> getConfig(){
 		return reader.getEntries();
 	}
 	
+	/**
+	 * Wrapper to set entries array and trigger file write
+	 * @param config
+	 */
 	protected void setConfig(Map<String, Map<String, String>> config) {
 		try {
 			reader.setEntries(config);
@@ -123,16 +138,20 @@ public class DABContainerComp {
 	 * @param tm_name
 	 * @return
 	 */
-	private TableInfo getTMInstance(String tm_name){
+	private TableInfo getTIInstance(String tm_name){
 		Map<String,String> triple = reader.getTriple(tm_name);
 		return new TableInfo(triple.get("dst"),triple.get("tmp"),triple.get("key"));
 	}
 	
+	/**
+	 * Initialises the TI map with new TI instances
+	 */
 	private void initTMI(){
 		for (String tm_name : TABV.keySet()){
-			ti_map.put(tm_name,getTMInstance(tm_name));
+			ti_map.put(tm_name,getTIInstance(tm_name));
 		}
 	}
+	
 	/**
 	 * Public accessor method
 	 * @param i
@@ -140,12 +159,29 @@ public class DABContainerComp {
 	public TableInfo getTM(int i){
 		return ti_map.get(i);
 	}
+	
+	/**
+	 * getter for TI map values
+	 * @return
+	 */
 	public Collection<TableInfo> values(){
 		return ti_map.values();
 	}
+	
+	/**
+	 * getter for named TI values
+	 * @param tm_str
+	 * @return
+	 */
 	public TableInfo valueOf(String tm_str){
 		return ti_map.get(tm_str);
 	}
+	
+	/**
+	 * Reverse lookup value->key for the TI map
+	 * @param val
+	 * @return
+	 */
 	public TableInfo keyOf(String val){
 		for (Object o : TABV.keySet()) {
             if (TABV.get(o).equals(val)) {

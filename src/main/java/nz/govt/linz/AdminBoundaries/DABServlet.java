@@ -19,6 +19,12 @@ import java.util.*;
 import javax.servlet.*;
 import javax.servlet.http.*;
 
+import static nz.govt.linz.AdminBoundaries.DABFormatter.BNAV;
+
+/**
+ * Base servlet class
+ * @author jramsay
+ */
 public class DABServlet extends HttpServlet {
 	
 	static final long serialVersionUID = 1;
@@ -32,6 +38,9 @@ public class DABServlet extends HttpServlet {
 	protected final static String ABs = "admin_bdys";
     protected final static String ABIs = "admin_bdys_import";
 
+    /**
+     * Servlet initialisation method setting title and message text
+     */
 	public void init() throws ServletException {
 		try {
 			hostname = InetAddress.getLocalHost().getHostName();
@@ -41,22 +50,24 @@ public class DABServlet extends HttpServlet {
 		}
 		title = "DAB."+hostname.substring(0, 3);
 		message = "Admin Boundaries application";
-		description = "The downloader interface queries the four destination admin boundary tables comparing them against their temporary source "
-				+ "counterparts. Each table-set can be in one of three states, Vacant, Loaded or Transferred. If a table-set is Vacant no temporary "
-				+ "tables exist and the import tables must be populated from file.\n"
-				+ "Two files are used to populate the admin boundaries; StatsNZ_meshblock_concordance_YYYMMDD.zip and nz_localities.csv. "
-				+ "These can be found on the LINZ SFTP and gisdata file share respectively. The StatsNZ meshblock zip file contains two shapefiles and "
-				+ "one CSV used to update the tables; meshblock, meshblock_concordance and territorial_authority.\n"
-				+ "If a table-set is in the Loaded state the import tables have been built and column changes applied. At this stage concerned users "
-				+ "will be notified and if approved changes can be pushed through to the final destiation tables.\n"
-				+ "When a table-set is in the Transferred state the import tables will match the destination tables and no action is necessary.\n"
-				+ "Actions:\n"
-				+ "LOAD - Load import tables from file\n"
-				+ "TRANSFER - Transfer import tables to destination tables.\n"
-				+ "REJECT - Delete import tables.\n";
+		description = "This application performs the downloading and importation of admin boundary data needed for AIMS";
+
 	}
 	
+	/**
+	 * Replace parentheses with encoded angle brackets and adds breaks on found new line characters
+	 * @param raw
+	 * @return
+	 */
+	protected String encode(String raw){
+		return raw.replaceAll("\\(", "&lt;").replaceAll("\\)", "&gt;").replace("\n","<br/>\n");
+	}
 	
+	/**
+	 * Wraps varargs content in html tags, fetching content from header and body functions
+	 * @param values
+	 * @return
+	 */
 	protected String getHTMLWrapper(String... values){
 		StringBuilder sb = new StringBuilder();
 		sb.append(docType);
@@ -69,6 +80,10 @@ public class DABServlet extends HttpServlet {
 		return sb.toString();
 	}
 	
+	/**
+	 * Returns loading screen animation script text
+	 * @return
+	 */
 	protected String getLoading(){
 		return String.join("\n" 
 				,"<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js\"></script>"
@@ -88,6 +103,10 @@ public class DABServlet extends HttpServlet {
 	protected String getLoaderDiv(){return "<div id=\"loader\"></div>";}
 	protected String getLoadScript(){return "<script>$(window).load(function(){$(\"#loader\").fadeOut(\"slow\");});</script>";}
 	
+	/**
+	 * Returns common header text
+	 * @return
+	 */
 	protected String getHead(){
 		return String.join("\n"
 				,"<head profile=\"http://www.w3.org/2005/10/profile\">"
@@ -100,6 +119,10 @@ public class DABServlet extends HttpServlet {
 				,"</head>");
 	}
 	
+	/**
+	 * Returns common title text used in html body 
+	 * @return
+	 */
 	protected String getBodyHeader(){
 		return String.join("\n"
 			,"<body>"
@@ -110,16 +133,32 @@ public class DABServlet extends HttpServlet {
 	    	,"</header>\n");
 	}
 	
+	/**
+	 * Formats informational title text
+	 * @return
+	 */
 	protected String getBodyTitle(){
-		return String.join("\n","<h1>",message,"</h1>","<p>",description.replace("\n","<br/>\n"),"</p>");
+		return String.join("\n","<h1>",message,"</h1>","<article class=\"desc\">",encode(description),"</article>\n");
 	}
 	
+	/**
+	 * Appends text strings into the content of the html body
+	 * @param values
+	 * @return
+	 */
 	protected String getBodyContent(String... values){
 		StringBuilder sb = new StringBuilder();
 		for (String s : values){sb.append(s);}
 		return sb.toString();
 	}
 	
+	/**
+	 * Provides informational text in footer of document and additionally provides links to config and summary/main pages
+	 * @param created
+	 * @param accessed
+	 * @param user
+	 * @return
+	 */
 	protected String getBodyFooter(Date created, Date accessed, String user){
 		return String.join("\n"
 				,"<footer><section class=\"l_foot\"><ul>"
@@ -127,8 +166,8 @@ public class DABServlet extends HttpServlet {
 				,"<li>Accessed : ",accessed.toString(),"</li>"
 				,"<li>User : ",user,"</li>"
 		    	,"</ul></section>\n<section class=\"r_foot\">\n"
-				,"<a href=\"sum\" class=\"b_nav\">S</a>\n"
-				,"<a href=\"cfg\" class=\"b_nav\">C</a>\n"
+				,"<a href=\"sum\" class=\""+BNAV+"\">S</a>\n"
+				,"<a href=\"cfg\" class=\""+BNAV+"\">C</a>\n"
 				,"</section>\n</footer>"
 		    	,"<!-- </div> -->"
 		    	,"</body>\n");

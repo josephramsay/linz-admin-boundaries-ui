@@ -24,24 +24,33 @@ public class IniReader {
 	private Pattern  section_p  = Pattern.compile( "\\s*\\[([^]]*)\\]\\s*" );
 	private Pattern  option_p = Pattern.compile( "\\s*([^=]*)=(.*)" );
 	private Pattern  value_p = Pattern.compile( "\\s+(.*)" );
-   
+
 	protected Map<String, Map<String, String>> entries = new HashMap<>();
 
-   	private String path;
-   	
-	/*public IniReader() throws IOException {
-		setPath(".");
-	}*/
-	
+	private String path;
+
+	/**
+	 * Constructor setting path to ini file
+	 * @param p
+	 * @throws IOException
+	 */
 	public IniReader(String p) throws IOException {
 		setPath(p);
 	}
-	
+
+	/**
+	 * Sets ini path
+	 * @param p
+	 */
 	public void setPath(String p){
 		path = p;
 	}
-	
-    public void load() throws IOException {
+
+	/**
+	 * Reads ini file populating entries array
+	 * @throws IOException
+	 */
+	public void load() throws IOException {
 		try( BufferedReader br = new BufferedReader( new FileReader( path ))) {
 			boolean save_flag = false;
 			String line;
@@ -79,34 +88,45 @@ public class IniReader {
 			if (save_flag){set(section,option,value.toString());}
 		}
 	}
-   
+
+	/** Entries array getter */
 	protected Map<String, Map<String, String>> getEntries(){
 		return entries;
 	}
-
+	
+	/** Entries array setter */
 	protected void setEntries(Map<String, Map<String, String>> entriesarg){
 		entries = entriesarg;
 	}
-	
+
 	//convenience methods to save having to fetch and re-save the entries array
+	
+	/** Sets and individual value in the entries array */
 	protected void setEntry(String sec,String opt, String val){
 		entries.get(sec).put(opt, val);
 	}
-	
+
+	/** Returns a single entry value from the entries array */
 	protected String getEntry(String sec,String opt){
 		return entries.get(sec).get(opt);
 	}	
-   
+
+	/** Returna the set of section elements */
 	protected Set<String> getSections(){
 		return entries.keySet();
 	}
-	
+
+	/** Returns the set of option elements for a particular section value */
 	protected Set<String> getOptions(String sec){
 		return entries.get(sec).keySet();
 	}
-	
+
 	//------------------------------------------------
-	
+
+	/**
+	 * Writes entries array back to its original file (NB comments and some formatting are lost)
+	 * @throws IOException
+	 */
 	public void dump() throws IOException {
 		try( BufferedWriter bw = new BufferedWriter( new FileWriter( path ))) {
 			for (String section : entries.keySet()){
@@ -135,8 +155,15 @@ public class IniReader {
 		opt_val.put( option, value );
 	}
 
-	public void get( String section, String option, String value) {
-		//get entry array triple
+	/**
+	 * Alias for getentry (NB originally returned entries array itself...)
+	 * @param section
+	 * @param option
+	 * @param value
+	 * @return
+	 */
+	public String get( String section, String option, String value) {
+		return getEntry(section,option);
 	}
 
 	public String getString( String section, String option, String defaultvalue ) {

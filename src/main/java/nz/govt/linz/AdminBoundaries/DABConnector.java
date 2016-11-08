@@ -40,7 +40,7 @@ public class DABConnector {
 	DataSource datasource = null;
 	
 	/**
-	 * Constructor for DAB database connector
+	 * Constructor for DAB database DAO (piggy backs on AIMS DAO)
 	 */
 	public DABConnector() {			
 		try {
@@ -69,6 +69,11 @@ public class DABConnector {
 		return result;
 	}
 
+	/**
+	 * Wrapper for boolean queries
+	 * @param query
+	 * @return
+	 */
 	public boolean executeTFQuery(String query){
 		boolean result = false;
 		try {
@@ -81,6 +86,11 @@ public class DABConnector {
 		return result;
 	}		
 	
+	/**
+	 * Wrapper for String queries
+	 * @param query
+	 * @return
+	 */
 	public String executeSTRQuery(String query){
 		String result = "";
 		try {
@@ -135,6 +145,11 @@ public class DABConnector {
 		return table;
 	}
 	
+	/**
+	 * Error handler that formats a structured response for eventual display to the user
+	 * @param sqle
+	 * @return
+	 */
 	private List<List<String>> parseSQLException(SQLException sqle){		
 		List<List<String>> result = null;	
 		
@@ -168,6 +183,12 @@ public class DABConnector {
 		return res.deleteCharAt(res.lastIndexOf(",")).toString();
 	}
 	
+	/**
+	 * Get the column type for a named column using table_version function ver_table_key_dattype
+	 * @param tablename
+	 * @param colname
+	 * @return
+	 */
 	protected String colType(String tablename, String colname){
 		String query = String.format("SELECT table_version.ver_table_key_datatype('%s','%s')",tablename,colname);
 		return executeSTRQuery(query);

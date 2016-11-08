@@ -1,5 +1,15 @@
 package nz.govt.linz.AdminBoundaries;
 
+/**
+ * AdminBoundaries
+ *
+ * Copyright 2014 Crown copyright (c)
+ * Land Information New Zealand and the New Zealand Government.
+ * All rights reserved
+ *
+ * This program is released under the terms of the new BSD license. See the
+ * LICENSE file for more information.
+ */
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -7,7 +17,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;

@@ -40,7 +40,7 @@ public class DABConnector {
 	DataSource datasource = null;
 	
 	/**
-	 * Constructor for DAB database connector
+	 * Constructor for DAB database DAO (piggy backs on AIMS DAO)
 	 */
 	public DABConnector() {			
 		try {
@@ -69,6 +69,11 @@ public class DABConnector {
 		return result;
 	}
 
+	/**
+	 * Wrapper for boolean queries
+	 * @param query
+	 * @return
+	 */
 	public boolean executeTFQuery(String query){
 		boolean result = false;
 		try {
@@ -81,6 +86,11 @@ public class DABConnector {
 		return result;
 	}		
 	
+	/**
+	 * Wrapper for String queries
+	 * @param query
+	 * @return
+	 */
 	public String executeSTRQuery(String query){
 		String result = "";
 		try {
@@ -135,6 +145,11 @@ public class DABConnector {
 		return table;
 	}
 	
+	/**
+	 * Error handler that formats a structured response for eventual display to the user
+	 * @param sqle
+	 * @return
+	 */
 	private List<List<String>> parseSQLException(SQLException sqle){		
 		List<List<String>> result = null;	
 		
@@ -168,6 +183,12 @@ public class DABConnector {
 		return res.deleteCharAt(res.lastIndexOf(",")).toString();
 	}
 	
+	/**
+	 * Get the column type for a named column using table_version function ver_table_key_dattype
+	 * @param tablename
+	 * @param colname
+	 * @return
+	 */
 	protected String colType(String tablename, String colname){
 		String query = String.format("SELECT table_version.ver_table_key_datatype('%s','%s')",tablename,colname);
 		return executeSTRQuery(query);
@@ -188,7 +209,7 @@ public class DABConnector {
 		}
 		else {
 			String query = String.format("SELECT COUNT(*) count FROM %s.%s",schema,table);
-			return DABFormatter.getSummaryAsTable(table,executeQuery(query));
+			return DABFormatter.formatTable(table,executeQuery(query));
 		}
 	}
 	
@@ -203,7 +224,7 @@ public class DABConnector {
 		String t2 = String.format("%s.%s", ABIs, ti.tmp());
 		String rec = String.format("T(code char(1), id %s)",colType(ABs+"."+ti.dst(),ti.key()));
 		String query = String.format("SELECT T.id, T.code FROM table_version.ver_get_table_differences('%s','%s','%s') as %s",t1,t2,ti.key(),rec);
-		return "<article>" + DABFormatter.getSummaryAsTable(ti.dst(),executeQuery(query)) + "</article>";
+		return "<article>" + DABFormatter.formatTable(ti.dst(),executeQuery(query)) + "</article>";
 	}
 	
 	

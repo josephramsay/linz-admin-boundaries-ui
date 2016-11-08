@@ -22,8 +22,12 @@ import nz.govt.linz.AdminBoundaries.DABContainerComp.ImportStatus;
 
 import static nz.govt.linz.AdminBoundaries.DABFormatter.BRED;
 import static nz.govt.linz.AdminBoundaries.DABFormatter.BGRN;
-//import static nz.govt.linz.AdminBoundaries.DABFormatter.BYLW;
 
+/**
+ * Main servlet page displaying table import status and possible actions
+ * @author jramsay
+ *
+ */
 public class DABServletSummary extends DABServlet {
 
 	
@@ -47,7 +51,21 @@ public class DABServletSummary extends DABServlet {
 	 */
 	public void init() throws ServletException {
 		super.init();
-		message = "Downloader for Admin Boundarys";
+		message = "Downloader for Admin Boundarys";		
+		description = String.join("\n", 
+				"The downloader interface queries the four destination admin boundary tables comparing them against their temporary source "
+				+ "counterparts. Each table-set can be in one of three states, Vacant, Loaded or Transferred. If a table-set is Vacant no temporary "
+				+ "tables exist and the import tables must be populated from file.",
+				"Two files are used to populate the admin boundaries; StatsNZ_meshblock_concordance_YYYMMDD.zip and nz_localities.csv. "
+				+ "These can be found on the LINZ SFTP and gisdata file share respectively. The StatsNZ meshblock zip file contains two shapefiles and "
+				+ "one CSV and is used to update the tables; meshblock, meshblock_concordance and territorial_authority.",
+				"If a table-set is in the Loaded state the import tables have been built and column changes applied. At this stage selected users "
+				+ "will be notified and if approved, changes can be pushed through to the final destiation tables.",
+				"When a table-set is in the Transferred state the import tables will match the destination tables and no action is necessary.",
+				"<br/><b>Actions</b>",
+				"<br/><u>LOAD</u> :: Load import tables from file\n",
+				"<br/><u>TRANSFER</u> :: Transfer import tables to destination tables.",
+				"<br/><u>REJECT</u> :: Delete import tables.");
 		dabc = new DABConnector();
 		dabf = new DABFormatter();
 		ccomp = new DABContainerComp();
@@ -55,7 +73,7 @@ public class DABServletSummary extends DABServlet {
 	}
 	
 	/**
-	 * Initialises the status array, reading table availability
+	 * Initialises the status array, reading table availability and calculating least ready state 
 	 */
 	private void updateStatus(){
 		for (TableInfo ti : ccomp.values()){
@@ -114,7 +132,7 @@ public class DABServletSummary extends DABServlet {
         	info.put("COMPARE",compare);
         	info.put("RESULT",ti.dst()+" &larr; "+ti.tmp());
         	summarytable = dabc.compareTableData(ti);
-        	accdectable = dabf.getAlternateNav();
+        	accdectable = dabf.getBackNav();
         }
         else if (action != null) {
         	//s = summary, a = 1
@@ -122,7 +140,7 @@ public class DABServletSummary extends DABServlet {
             info.put("RESULT",readProcessOutput(action));
             updateStatus();
             summarytable = getFullSummary();
-            accdectable = dabf.getAcceptDeclineNav(lowstatus.ordinal());
+            accdectable = dabf.getNavigation(lowstatus.ordinal());
         }
         else {
         	updateStatus();
@@ -136,16 +154,13 @@ public class DABServletSummary extends DABServlet {
             	summarytable = getFullSummary();
             default:
             }
-            accdectable = dabf.getAcceptDeclineNav(lowstatus.ordinal());
+            accdectable = dabf.getNavigation(lowstatus.ordinal());
         }
         
         infomessage = dabf.getInfoMessage(info);
         
         //OUTPUT
-        out.println(getHTMLWrapper(                
-        		getHead(),
-                getBodyHeader(),
-                getBodyTitle(),
+        out.println(getHTMLWrapper(
                 getBodyContent(infomessage,summarytable,accdectable),
                 getBodyFooter(created,accessed,user)
                 )

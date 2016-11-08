@@ -81,7 +81,12 @@ a.b_green, a.b_yellow, a.b_red {
     text-align: center;
 }
 
-a.b_green:hover {
+a.b_red {
+    pointer-events: none;
+    cursor: default;
+}
+
+a.b_green:hover, a.b_nav:hover {
     color: white;
     background-color: lightseagreen;
 }
@@ -94,6 +99,41 @@ a.b_yellow:hover {
 a.b_red:hover {
     color: white;
     background-color: lightcoral;
+}
+
+a.b_nav {
+    background-color: dodgerblue;
+    border-radius: 25px;
+    color: white;
+    display: inline-block;
+    font-size: 13px;
+    font-weight: bold;
+    padding: 8px 12px;
+    text-decoration: none;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+input[type=submit] {
+    margin-top: 20;
+    background-color: dodgerblue;
+    color: white;
+    width: 210px;
+    border-radius: 5px 5px 5px 5px;
+    display: inline-block;
+    font-size: 14px;
+    font-weight: bold;
+    padding: 8px 15px;
+    text-decoration: none;
+    text-transform: uppercase;
+    border: 0;
+    text-align: center;
+    cursor: pointer;
+}
+
+input[type=submit]:hover {
+    color: white;
+    background-color: lightseagreen;
 }
 
 h1 {
@@ -153,8 +193,6 @@ li ol, li ul {
     width: 960px;
     margin: 0 auto;
 }
-
-
 
 header {
     padding: 20px 2px;
@@ -226,15 +264,80 @@ nav ul li a:hover {
     text-decoration: none;
 }
 
+legend {
+    margin: 10px 5px;
+    font-size:larger;
+    text-decoration:underline;
+    color:black;
+}
 
+article {
+    display: inline-block;
+    width: 98%;
+    background-color: ghostwhite;
+    border: 10px solid ghostwhite;
+    border-radius: 10px;
+    padding: 0px;
+    margin: 5px;
+ }
 
+article.desc {
+    display: inline-block;
+    width: 96%;
+    background-color: ghostwhite;
+    border-color: ghostwhite;
+    border-radius: 10px;
+    padding: 15px;
+    margin: 5px;
+ }
+ 
 section.box {
     display: inline-block;
     position: relative;
     padding: 5px;
     float: left;
     width: calc(50% - 10px);
-    background-color: aliceblue;
+    background-color: ghostwhite;
+}
+
+section.form {
+    display: inline-block;
+    position: relative;
+    float: unset;
+    width: 100%;
+    background-color: ghostwhite;
+}
+
+section.form label {
+    font-style: italic;
+    float: left;
+    width: 99%;
+    margin: 5px 0px 0px 10px;
+    background-color: ghostwhite;
+}
+
+label.sec {
+    font-size:large;
+    text-transform: uppercase;
+    margin-left: 5px;
+}
+
+section.form input {
+    width: 99%;
+    float: left;
+    margin: 5px 10px 10px 10px;
+    padding: 0px;
+    color: black;
+    background-color: white;
+}
+
+section.form textarea {
+    outline:none;
+    margin: 5px 10px 10px 10px;
+    min-width: 99%;
+    min-height: 70px;
+    color: black;
+    background-color: white;
 }
 
 section.detail {
@@ -242,7 +345,7 @@ section.detail {
     position: relative;
     float: left;
     width: 100%;
-    background-color: aliceblue;
+    background-color: ghostwhite;
 }
 
 section.detail p a {
@@ -250,15 +353,23 @@ section.detail p a {
     padding: 5px 15px;
 }
 
-article {
+section.l_foot {
     display: inline-block;
-    width: 98%;
-    background-color: aliceblue;
-    border: 10px solid aliceblue;
-    border-radius: 10px;
+    position: relative;
     padding: 0px;
-    margin: 5px;
- }
+    float: left;
+    width: calc(50% - 10px);
+    text-align: left;
+}
+
+section.r_foot {
+    display: inline-block;
+    position: relative;
+    padding: 10px;
+    float: left;
+    width: calc(50% - 10px);
+    text-align: right;
+}
 
 footer {
     position: fixed;

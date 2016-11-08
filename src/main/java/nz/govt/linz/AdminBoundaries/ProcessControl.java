@@ -24,16 +24,23 @@ import java.io.InputStreamReader;
 public class ProcessControl {
 	
 	//this is the path where the debian packager puts the py part of the app
-	//private final static String DABP = "/usr/local/share/AdminBoundaries/download_admin_bdys.sh";
 	private final static String DABP = "webapps/ab/WEB-INF/scripts/download_admin_bdys.py";
 	private final static String SHELL = "python";
 	
 	private ProcessBuilder processbuilder;
 	private String processname;
 	
+	/**
+	 * Null constructor using default config file location  
+	 */
 	public ProcessControl(){
 		this(DABP);
 	}
+	
+	/**
+	 * Constructor sets up config file path and tests accessibility
+	 * @param procarg
+	 */
 	public ProcessControl(String procarg){
 		File catalina_base = new File( System.getProperty( "catalina.base" ) ).getAbsoluteFile();
 		File proc_file = new File(catalina_base, procarg);
@@ -80,6 +87,7 @@ public class ProcessControl {
 	public String toString(){
 		return "ProcessControl::" + processbuilder;
 	}
+	
 	
 	public static void main(String[] args){
 		ProcessControl pc = new ProcessControl("/home/<user>/git/AdminBoundaries/scripts/download_admin_bdys.sh");

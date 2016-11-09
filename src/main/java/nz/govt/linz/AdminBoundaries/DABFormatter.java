@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 
+
 /**
  * Formatter class whose main function is to map resultset data into html tables/forms. Other
  * formatting functions also added include button arrays and info messages

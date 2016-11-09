@@ -27,7 +27,7 @@ import org.junit.Test;
 
 public class DABIniReader_Test {
 	
-	private String p;
+	private static final String p = "testconfig.ini";
 	/** pre change reader */
 	private DABIniReader reader1;
 	/** editing reader */
@@ -35,11 +35,16 @@ public class DABIniReader_Test {
 	/** post change reader */
 	private DABIniReader reader3;
 	
-	private boolean change_flag;
-	private Map<String,Map<String,String>> restore;
+	private static boolean overwrite_flag;
+	private static Map<String,Map<String,String>> restore;
 	
 	@BeforeClass
-	public static void setUpBeforeClass() throws Exception {
+	public static void setUpBeforeClass() throws Exception {	
+		overwrite_flag = false;	
+		restore = new HashMap<>();
+		restore.put("user",new HashMap<String,String>(){{put("domain", "fake.domain.com");put("list", "user1,user2");}});
+		restore.put("connection",new HashMap<String,String>(){{put("ftphost", "ftp.domain.com");put("ftpport", "999");}});
+		restore.put("database",new HashMap<String,String>(){{put("host", "db.domain.com");put("port", "8080");}});
 	}
 
 	@AfterClass
@@ -48,12 +53,6 @@ public class DABIniReader_Test {
 
 	@Before
 	public void setUp() throws Exception {
-		change_flag = false;
-		p = "testconfig.ini";
-		restore = new HashMap<>();
-		restore.put("user",new HashMap<String,String>(){{put("domain", "fake.domain.com");put("list", "user1,user2");}});
-		restore.put("connection",new HashMap<String,String>(){{put("ftphost", "ftp.domain.com");put("ftpport", "999");}});
-		restore.put("database",new HashMap<String,String>(){{put("host", "db.domain.com");put("port", "8080");}});
 		changeReaders(p);
 	}
 
@@ -62,10 +61,9 @@ public class DABIniReader_Test {
 		restoreReaders(p);
 	}
 	
-	private void changeReaders(String p) throws IOException {
+	private void swapReaders(String p) throws IOException {
 		reader1 = new DABIniReader(p);
 		reader2 = new DABIniReader(p);
-		System.out.println("setup change");
 		for (String sec : reader2.getSections()){
 			for (String opt : reader2.getOptions(sec)){
 				if (restore.containsKey(sec) && restore.get(sec).containsKey(opt)){
@@ -78,30 +76,43 @@ public class DABIniReader_Test {
 			}
 		}
 		reader2.dump();
-		change_flag = true;
 		reader3 = new DABIniReader(p);
 	}
 	
 	private void restoreReaders(String p) throws IOException {
 		System.out.println("setup restore");
-		if (change_flag) {
-			changeReaders(p);
-			change_flag = false;
+		if (overwrite_flag) {
+			swapReaders(p);
+			overwrite_flag = false;
+		}
+	}
+	
+	private void changeReaders(String p) throws IOException {
+		System.out.println("setup change");
+		if (!overwrite_flag) {
+			swapReaders(p);
+			overwrite_flag = true;
 		}
 	}
 	
 
 	@Test
 	public void test_changed() {
-		System.out.println("R1 "+reader1.getEntry("layer", "output_srid"));
-		System.out.println("R2 "+reader2.getEntry("layer", "output_srid"));
 		assertNotEquals(reader1.getEntry("database", "port"), reader3.getEntry("database", "port"));
+		assertNotEquals(reader1.getEntry("database", "host"), reader3.getEntry("database", "host"));
+		assertNotEquals(reader1.getEntry("connection", "ftpport"), reader3.getEntry("connection", "ftpport"));
+		assertNotEquals(reader1.getEntry("connection", "ftphost"), reader3.getEntry("connection", "ftphost"));
+		assertNotEquals(reader1.getEntry("user", "domain"), reader3.getEntry("user", "domain"));
+		assertNotEquals(reader1.getEntry("user", "list"), reader3.getEntry("user", "list"));
 
 	}	
 	
 	@Test
 	public void test_unchanged() {
 		assertEquals(reader1.getEntry("layer", "geom_column"), reader3.getEntry("layer", "geom_column"));
+		assertEquals(reader1.getEntry("layer", "grid_res"), reader3.getEntry("layer", "grid_res"));
+		assertEquals(reader1.getEntry("user", "link"), reader3.getEntry("user", "link"));
+		assertEquals(reader1.getEntry("user", "smtp"), reader3.getEntry("user", "smtp"));
 
 	}
 

@@ -1,31 +1,39 @@
 #!/usr/bin/env python
-################################################################################
-#
-# download_admin_bdys.py
-#
-# Copyright 2014 Crown copyright (c)
-# Land Information New Zealand and the New Zealand Government.
-# All rights reserved
-#
-# This program is released under the terms of the new BSD license. See the 
-# LICENSE file for more information.
-#
-################################################################################
-# Notes
-# to fetch localities file need share created to \\prdassfps01\GISData\Electoral specific\Enrollment Services\Meshblock_Address_Report
-# to fetch meshblock data need sftp connection to 144.66.244.17/Meshblock_Custodianship 
-# without updated python >2.7.9 cant use paramiko (see commit history) use pexpect instead
-# database conn uses lds_bde user and modifed pg_hba allowing; local, lds_bde, linz_db, peer 
 
-# TODO
-# No | X | Desc
-# ---+---+-----
-# 1. | x | Change legacy database config to common attribute mapping
-# 2. |   | Shift file to table mapping into config
-# 3. | x | Enforce create/drop schema
-# 4. |   | Consistent return types from db calls
-# 5. |   | Validation framework
-# 6. | x | Standardise logging, remove from config
+'''
+v.0.0.1
+
+download_admin_bdys_test.py
+
+Copyright 2011 Crown copyright (c)
+Land Information New Zealand and the New Zealand Government.
+All rights reserved
+
+This program is released under the terms of the new BSD license. See the 
+LICENSE file for more information.
+
+Tests on Address class
+
+Created on 09/11/2016
+
+@author: jramsay
+
+Notes
+to fetch localities file need share created to \\prdassfps01\GISData\Electoral specific\Enrollment Services\Meshblock_Address_Report
+to fetch meshblock data need sftp connection to 144.66.244.17/Meshblock_Custodianship 
+without updated python >2.7.9 cant use paramiko (see commit history) use pexpect instead
+database conn uses lds_bde user and modifed pg_hba allowing; local, lds_bde, linz_db, peer 
+
+TODO
+No | X | Desc
+---+---+-----
+1. | x | Change legacy database config to common attribute mapping
+2. |   | Shift file to table mapping into config
+3. | x | Enforce create/drop schema
+4. |   | Consistent return types from db calls
+5. |   | Validation framework
+6. | x | Standardise logging, remove from config
+'''
  
 __version__ = 1.0
 
@@ -797,7 +805,7 @@ class Version(object):
                 imported = '{}.{}{}'.format(self.conf.database_schema,PREFIX,t)
                 for q in self.qset(original,imported,pk):
                     logger.debug('pQ1 {}'.format(q))
-                    Processor.attempt(self.conf,q)
+                    Processor.attempt(self.conf,q,driver_type='psy')
                 self.gridtables(sec,t,t2)
                     
     def gridtables(self,sec,tab,tname):

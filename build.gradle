@@ -28,6 +28,7 @@ ext {
     postGISApiVersion = '2.2.0'
     servletApiVersion = '3.+'
     junitVersion = '4.12'
+    jmockVersion = '2.8.2'
     jsoupVersion = '1.10.1'
 }
 
@@ -116,6 +117,7 @@ dependencies {
     providedRuntime "org.postgresql:postgresql:$postgresqlApiVersion"
     providedRuntime "net.postgis:postgis-jdbc:$postGISApiVersion"
     testCompile "junit:junit:$junitVersion" 
+    testCompile "org.jmock:jmock:$jmockVersion" 
     testCompile "org.jsoup:jsoup:$jsoupVersion"
 }
 

@@ -135,7 +135,8 @@ public class DABContainerComp {
 		} catch (IOException ioe) {
 			// TODO Auto-generated catch block
 			ioe.printStackTrace();
-		}initTMI();
+		}
+		initTMI();
 	}
 	
 	

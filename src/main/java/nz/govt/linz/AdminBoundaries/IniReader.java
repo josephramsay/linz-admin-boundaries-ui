@@ -1,5 +1,15 @@
 package nz.govt.linz.AdminBoundaries;
 
+/**
+ * AdminBoundaries
+ *
+ * Copyright 2014 Crown copyright (c)
+ * Land Information New Zealand and the New Zealand Government.
+ * All rights reserved
+ *
+ * This program is released under the terms of the new BSD license. See the
+ * LICENSE file for more information.
+ */
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -7,7 +17,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -34,7 +43,7 @@ public class IniReader {
 	 * @param p
 	 * @throws IOException
 	 */
-	public IniReader(String p) throws IOException {
+	public IniReader(String p) {
 		setPath(p);
 	}
 
@@ -50,7 +59,7 @@ public class IniReader {
 	 * Reads ini file populating entries array
 	 * @throws IOException
 	 */
-	public void load() throws IOException {
+	public void load() {
 		try( BufferedReader br = new BufferedReader( new FileReader( path ))) {
 			boolean save_flag = false;
 			String line;
@@ -86,6 +95,9 @@ public class IniReader {
 				}
 			}
 			if (save_flag){set(section,option,value.toString());}
+		}
+		catch (IOException ioe) {
+			System.out.println("Error reading config file, "+path+". "+ioe);;
 		}
 	}
 

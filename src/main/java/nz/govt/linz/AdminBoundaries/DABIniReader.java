@@ -3,7 +3,6 @@ package nz.govt.linz.AdminBoundaries;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -31,7 +30,7 @@ public class DABIniReader extends IniReader{
 	 * Null constructor setting up on default confg path
 	 * @throws IOException
 	 */
-	public DABIniReader() throws IOException {
+	public DABIniReader() {
 		this(CONF_PATH);
 	}
 
@@ -40,7 +39,7 @@ public class DABIniReader extends IniReader{
 	 * @param path
 	 * @throws IOException
 	 */
-	public DABIniReader(String path) throws IOException {
+	public DABIniReader(String path) {
 		super(path);
 		load();
 		parse(entries.get("meshblock").get("colmap"));

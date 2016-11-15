@@ -1,10 +1,5 @@
 package nz.govt.linz.AdminBoundaries;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-
 /**
  * AdminBoundaries
  *
@@ -18,9 +13,11 @@ import java.util.LinkedHashMap;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 
-import nz.govt.linz.AdminBoundaries.DABContainerComp.ImportStatus;
-import nz.govt.linz.AdminBoundaries.DABContainerComp.TableInfo;
 
 /**
  * Formatter class whose main function is to map resultset data into html tables/forms. Other
@@ -187,8 +184,10 @@ public class DABFormatter {
 		return "DABFormatter";
 	}
 	
+	@SuppressWarnings("serial")
 	public static void main(String[] args){
 		Map<String,Map<String,String>> ftest = new LinkedHashMap<>();
+		//Use test instead
 		ftest.put("SECTION1",new HashMap<String,String>(){{put("OPTION1", "value aaa");put("OPTION2", "value bbb");}});
 		ftest.put("temp",new HashMap<String,String>(){{put("OPTION3", "value ccc");put("OPTION4", "value ddd");}});
 		ftest.put("SECTION2",new HashMap<String,String>(){{put("OPTION5", "value eee");put("OPTION6", "value fff");}});

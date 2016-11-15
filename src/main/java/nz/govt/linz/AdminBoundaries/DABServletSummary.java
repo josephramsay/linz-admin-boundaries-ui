@@ -63,7 +63,7 @@ public class DABServletSummary extends DABServlet {
 				+ "will be notified and if approved, changes can be pushed through to the final destiation tables.",
 				"When a table-set is in the Transferred state the import tables will match the destination tables and no action is necessary.",
 				"<br/><b>Actions</b>",
-				"<br/><u>LOAD</u> :: Load import tables from file\n",
+				"<br/><u>LOAD</u> :: Load import tables from file",
 				"<br/><u>TRANSFER</u> :: Transfer import tables to destination tables.",
 				"<br/><u>REJECT</u> :: Delete import tables.");
 		dabc = new DABConnector();
@@ -104,7 +104,7 @@ public class DABServletSummary extends DABServlet {
 		String summarytable = "";
 		String accdectable = "";
 		String infomessage = "";
-		String sp = request.getServletPath();//  getServletContext().getRealPath("/");
+		//String sp = request.getServletPath();//  getServletContext().getRealPath("/");
 		
 		response.setContentType("text/html; charset=UTF-8");
         PrintWriter out = response.getWriter();
@@ -147,7 +147,7 @@ public class DABServletSummary extends DABServlet {
             switch (lowstatus){
             case BLANK: 
             	//show dst table  - <blank>
-            	summarytable = ccomp.DEF_TABLE;
+            	summarytable = DABContainerComp.DEF_TABLE;
             case LOADED:
             case COMPLETE:
             	//show counts match
@@ -173,7 +173,7 @@ public class DABServletSummary extends DABServlet {
 	 */
 	private String getFullSummary(){
 		String res = "";
-		for (String tm_str : ccomp.TABV.keySet()){
+		for (String tm_str : DABContainerComp.TABV.keySet()){
 			res = res.concat(getSummarySection(ccomp.valueOf(tm_str)));
 		}
 		return res;

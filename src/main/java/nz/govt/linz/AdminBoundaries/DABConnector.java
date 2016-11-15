@@ -53,6 +53,14 @@ public class DABConnector {
 	}
 	
 	/**
+	 * Datasource provided (for mocking)
+	 * @param datasource_m
+	 */
+	public DABConnector(DataSource datasource_m) {
+		datasource = datasource_m;
+	}
+	
+	/**
 	 * Fetches summary data from temp import schema, admin_bdys_import
 	 * @return {@codeList<List<String>> representing a MxN data table}
 	 */
@@ -126,22 +134,31 @@ public class DABConnector {
 	 * @return
 	 */
 	private List<List<String>> parseResultSet(ResultSet rs) throws SQLException {
-		List<String> row;// = new ArrayList<String>();
+		List<String> head_row;// = new ArrayList<String>();
+		List<String> body_row;// = new ArrayList<String>();
 		List<List<String>> table = new ArrayList<>();
 		
 	    ResultSetMetaData rsmd = rs.getMetaData();
 	    int count = rsmd.getColumnCount();
-	    row = new ArrayList<>();
+	    head_row = new ArrayList<>();
 	    for (int i=1; i<=count; i++) {
-	    	row.add(rsmd.getColumnLabel(i));
+	    	
+	    	String l = rsmd.getColumnLabel(i);
+	    	System.out.println(">>>CL>>> "+l);
+	    	head_row.add(l);
+	    	//row.add(rsmd.getColumnLabel(i));
 	    }
-	    table.add(row);
+	    table.add(head_row);
 	    while (rs.next()) {
-	    	row = new ArrayList<>();
-	    	for (int i=1; i<=count; i++) {
-	    		row.add(rs.getString(i));
+	    	body_row = new ArrayList<>();
+	    	for (String col : head_row){//int i=1; i<=count; i++) {
+	    		
+	    		String v = rs.getString(col);
+	    		System.out.println(">>>R["+col+"]>>> "+v);
+	    		body_row.add(v);
+	    		//row.add(rs.getString(col));
 	    	}
-	    	table.add(row);
+	    	table.add(body_row);
 		}
 		return table;
 	}
@@ -259,8 +276,7 @@ public class DABConnector {
 		return ImportStatus.BLANK;
 	}
 	
-	
-	
+
 	public String toString(){
 		return "DABConnector::";//+connector;
 	}
@@ -271,9 +287,7 @@ public class DABConnector {
 	 */
 	public static void main(String[] args){
 		DABConnector dabc = new DABConnector();
-		System.out.println(dabc.executeQuery("select 1"));
-		
-
+		System.out.println(dabc.executeQuery("select 1"));	
 	}
 	
 }

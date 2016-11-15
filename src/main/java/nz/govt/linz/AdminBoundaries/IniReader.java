@@ -43,7 +43,7 @@ public class IniReader {
 	 * @param p
 	 * @throws IOException
 	 */
-	public IniReader(String p) throws IOException {
+	public IniReader(String p) {
 		setPath(p);
 	}
 
@@ -59,7 +59,7 @@ public class IniReader {
 	 * Reads ini file populating entries array
 	 * @throws IOException
 	 */
-	public void load() throws IOException {
+	public void load() {
 		try( BufferedReader br = new BufferedReader( new FileReader( path ))) {
 			boolean save_flag = false;
 			String line;
@@ -95,6 +95,9 @@ public class IniReader {
 				}
 			}
 			if (save_flag){set(section,option,value.toString());}
+		}
+		catch (IOException ioe) {
+			System.out.println("Error reading config file, "+path+". "+ioe);;
 		}
 	}
 

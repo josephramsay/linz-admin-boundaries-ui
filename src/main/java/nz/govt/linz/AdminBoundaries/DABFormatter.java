@@ -187,6 +187,7 @@ public class DABFormatter {
 	@SuppressWarnings("serial")
 	public static void main(String[] args){
 		Map<String,Map<String,String>> ftest = new LinkedHashMap<>();
+		//Use test instead
 		ftest.put("SECTION1",new HashMap<String,String>(){{put("OPTION1", "value aaa");put("OPTION2", "value bbb");}});
 		ftest.put("temp",new HashMap<String,String>(){{put("OPTION3", "value ccc");put("OPTION4", "value ddd");}});
 		ftest.put("SECTION2",new HashMap<String,String>(){{put("OPTION5", "value eee");put("OPTION6", "value fff");}});

@@ -90,25 +90,31 @@ public class DABContainerComp {
 	
 	/**
 	 * Container constructor initialises and populates TI map
+	 * @throws IOException 
 	 */
-	public DABContainerComp(){
-		ti_map = new HashMap<>();
-		readConfig(new ArrayList<TableInfo>());
+	public DABContainerComp() {
+		setTIMap(new HashMap<>());
+		setReader(new DABIniReader());
+		initTMI();
 	}
 	
-	/**
-	 * Initialises Reader
-	 * @param tablemap
-	 */
-	private void readConfig(List<TableInfo> tablemap){
-		try {
-			reader = new DABIniReader();
-			initTMI();
-		} catch (IOException ioe) {
-			// TODO Auto-generated catch block
-			ioe.printStackTrace();
-		}
+	public DABContainerComp(String conf) {
+		setTIMap(new HashMap<>());
+		setReader(new DABIniReader(conf));
+		initTMI();
 	}
+	
+	/** Sets TableInfo map */
+	public void setTIMap(HashMap<String,TableInfo> tim){
+		ti_map = tim;
+	}
+	
+	/** Sets DABIniReader object */
+	public void setReader(DABIniReader ir){
+		reader = ir;
+	}
+	
+	//-------------------------------------------------------------------------
 	
 	/**
 	 * Wrapper for fetching entries array
@@ -127,9 +133,9 @@ public class DABContainerComp {
 			reader.setEntries(config);
 			reader.dump();		
 		} catch (IOException ioe) {
-				// TODO Auto-generated catch block
-				ioe.printStackTrace();
-		}
+			// TODO Auto-generated catch block
+			ioe.printStackTrace();
+		}initTMI();
 	}
 	
 	
@@ -152,13 +158,6 @@ public class DABContainerComp {
 		}
 	}
 	
-	/**
-	 * Public accessor method
-	 * @param i
-	 */
-	public TableInfo getTM(int i){
-		return ti_map.get(i);
-	}
 	
 	/**
 	 * getter for TI map values
@@ -178,13 +177,13 @@ public class DABContainerComp {
 	}
 	
 	/**
-	 * Reverse lookup value->key for the TI map
-	 * @param val
+	 * Reverse lookup abbreviation value->key for the TI map
+	 * @param abv_val
 	 * @return
 	 */
-	public TableInfo keyOf(String val){
+	public TableInfo keyOf(String abv_val){
 		for (Object o : TABV.keySet()) {
-            if (TABV.get(o).equals(val)) {
+            if (TABV.get(o).equals(abv_val)) {
               return ti_map.get((String) o);
             }
         }

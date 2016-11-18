@@ -13,14 +13,24 @@ LICENSE file for more information.
     repositories {
         mavenLocal()
         mavenCentral()
+        //maven { url "https://plugins.gradle.org/m2/" }
     }
 
     dependencies {
         classpath "org.postgresql:postgresql:9.4-1206-jdbc42"
         classpath 'com.bmuschko:gradle-cargo-plugin:2+'
-        //for debpackage
+        //pygradle
+        //classpath "gradle.plugin.com.linkedin.pygradle:pygradle-plugin:0.3.24"
+        //debpackage
         //classpath 'com.netflix.nebula:gradle-ospackage-plugin:1+'
+
     }
+}
+
+
+plugins {
+  //id "com.linkedin.python" version "0.3.24"
+  id "com.linkedin.python-sdist" version "0.3.9"
 }
 
 ext {
@@ -32,11 +42,10 @@ ext {
     jsoupVersion = '1.10.1'
 }
 
-
-
 apply plugin: 'java'
 apply plugin: 'war'
 apply plugin: 'com.bmuschko.cargo'
+//apply plugin: "com.linkedin.python"
 //apply plugin: "nebula.deb"
 
 version = '0.1'
@@ -51,6 +60,7 @@ def packVersion = '0.1'
 //packages up everything in src/main/webapp
 
 task copyscripts(type: Copy) {
+     dependsOn test
      from('scripts') {
          include '**/*.sh'
          include '**/*.py'
@@ -58,7 +68,6 @@ task copyscripts(type: Copy) {
      }
      into 'src/main/webapp/WEB-INF/scripts'
 }
-
 
 war {
     dependsOn copyscripts
@@ -69,7 +78,6 @@ war {
     }
     archiveName = warName
 }
-
 
 task cargosetup {
     dependsOn war
@@ -91,6 +99,10 @@ task cargosetup {
 	}    
 }
 
+/*task flake8 (overwrite: true){
+   ignore = "E3"
+}*/
+
 task redeploy {
     dependsOn cargosetup, cargoRedeployRemote
 }
@@ -103,12 +115,11 @@ task undeploy {
     dependsOn cargosetup, cargoUndeployRemote
 }
 
-task xdeploy {
-	dependsOn undeploy, deploy
-}
-
 repositories {
     mavenCentral()
+    pyGradlePyPi()
+    ivy { url "../../ivy/repository" }
+    //flatDir name:"local", dirs:"~/ivy/repository"
 }
 
 dependencies {
@@ -119,6 +130,15 @@ dependencies {
     testCompile "junit:junit:$junitVersion" 
     testCompile "org.jmock:jmock:$jmockVersion" 
     testCompile "org.jsoup:jsoup:$jsoupVersion"
+    /*
+    python "pypi:pexpect:4.2.1"
+    python "pypi:psycopg2:2.6.2"
+    python "pypi:GDAL:2.1.0"
+    */
+    test "nz.govt.linz:psycopg2:2.6.2"
+    test "nz.govt.linz:pexpect:4.2.1"
+    test "nz.govt.linz:gdal:2.1.0"
+    test "nz.govt.linz:ptyprocess:0.5.1"
 }
 
 

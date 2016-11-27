@@ -28,7 +28,7 @@ TODO
 No | X | Desc
 ---+---+-----
 1. | x | Change legacy database config to common attribute mapping
-2. |   | Shift file to table mapping into config
+2. | x | Shift file to table mapping into config
 3. | x | Enforce create/drop schema
 4. |   | Consistent return types from db calls
 5. |   | Validation framework
@@ -121,6 +121,8 @@ OPTS = [('1. Load - Copy AB files from Servers','load',0),
 		('3. Reject - Drop import tables and quit','reject',3)]
 #name of config file
 CONFIG = 'download_admin_bdys.ini'
+SETTINGS = 'dab.properties'
+VARS = ConfReader.load()
 
 #max number of retries in recursive loop (insertshp in this case
 MAX_RETRY = 10
@@ -422,40 +424,52 @@ class ConfReader(object):
 				self.parser.remove_section(self.TEMP)
 				with open(self.config_file, 'w') as configfile: self.parser.write(configfile)
 		return rv
+	
+	@staticmethod
+	def load():
+		'''Simple JSON config file reader'''
+		with open(SETTINGS) as s:
+			return json.load(s)
 		
 	
 class ProcessorException(Exception):pass
 class Processor(object):
-	mbcc = ('objectid','meshblock','ta','ta ward','community board','ta subdivision','ta maori_ward','region', \
-			'region constituency','region maori constituency','dhb','dhb constituency','ged 2007','med 2007', \
-			'high court','district court','ged','med','licensing trust ward')
-	#filename to table+column name translations
-	f2t = {'Stats_MB_WKT.csv':['meshblock','<todo create columns>'], \
-		   'Stats_Meshblock_concordance.csv':['meshblock_concordance',mbcc], \
-		   'Stats_Meshblock_concordance_WKT.csv':['meshblock_concordance',mbcc], \
-		   'Stats_TA_WKT.csv':['territorial_authority','<todo create columns>']}
-		   
-	#mapping for csv|shapefilenames to tablenames
-	#{shapefile:[import tablename, original tablename]}
-	l2t = {'nz_localities':['nz_locality','nz_locality'],
-		   'StatsNZ_Meshblock':['statsnz_meshblock','meshblock'],
-		   'StatsNZ_TA':['statsnz_ta','territorial_authority'],
-		   'Stats_Meshblock_concordance':['meshblock_concordance','meshblock_concordance']}
-	
-	#common queries, indexed
-	q = {'find':"select count(*) from information_schema.tables where table_schema like '{}' and table_name = '{}'",
-		 'create':'create table {}.{} ({})',
-		 'insert':'insert into {}.{} ({}) values ({})',
-		 'trunc':'truncate table {}.{}',
-		 'drop':'drop table if exists {}.{}',
-		 'permit_t':'grant select on table {}.{} to {}',
-		 'permit_s':'grant usage on schema {} to {}'
-	}
+# 	mbcc = ('objectid','meshblock','ta','ta ward','community board','ta subdivision','ta maori_ward','region', \
+# 			'region constituency','region maori constituency','dhb','dhb constituency','ged 2007','med 2007', \
+# 			'high court','district court','ged','med','licensing trust ward')
+# 	
+# 	#filename to table+column name translations
+# 	f2t = {'Stats_MB_WKT.csv':['meshblock','<todo create columns>'], \
+# 		   'Stats_Meshblock_concordance.csv':['meshblock_concordance',mbcc], \
+# 		   'Stats_Meshblock_concordance_WKT.csv':['meshblock_concordance',mbcc], \
+# 		   'Stats_TA_WKT.csv':['territorial_authority','<todo create columns>']}
+# 		   
+# 	#mapping for csv|shapefilenames to tablenames
+# 	#{shapefile:[import tablename, original tablename]}
+# 	l2t = {'nz_localities':['nz_locality','nz_locality'],
+# 		   'StatsNZ_Meshblock':['statsnz_meshblock','meshblock'],
+# 		   'StatsNZ_TA':['statsnz_ta','territorial_authority'],
+# 		   'Stats_Meshblock_concordance':['meshblock_concordance','meshblock_concordance']}
+# 	
+# 	#common queries, indexed
+# 	q = {'find':"select count(*) from information_schema.tables where table_schema like '{}' and table_name = '{}'",
+# 		 'create':'create table {}.{} ({})',
+# 		 'insert':'insert into {}.{} ({}) values ({})',
+# 		 'trunc':'truncate table {}.{}',
+# 		 'drop':'drop table if exists {}.{}',
+# 		 'permit_t':'grant select on table {}.{} to {}',
+# 		 'permit_s':'grant usage on schema {} to {}'
+# 	}
 	
 	enc = 'utf-8-sig'
 	
 	def __init__(self,conf,db,cm,sf):
 		self.conf = conf
+		vars = self.conf.load()
+		self.mbcc = vars['mbcc'] 
+		self.l2t = vars['l2t']
+		self.f2t = vars['f2t']
+		self.cq = vars['cq']
 		self.db = db
 		self.cm = cm
 		self.driver = ogr.GetDriverByName('ESRI Shapefile')
@@ -501,8 +515,8 @@ class Processor(object):
 		#h = ','.join([i.replace(' ','_') for i in headers]).lower() if is_nonstr_iter(headers) else headers
 		h = ','.join(headers).lower() if is_nonstr_iter(headers) else headers
 		v = "'{}'".format("','".join(values)) if is_nonstr_iter(values) else values
-		#return self.q[op].format(schema,table,h,v).replace('"','\'')
-		return self.q[op].format(schema,table,h,v)
+		#return self.cq[op].format(schema,table,h,v).replace('"','\'')
+		return self.cq[op].format(schema,table,h,v)
 	
 	def layername(self,in_layer):
 		'''Returns the name of the layer that inserting a shapefile would create'''
@@ -637,12 +651,12 @@ class Processor(object):
 	def assignperms(self,tablename):
 		'''Give select-on-table and usage-on-schema for all named users'''
 		for user in self.cm.map[self.secname][tablename]['permission']:
-			self._attempt(self.q['permit_t'].format(self.conf.database_schema,PREFIX+tablename,user))
-			self._attempt(self.q['permit_s'].format(self.conf.database_schema,user))
+			self._attempt(self.cq['permit_t'].format(self.conf.database_schema,PREFIX+tablename,user))
+			self._attempt(self.cq['permit_s'].format(self.conf.database_schema,user))
 				
 	def drop(self,table):
 		'''Clean up any previous table instances. Doesn't work!''' 
-		return self._attempt(self.q['drop'].format(self.conf.database_schema,table))
+		return self._attempt(self.cq['drop'].format(self.conf.database_schema,table))
 
 	def _attempt(self,q):
 		'''Wrapper for static attempt'''

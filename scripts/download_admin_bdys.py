@@ -251,6 +251,7 @@ class ColumnMapper(object):
 			if m: self.map[m.group(1)] = json.loads(getattr(conf,attr))
 			
 	def flatten(self,lol):
+		'''Flattens a nested list into 1D'''
 		if not isinstance(lol,str) and isinstance(lol, collections.Iterable): return [a for i in lol for a in self.flatten(i)]
 		else: return [lol]
 		 

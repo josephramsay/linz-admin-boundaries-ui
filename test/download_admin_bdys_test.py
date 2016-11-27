@@ -65,14 +65,56 @@ class Test00_ConfReader(unittest.TestCase):
 class Test10_ColumnMapper(unittest.TestCase):
 	
 	def setUp(self):
+		self.cm = ColumnMapper(ConfReader())	
+	
+	def tearDown(self):
+		pass	
+	
+	def test00_selfTest(self):
+		'''Self tests making sure reader object is instantated correctly'''
+		self.assertIsNotNone(self.cm, 'Failied to instantiale mapper')
+		self.assertIsNotNone(self.cm.schema, 'Failied to instantiale schema')
+		self.assertIsNotNone(self.cm.map, 'Failied to instantiale map')
+
+	def test10_flatten(self):
+		'''Tests list flattening function'''
+		f1 = [[1,11],[2,[3,33],[4,44],5,[6]],7]
+		f2 = [1,11,2,3,33,4,44,5,6,7]
+		self.assertEqual(f2,self.cm.flatten(f1))
+				
+	def test20_action(self):
+		'''Tests query generation by matching query string length against known as a sig test'''
+		actions = {'add':0,'drop':82,'rename':162,'cast':0,'primary':75,'trans':189}
+		for a in actions:
+			self.assertEqual(actions[a],sum([len(i) for i in self.cm.action("meshblock","statsnz_meshblock",a)]))
+			
+					
+	def test30_fromqry(self):
+		a = ['ALTER TABLE admin_bdys_import.temp_statsnz_meshblock ADD COLUMN A A']
+		b = ['ALTER TABLE admin_bdys_import.temp_statsnz_meshblock DROP COLUMN IF EXISTS B']
+		c = ['ALTER TABLE admin_bdys_import.temp_statsnz_meshblock ALTER COLUMN C SET DATA TYPE C']
+		d = ['ALTER TABLE admin_bdys_import.temp_statsnz_meshblock RENAME COLUMN D TO D']
+		e = ["SELECT UpdateGeometrySRID('admin_bdys_import','temp_statsnz_meshblock', 'shape', 4167)", 
+			'UPDATE admin_bdys_import.temp_statsnz_meshblock SET shape = ST_Transform(shape::geometry,4167::integer)']
+		f = ['ALTER TABLE admin_bdys_import.temp_statsnz_meshblock ADD PRIMARY KEY (code)']
+		self.assertEqual(a, self.cm.formqry('add','meshblock','statsnz_meshblock',{'add':'A','type':'A'}))
+		self.assertEqual(b, self.cm.formqry('drop','meshblock','statsnz_meshblock','B'))
+		self.assertEqual(c, self.cm.formqry('cast','meshblock','statsnz_meshblock',{'cast':'C','type':'C'}))
+		self.assertEqual(d, self.cm.formqry('rename','meshblock','statsnz_meshblock',{'old':'D','new':'D'}))
+		self.assertEqual(e, self.cm.formqry('trans','meshblock','statsnz_meshblock',None))
+		self.assertEqual(f, self.cm.formqry('primary','meshblock','statsnz_meshblock',None))
+	
+class Test20_Version(unittest.TestCase):
+	
+	def setUp(self):
 		c = ConfReader()
-		m = ColumnMapper(c)	
+		m = ColumnMapper(c)
+		v = Version(c, m)
 	
 	def tearDown(self):
 		pass
-
-			
-class Test20_Version(unittest.TestCase):
+	
+class Test30_Processor(unittest.TestCase):
 	
 	def setUp(self):
 		c = ConfReader()

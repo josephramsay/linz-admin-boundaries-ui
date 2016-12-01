@@ -24,7 +24,7 @@ import javax.servlet.http.*;
 public class DABServletConfig extends DABServlet {
 
 
-	static final long serialVersionUID = 1;
+	static final long serialVersionUID = 105L;
 
 	/** Formatter class for converting data-maps to html strings */
 	private DABFormatter dabf;
@@ -134,7 +134,7 @@ public class DABServletConfig extends DABServlet {
 			}
 			else {
 				config.put(parts[0], new LinkedHashMap<String,String>(){
-					private static final long serialVersionUID = 1L;
+					private static final long serialVersionUID = 1051L;
 					{put(parts[1],request.getParameterValues(pname)[0]);}});
 			}
 		}

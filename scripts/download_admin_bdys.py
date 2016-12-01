@@ -46,6 +46,7 @@ import getopt
 import psycopg2
 import smtplib
 import collections
+import socket
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -121,8 +122,9 @@ OPTS = [('1. Load - Copy AB files from Servers','load',0),
 		('3. Reject - Drop import tables and quit','reject',3)]
 #name of config file
 CONFIG = 'download_admin_bdys.ini'
-SETTINGS = 'dab.properties'
-VARS = ConfReader.load()
+PROPS = '../scripts/dab.properties'
+#PROPS = 'dab.properties'
+HOST = socket.gethostname()
 
 #max number of retries in recursive loop (insertshp in this case
 MAX_RETRY = 10
@@ -139,6 +141,11 @@ else:
 		return hasattr(v, '__iter__')
 	dec = lambda d: d.decode()
 	enc = lambda e: e.encode()
+	
+	
+def setRetryDepth(depth):
+	global DEPTH
+	DEPTH = depth
 	
 def shift_geom ( geom ):
 	'''translate geometry to 0-360 longitude space'''
@@ -235,14 +242,20 @@ class DataValidator(object):
 class ColumnMapperError(Exception):pass
 class ColumnMapper(object):
 	'''Actions the list of column mappings defined in the conf file'''
+	tfnc = 3
+	ofsrf = "find_srid('{schema}','{table}','{geom}')"#for when o(riginal)srid varies
 	map = {}
 	dra = {'drop':'ALTER TABLE {schema}.{table} DROP COLUMN IF EXISTS {drop}',
 		   'rename':'ALTER TABLE {schema}.{table} RENAME COLUMN {old} TO {new}',
 		   'add':'ALTER TABLE {schema}.{table} ADD COLUMN {add} {type}',
 		   'cast':'ALTER TABLE {schema}.{table} ALTER COLUMN {cast} SET DATA TYPE {type}',
 		   'srid':'SELECT UpdateGeometrySRID(\'{schema}\',\'{table}\', \'{geom}\', {srid})',
-		   'trans':'UPDATE {schema}.{table} SET {geom} = ST_Transform({geom}::geometry,{srid}::integer)',
-		   'primary':'ALTER TABLE {schema}.{table} ADD PRIMARY KEY ({primary})'
+		   'trans1':'UPDATE {schema}.{table} SET {geom} = ST_Transform({geom}::geometry,{srid}::integer)',
+		   'trans2':'ALTER TABLE {schema}.{table} ALTER COLUMN {geom} TYPE geometry(MultiPolygon,{srid}) USING ST_Transform({geom}, {srid})',
+		   'trans3':'ALTER TABLE {schema}.{table} ALTER COLUMN {geom} TYPE geometry(MultiPolygon,{srid}) USING ST_Transform(ST_SetSRID({geom},{osrid}), {srid})',
+		   'primary':'ALTER TABLE {schema}.{table} ADD PRIMARY KEY ({primary})',
+		   'shift':'UPDATE {schema}.{table} SET {geom} = ST_Shift_Longitude({geom}) where ST_XMin({geom}) < 0'
+		  
 	}
 	
 	def __init__(self,conf):
@@ -282,8 +295,10 @@ class ColumnMapper(object):
 		elif action == 'trans': 
 			g = self.map[section][table]['geom']
 			s = self.map[section][table]['srid'] #4167
-			queries.append(self.dra['srid'].format(schema=self.schema,table=ptable,geom=g,srid=s))
-			queries.append(self.dra['trans'].format(schema=self.schema,table=ptable,geom=g,srid=s))
+			o = self.ofsrf.format(schema=self.schema,table=ptable,geom=g)
+			if self.tfnc<3: queries.append(self.dra['srid'].format(schema=self.schema,table=ptable,geom=g,srid=s))
+			queries.append(self.dra['trans{}'.format(self.tfnc)].format(schema=self.schema,table=ptable,geom=g,srid=s,osrid=o))
+			queries.append(self.dra['shift'].format(schema=self.schema,table=ptable,geom=g))
 		elif action == 'primary':
 			p = self.map[section][table]['primary']
 			queries.append(self.dra['primary'].format(schema=self.schema,table=ptable,primary=p))
@@ -347,7 +362,7 @@ class DatabaseConn_psycopg2(object):
 		except Exception as e: 
 			raise DatabaseConnectionException('Database query error, {}'.format(e))
 		#for now just check if row returned as success
-		return bool(res)
+		return bool(isinstance(res,int) and res>0)
 	
 	def disconnect(self):
 		self.pconn.commit()
@@ -390,6 +405,9 @@ class DatabaseConn_ogr(object):
 class ConfReader(object):
 	'''Configuration Reader reads (and writes temp objects) in cp format'''
 	TEMP = 'temp'
+	HSUB = re.sub('\d{2}','0{}'.format('dtp'.index(HOST[0])+1),HOST) if HOST[0] in 'dtp' and re.search('\d{2}',HOST) else HOST
+	DEF = {	'database_host':HOST.split('.')[0],
+			'user_link':'http://{}:8080/ab/'.format(HSUB) }
 	
 	def __init__(self):
 		self.path = os.path.dirname(__file__)
@@ -401,10 +419,16 @@ class ConfReader(object):
 			#sys.exit('Could not load config ' + config_files[0] )
 		
 		for section in ('connection','meshblock','nzlocalities','database','layer','user'):
-			for option in self.parser.options(section): 
-				setattr(self,'{}_{}'.format(section,option),self.parser.get(section,option))
+			for option in self.parser.options(section):
+				optval = self.parser.get(section,option)
+				setattr(self,'{}_{}'.format(section,option),optval if optval else self._fitg(section,option))
 	
 		logger.info('Starting DAB')
+		
+	def _fitg(self,section,option):
+		'''calculated default config values'''
+		return self.DEF['{}_{}'.format(section,option)]
+		
 		
 	def save(self,name,data):
 		'''Configparser save for interrupted processing jobs'''
@@ -428,38 +452,13 @@ class ConfReader(object):
 	@staticmethod
 	def load():
 		'''Simple JSON config file reader'''
-		with open(SETTINGS) as s:
+		with open(PROPS) as s:
 			return json.load(s)
 		
+#VARS = ConfReader.load()		
 	
 class ProcessorException(Exception):pass
 class Processor(object):
-# 	mbcc = ('objectid','meshblock','ta','ta ward','community board','ta subdivision','ta maori_ward','region', \
-# 			'region constituency','region maori constituency','dhb','dhb constituency','ged 2007','med 2007', \
-# 			'high court','district court','ged','med','licensing trust ward')
-# 	
-# 	#filename to table+column name translations
-# 	f2t = {'Stats_MB_WKT.csv':['meshblock','<todo create columns>'], \
-# 		   'Stats_Meshblock_concordance.csv':['meshblock_concordance',mbcc], \
-# 		   'Stats_Meshblock_concordance_WKT.csv':['meshblock_concordance',mbcc], \
-# 		   'Stats_TA_WKT.csv':['territorial_authority','<todo create columns>']}
-# 		   
-# 	#mapping for csv|shapefilenames to tablenames
-# 	#{shapefile:[import tablename, original tablename]}
-# 	l2t = {'nz_localities':['nz_locality','nz_locality'],
-# 		   'StatsNZ_Meshblock':['statsnz_meshblock','meshblock'],
-# 		   'StatsNZ_TA':['statsnz_ta','territorial_authority'],
-# 		   'Stats_Meshblock_concordance':['meshblock_concordance','meshblock_concordance']}
-# 	
-# 	#common queries, indexed
-# 	q = {'find':"select count(*) from information_schema.tables where table_schema like '{}' and table_name = '{}'",
-# 		 'create':'create table {}.{} ({})',
-# 		 'insert':'insert into {}.{} ({}) values ({})',
-# 		 'trunc':'truncate table {}.{}',
-# 		 'drop':'drop table if exists {}.{}',
-# 		 'permit_t':'grant select on table {}.{} to {}',
-# 		 'permit_s':'grant usage on schema {} to {}'
-# 	}
 	
 	enc = 'utf-8-sig'
 	
@@ -583,7 +582,7 @@ class Processor(object):
 				#1. fix_esri_polygon (no longer needed?)
 				#geom = fix_esri_polyon(geom)
 				#2. shift_geom
-				if out_srs.IsGeographic() and self.conf.layer_shift_geometry:
+				if self.conf.layer_shift_geometry and out_srs.IsGeographic():
 						shift_geom(geom)
 				#3. always force, bugfix
 				geom = ogr.ForceToMultiPolygon(geom)
@@ -663,7 +662,7 @@ class Processor(object):
 		Processor.attempt(self.conf,q)
 		
 	@staticmethod
-	def attempt(conf,q,driver_type='ogr',depth=0,r=None):
+	def attempt(conf,q,driver_type='ogr',depth=0,r=None):#,test=False):
 		'''Attempt connection using ogr or psycopg drivers creating temp connection if conn object not stored'''
 		m = None
 		while depth<DEPTH:
@@ -800,10 +799,10 @@ class Version(object):
 		Processor.attempt(self.conf, q3, driver_type='psy')
 		#self.db.disconnect()
 		
-	def qset(self,original,imported,pk):
+	def qset(self,original,imported,pk,dstr=None):
 		'''Run table version and apply diffs'''
 		q = ''
-		dstr = datetime.datetime.now().isoformat()
+		dstr = dstr or datetime.datetime.now().isoformat()
 		#table_version operations must be done in one active cursor
 		q += "select table_version.ver_create_revision('DAB:{}');".format(dstr)
 		q += "select table_version.ver_apply_table_differences('{original}','{imported}','{pk}');".format(original=original,imported=imported,pk=pk)
@@ -1099,6 +1098,7 @@ def main():
 def process(args):
 	t = () 
 	_t = (('meshblock', ('statsnz_meshblock', 'statsnz_ta', 'meshblock_concordance')), ('nzlocalities', ('nz_locality',)))
+	#_tloc = (('nzlocalities', ('nz_locality',)),)
 	
 	c = ConfReader()
 	m = ColumnMapper(c)

@@ -24,12 +24,16 @@ import sys
 import re
 import sys
 import os
+import mock
 
 sys.path.append('../scripts')
 
 from download_admin_bdys import ColumnMapper
 from download_admin_bdys import ConfReader
 from download_admin_bdys import Version
+from download_admin_bdys import setRetryDepth
+
+#from download_admin_bdys_mock import DABM
 
 #testlog = Logger.setup('test')
 
@@ -109,10 +113,31 @@ class Test20_Version(unittest.TestCase):
 	def setUp(self):
 		c = ConfReader()
 		m = ColumnMapper(c)
-		v = Version(c, m)
+		self.v = Version(c, m)
+		self.dstr='19700101'
+		self.orig='ORIG'
+		self.impt='IMPT'
+		self.pkey='PKEY'
+		self.q = "select table_version.ver_create_revision('DAB:{}');".format(self.dstr)
+		self.q += "select table_version.ver_apply_table_differences('{}','{}','{}');".format(self.orig,self.impt,self.pkey)
+		self.q += "select table_version.ver_complete_revision();"
 	
 	def tearDown(self):
 		pass
+	
+	def test10_qset(self):
+		self.assertEquals([self.q,],self.v.qset(self.orig,self.impt,self.pkey,self.dstr))
+	
+	def test10_versiontables(self):
+		#HACK. setting the global retry depth to 0 bypasses the query attempt
+		setRetryDepth(0)
+
+		t = (('meshblock', ('statsnz_meshblock', 'statsnz_ta', 'meshblock_concordance')), ('nzlocalities', ('nz_locality',)))
+		#self.v.versiontables(t)
+		self.assertTrue(True, 'Cannot reach this message if error')
+		
+			
+		
 	
 class Test30_Processor(unittest.TestCase):
 	

@@ -183,7 +183,7 @@ public class DABConnector {
 	}
 	
 	/**
-	 * Double quotes column names with spaces in them
+	 * Single quotes column names with spaces in them
 	 * @param columns
 	 * @return
 	 */

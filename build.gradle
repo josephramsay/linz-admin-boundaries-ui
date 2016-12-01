@@ -18,7 +18,7 @@ LICENSE file for more information.
 
     dependencies {
         classpath "org.postgresql:postgresql:9.4-1206-jdbc42"
-        classpath 'com.bmuschko:gradle-cargo-plugin:2+'
+        classpath 'com.bmuschko:gradle-cargo-plugin:2.2.3'
         //pygradle
         //classpath "gradle.plugin.com.linkedin.pygradle:pygradle-plugin:0.3.24"
         //debpackage
@@ -40,6 +40,7 @@ ext {
     junitVersion = '4.12'
     jmockVersion = '2.8.2'
     jsoupVersion = '1.10.1'
+    cargoVersion = '1.4.5'
 }
 
 apply plugin: 'java'
@@ -139,6 +140,9 @@ dependencies {
     test "nz.govt.linz:pexpect:4.2.1"
     test "nz.govt.linz:gdal:2.1.0"
     test "nz.govt.linz:ptyprocess:0.5.1"
+    
+    cargo "org.codehaus.cargo:cargo-core-uberjar:$cargoVersion",
+          "org.codehaus.cargo:cargo-ant:$cargoVersion"
 }
 
 

@@ -31,7 +31,7 @@ import static nz.govt.linz.AdminBoundaries.DABFormatter.BGRN;
 public class DABServletSummary extends DABServlet {
 
 	
-	static final long serialVersionUID = 1;
+	static final long serialVersionUID = 110L;
 	
 	/** Database connector and query wrapper */
 	private DABConnector dabc;		

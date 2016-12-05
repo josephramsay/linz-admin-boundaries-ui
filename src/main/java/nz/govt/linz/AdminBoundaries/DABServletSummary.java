@@ -14,6 +14,8 @@ package nz.govt.linz.AdminBoundaries;
 import java.io.*;
 import java.util.*;
 
+import java.util.logging.Logger;
+
 import javax.servlet.*;
 import javax.servlet.http.*;
 
@@ -30,6 +32,7 @@ import static nz.govt.linz.AdminBoundaries.DABFormatter.BGRN;
  */
 public class DABServletSummary extends DABServlet {
 
+	private static final Logger LOGGER = Logger.getLogger( DABServletSummary.class.getName() );
 	
 	static final long serialVersionUID = 110L;
 	
@@ -77,6 +80,7 @@ public class DABServletSummary extends DABServlet {
 	 */
 	private void updateStatus(){
 		for (TableInfo ti : ccomp.values()){
+			LOGGER.info("Getting status for TI, "+ti);
 			status.put(ti, dabc.getStatus(ti));
 		}
 		lowstatus = status.values().stream().sorted().findFirst().get();

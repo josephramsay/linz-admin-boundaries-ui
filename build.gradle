@@ -66,6 +66,7 @@ task copyscripts(type: Copy) {
          include '**/*.sh'
          include '**/*.py'
          include '**/*.ini'
+         include '**/*.properties'
      }
      into 'src/main/webapp/WEB-INF/scripts'
 }
@@ -140,9 +141,6 @@ dependencies {
     test "nz.govt.linz:pexpect:4.2.1"
     test "nz.govt.linz:gdal:2.1.0"
     test "nz.govt.linz:ptyprocess:0.5.1"
-    
-    cargo "org.codehaus.cargo:cargo-core-uberjar:$cargoVersion",
-          "org.codehaus.cargo:cargo-ant:$cargoVersion"
 }
 
 

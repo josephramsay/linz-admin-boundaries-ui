@@ -129,6 +129,9 @@ HOST = socket.gethostname()
 #max number of retries in recursive loop (insertshp in this case
 MAX_RETRY = 10
 
+ENC = 'utf-8-sig'
+ASC = 'ascii'
+
 if PYVER3:
 	def is_nonstr_iter(v):
 		if isinstance(v, str):
@@ -136,13 +139,26 @@ if PYVER3:
 		return hasattr(v, '__iter__')
 	dec = lambda d: d
 	enc = lambda e: e
+	diter = lambda d: d.iteritems()
+	unistr = str
 else:
 	def is_nonstr_iter(v):
 		return hasattr(v, '__iter__')
-	dec = lambda d: d.decode()
-	enc = lambda e: e.encode()
+	dec = lambda d,enc=ASC: d.decode(enc)
+	enc = lambda e,enc=ASC: e.encode(enc)
+	diter = lambda d: d.iteritems()
+	unistr = unicode
 	
-	
+def convenc(input):
+    if isinstance(input, dict):
+        return {convenc(k): convenc(v) for k,v in diter(input)}
+    elif isinstance(input, list):
+        return [convenc(element) for element in input]
+    elif isinstance(input, unistr):
+        return enc(input)
+    else:
+        return input
+       
 def setRetryDepth(depth):
 	global DEPTH
 	DEPTH = depth
@@ -397,6 +413,7 @@ class DatabaseConn_ogr(object):
 			#sys.exit(1)
 			
 	def execute_query(self,q):
+		logger.info("E "+q)
 		return self.pg_ds.ExecuteSQL(q)
 		   
 	def disconnect(self):
@@ -405,13 +422,18 @@ class DatabaseConn_ogr(object):
 class ConfReader(object):
 	'''Configuration Reader reads (and writes temp objects) in cp format'''
 	TEMP = 'temp'
-	HSUB = re.sub('\d{2}','0{}'.format('dtp'.index(HOST[0])+1),HOST) if HOST[0] in 'dtp' and re.search('\d{2}',HOST) else HOST
-	DEF = {	'database_host':HOST.split('.')[0],
-			'user_link':'http://{}:8080/ab/'.format(HSUB) }
+	#database to webapi; d1d1, t1t2, p1p3
+	HostD2W = re.sub('\d{2}','0{}'.format('dtp'.index(HOST[0])+1),HOST) if HOST[0] in 'dtp' and re.search('\d{2}',HOST) else HOST
+	#webapi to database
+	HostW2D = re.sub('\d{2}','01',HOST) if HOST[0] in 'dtp' and re.search('\d{2}',HOST) else HOST
+	
+	DEF = {	'database_host':HostW2D.split('.')[0],
+			'user_link':'http://{}:8080/ab/'.format(HostW2D) }
 	
 	def __init__(self):
 		self.path = os.path.dirname(__file__)
 		self.config_file = os.path.join(self.path,CONFIG)
+		self.props_file = os.path.join(self.path,PROPS)
 		self.parser = SafeConfigParser()
 		found = self.parser.read(self.config_file)
 		if not found:
@@ -449,24 +471,23 @@ class ConfReader(object):
 				with open(self.config_file, 'w') as configfile: self.parser.write(configfile)
 		return rv
 	
-	@staticmethod
-	def load():
+	def load(self):
 		'''Simple JSON config file reader'''
-		with open(PROPS) as s:
-			return json.load(s)
+		with open(self.props_file) as handle:
+			return convenc(json.load(handle))
+			#data = enc(handle.read().replace('\n',''))
+			#return json.loads(data,encoding='ascii')
+
 		
 #VARS = ConfReader.load()		
 	
 class ProcessorException(Exception):pass
 class Processor(object):
 	
-	enc = 'utf-8-sig'
-	
 	def __init__(self,conf,db,cm,sf):
 		self.conf = conf
 		vars = self.conf.load()
 		self.mbcc = vars['mbcc'] 
-		self.l2t = vars['l2t']
 		self.f2t = vars['f2t']
 		self.cq = vars['cq']
 		self.db = db
@@ -482,7 +503,6 @@ class Processor(object):
 			 and table_name like '{t}' \
 			 and constraint_type like 'PRIMARY KEY'".format(s=s,t=t)
 		logger.debug('pQ2 {}'.format(q))
-		#return bool(self.db.pg_ds.ExecuteSQL(q).GetFeatureCount())
 		return Processor.attempt(self.conf, q, driver_type='psy')
 
 	def extract(self,file):
@@ -520,7 +540,7 @@ class Processor(object):
 	def layername(self,in_layer):
 		'''Returns the name of the layer that inserting a shapefile would create'''
 		in_name = in_layer.GetName()
-		return self.l2t[in_name][0] if in_name in self.l2t else in_name
+		return self.f2t[in_name][0] if in_name in self.f2t else in_name
 		
 	def deletelyr(self,tname):
 		#dlayer = self.db.pg_ds.GetLayerByName('{}.{}'.format(self.conf.database_schema,tname))
@@ -539,10 +559,10 @@ class Processor(object):
 		#create new layer
 		try: 
 			in_name = in_layer.GetName()
-			logger.info('Inserting shapefile {}'.format(in_name))
-			out_name = PREFIX+self.l2t[in_name][0] if in_name in self.l2t else in_name
-
+			out_name = PREFIX+self.f2t[in_name][0] if in_name in self.f2t else in_name
 			out_srs = in_layer.GetSpatialRef()
+			
+			logger.debug('Inserting shapefile {}->{}[{}] - {}'.format(in_name,out_name,out_srs.AutoIdentifyEPSG(),create_opts))
 			out_layer = self.db.pg_ds.CreateLayer(
 				name = out_name,
 				srs = out_srs,
@@ -550,10 +570,12 @@ class Processor(object):
 				options = create_opts
 			)
 			#build layer fields
+			logger.debug('Structuring table {}->{}'.format(in_name,out_name))
 			in_ldef = in_layer.GetLayerDefn()
 			for i in range(0, in_ldef.GetFieldCount()):
 				in_fdef = in_ldef.GetFieldDefn(i)
 				out_layer.CreateField(in_fdef)
+				logger.debug('Add {}[{}]'.format(out_name,in_fdef.GetName()))
 		except RuntimeError as r:
 			#Version.rebuild(self.conf) If a problem occurs any previously created tables are deleted
 			logger.warn('Error creating layer {}, drop and rebuild. {}'.format(out_name,r))
@@ -566,6 +588,7 @@ class Processor(object):
 			#sys.exit(1)
 			
 		#insert features
+		logger.debug('Populating table {}'.format(out_name))
 		try:
 			in_layer.ResetReading()
 			in_feat = in_layer.GetNextFeature()
@@ -594,12 +617,13 @@ class Processor(object):
 			logger.fatal('Can not populate {} output table. {}'.format(out_name,e))
 			raise 
 			#sys.exit(1)
-			
+		
+		logger.debug('Returning table {}'.format(out_name))
 		return out_name
 			
 	def insertcsv(self,mbfile):
 		#TODO catch runtime errors
-		fp,ff = os.path.split(mbfile) 
+		ff = os.path.splitext(os.path.basename(mbfile))[0]
 		logger.info('Inserting csv {}'.format(ff))
 		#self.db.connect()
 		#mb = '/home/jramsay/Downloads/Stats_MB_TA_WKT_20160415-NEW.zip'
@@ -608,7 +632,7 @@ class Processor(object):
 		csvhead = self.f2t[ff]
 		with open(mbfile,'r') as fh:
 			for line in fh:
-				line = line.strip().encode('ascii','ignore').decode(self.enc) if PYVER3 else line.strip().decode(self.enc)
+				line = line.strip().encode('ascii','ignore').decode(ENC) if PYVER3 else line.strip().decode(ENC)
 				if first: 
 					headers = [h.strip().lower() for h in line.split(',')]
 					createheaders   = ','.join(['"{}" VARCHAR'.format(m) if m.find(' ')>0 else '{} VARCHAR'.format(m) for m in headers])
@@ -617,8 +641,6 @@ class Processor(object):
 					findqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],op='find')
 					if not self._attempt(findqry) or self._attempt(findqry).GetNextFeature().GetFieldAsInteger(0) == 0:
 						#if import table doesnt exist, create it
-						#storedheaders = ','.join(['{} VARCHAR'.format(m.replace(' ','_')) for m in csvhead[1]])
-						#createheaders   = ','.join(['{} VARCHAR'.format(m.replace(' ','_')) for m in headers])
 						if storedheaders != createheaders: logger.warn('Unexpected table column names, {}'.format(createheaders))
 						createqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],createheaders,op='create')
 						self._attempt(createqry)

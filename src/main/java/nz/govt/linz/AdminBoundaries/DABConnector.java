@@ -19,6 +19,8 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
+import java.util.logging.Logger;
+
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
@@ -36,6 +38,8 @@ import nz.govt.linz.AdminBoundaries.DABContainerComp.TableInfo;
  *
  */
 public class DABConnector {
+	
+	private static final Logger LOGGER = Logger.getLogger( DABConnector.class.getName() );
 	
 	//private Connector connector;
 	DataSource datasource = null;
@@ -72,7 +76,7 @@ public class DABConnector {
 			result = parseResultSet(rs);
 		}
 		catch (SQLException sqle) {
-			//System.out.println(String.format("### ERR ### %s", sqle));
+			LOGGER.warning("SQLError (q) "+sqle+"\n"+query);
 			result = parseSQLException(sqle);
 		}
 		return result;
@@ -90,7 +94,7 @@ public class DABConnector {
 			if (rs.next()){ result = rs.getBoolean(1); }
 		}
 		catch (SQLException sqle) {
-			System.out.println("SQLError TFQ "+sqle+"\n"+query);
+			LOGGER.warning("SQLError (tf_q) "+sqle+"\n"+query);
 		}
 		return result;
 	}		
@@ -104,10 +108,14 @@ public class DABConnector {
 		String result = "";
 		try {
 			ResultSet rs = exeQuery(query);
-			if (rs.next()){ result = rs.getString(1); }
+			
+			if (rs.next()){ 
+				result = rs.getString(1);
+				LOGGER.fine("Q: "+query+"\nR: "+rs+"\nS: "+result);
+			}
 		}
 		catch (SQLException sqle) {
-			System.out.println("SQLError STQ "+sqle+"\n"+query);
+			LOGGER.warning("SQLError (str_q) "+sqle+"\n"+query);
 		}
 		return result;
 	}
@@ -144,7 +152,7 @@ public class DABConnector {
 	    for (int i=1; i<=count; i++) {
 	    	
 	    	String l = rsmd.getColumnLabel(i);
-	    	System.out.println(">>>CL>>> "+l);
+			LOGGER.fine("Col Label "+l);
 	    	head_row.add(l);
 	    	//row.add(rsmd.getColumnLabel(i));
 	    }
@@ -154,7 +162,7 @@ public class DABConnector {
 	    	for (String col : head_row){//int i=1; i<=count; i++) {
 	    		
 	    		String v = rs.getString(col);
-	    		System.out.println(">>>R["+col+"]>>> "+v);
+				LOGGER.fine("Row["+col+"] = "+v);
 	    		body_row.add(v);
 	    		//row.add(rs.getString(col));
 	    	}
@@ -183,11 +191,12 @@ public class DABConnector {
 	}
 	
 	/**
-	 * Double quotes column names with spaces in them
+	 * Single quotes column names with spaces in them
 	 * @param columns
 	 * @return
 	 */
 	protected String quoteSpace(String columns){
+		LOGGER.fine("COLS. "+columns);
 		StringBuilder res = new StringBuilder(); 
 		for (String col : columns.split(",")){
 		    if (col.trim().indexOf(" ")>0){
@@ -254,7 +263,7 @@ public class DABConnector {
 	public ImportStatus getStatus(TableInfo ti){
 		//check that imported temp files exist
 		String exist_query = String.format("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='%s' AND table_name='%s')",ABIs,ti.tmp());
-		System.out.println("1TQ "+exist_query+" / "+executeTFQuery(exist_query));
+		LOGGER.finer("1TQ "+exist_query+" / "+executeTFQuery(exist_query));
 		if (executeTFQuery(exist_query)){
 			//get original column names (so column order isn't considered in comparison
 			String col_query = String.format("select array_to_string(array_agg(column_name::text),',') " +
@@ -262,12 +271,12 @@ public class DABConnector {
 					"where table_schema='%s' " +
 					"and table_name='%s'", ABs, ti.dst());
 			String columns = quoteSpace(executeSTRQuery(col_query));
-			System.out.println("2CQ "+col_query+" / "+columns);
+			LOGGER.finer("2CQ "+col_query+" / "+columns);
 			//tmp files match dst files
 			String tt = String.format("SELECT %s FROM %s.%s", columns, ABIs, ti.tmp());
 			String dt = String.format("SELECT %s FROM %s.%s", columns, ABs,  ti.dst());
 			String cmp_query = String.format("SELECT NOT EXISTS (%s EXCEPT %s UNION %s EXCEPT %s)",tt,dt,dt,tt);
-			System.out.println("3CQ "+cmp_query+" / "+executeTFQuery(cmp_query));
+			LOGGER.finer("3CQ "+cmp_query+" / "+executeTFQuery(cmp_query));
 			if (executeTFQuery(cmp_query)){
 				return ImportStatus.COMPLETE;
 			}

@@ -115,5 +115,11 @@ public class DABIniReader_Test {
 		assertEquals(reader1.getEntry("user", "smtp"), reader3.getEntry("user", "smtp"));
 
 	}
+	
+	@Test
+	public void test_underscore(){
+		assertEquals(reader1.getEntry("layer", "geom_column"), reader3.getEntry("layer", "geom_column"));
+		assertEquals(reader1.getEntry("layer", "shift_geometry"), reader3.getEntry("layer", "shift_geometry"));
+	}
 
 }

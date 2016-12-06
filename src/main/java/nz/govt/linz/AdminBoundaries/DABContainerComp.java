@@ -13,6 +13,9 @@ package nz.govt.linz.AdminBoundaries;
 
 import java.io.*;
 import java.util.*;
+import java.util.logging.Logger;
+
+import javax.servlet.ServletContext;
 
 
 /**
@@ -22,7 +25,9 @@ import java.util.*;
  */
 public class DABContainerComp {
 	
-	//protected final static String[] TML = new String[]{"meshblock","meshblock_concordance","territorial_authority","nz_locality"};
+	private static final Logger LOGGER = Logger.getLogger( DABContainerComp.class.getName() );
+	
+	private final static String CONF_PATH = "WEB-INF/scripts/download_admin_bdys.ini";
 	
 	protected final static Map<String,String> TABV = new HashMap<>();
 	static {
@@ -88,14 +93,14 @@ public class DABContainerComp {
 	private Map<String,TableInfo> ti_map;
 	private DABIniReader reader;
 	
+	
+	//-------------------------------------------------------------------------
 	/**
 	 * Container constructor initialises and populates TI map
 	 * @throws IOException 
 	 */
-	public DABContainerComp() {
-		setTIMap(new HashMap<>());
-		setReader(new DABIniReader());
-		initTMI();
+	public DABContainerComp(ServletContext context) {
+		this(context.getRealPath(CONF_PATH));
 	}
 	
 	public DABContainerComp(String conf) {
@@ -121,7 +126,9 @@ public class DABContainerComp {
 	 * @return
 	 */
 	protected Map<String, Map<String, String>> getConfig(){
-		return reader.getEntries();
+		Map<String, Map<String, String>> config = reader.getEntries();
+		LOGGER.fine("Fetching Config "+config.toString());
+		return config;
 	}
 	
 	/**
@@ -130,6 +137,7 @@ public class DABContainerComp {
 	 */
 	protected void setConfig(Map<String, Map<String, String>> config) {
 		try {
+			LOGGER.fine("Setting Config "+config.toString());
 			reader.setEntries(config);
 			reader.dump();		
 		} catch (IOException ioe) {

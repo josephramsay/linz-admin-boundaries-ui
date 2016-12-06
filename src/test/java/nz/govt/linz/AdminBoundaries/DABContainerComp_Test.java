@@ -12,7 +12,6 @@ package nz.govt.linz.AdminBoundaries;
  */
 
 import nz.govt.linz.AdminBoundaries.DABContainerComp;
-import nz.govt.linz.AdminBoundaries.DABContainerComp.TableInfo;
 
 import static org.junit.Assert.*;
 
@@ -22,12 +21,12 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import org.jmock.Mockery;
-import org.jmock.Expectations;
+//import org.jmock.Mockery;
+//import org.jmock.Expectations;
 
 public class DABContainerComp_Test {
 	
-	private static Mockery context = new Mockery();
+	//private static Mockery context = new Mockery();
     
 	private DABContainerComp container;	
 	private static String[][] d = {

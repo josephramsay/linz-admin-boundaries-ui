@@ -27,7 +27,7 @@ import static nz.govt.linz.AdminBoundaries.DABFormatter.BNAV;
  */
 public class DABServlet extends HttpServlet {
 	
-	static final long serialVersionUID = 1;
+	static final long serialVersionUID = 100L;
 	protected String message;
 	protected String title;	
 	protected String description;	

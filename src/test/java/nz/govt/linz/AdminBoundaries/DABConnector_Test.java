@@ -20,7 +20,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
+import org.junit.rules.ExpectedException;
 import org.jmock.Mockery;
 import org.jmock.Expectations;
 
@@ -31,6 +31,8 @@ import java.util.List;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+
+import java.lang.NullPointerException;
 
 public class DABConnector_Test {
 	
@@ -132,6 +134,7 @@ public class DABConnector_Test {
 	@Test
 	public void test_executeQuery1() {
 		List<List<String>> result = connector.executeQuery(query_l);
+		System.out.println(result);
 		assertEquals(result.get(0).get(0),colname_l[0]);
 		assertEquals(result.get(1).get(0),colvalue_l[0]);
 		assertEquals(result.get(1).get(1),colvalue_l[1]);
@@ -144,10 +147,34 @@ public class DABConnector_Test {
 	@Test
 	public void test_executeQuery2() {
 		List<List<String>> result = connector.executeQuery(query_e);
+		System.out.println(result);
 		assertEquals(result.get(0).get(0),colvalue_e[0]);
 		assertEquals(result.get(0).get(1),colvalue_e[1]);
 
 	}
+	
+	/**
+	 * Test the quotespace function
+	 */
+	@Test
+	public void test_quotespace() {
+		assertEquals(connector.quoteSpace("col1,col2,col 3,col_4"),"col1,col2,'col 3',col_4");
+		assertEquals(connector.quoteSpace("col1,col2,col 3 4,col 5"),"col1,col2,'col 3 4','col 5'");
+		assertEquals(connector.quoteSpace("col1col2"),"col1col2");
+		assertEquals(connector.quoteSpace(""),"");
+		/*try{
+			connector.quoteSpace(null);
+			fail("Expected NPE");
+		}
+		catch (NullPointerException npe){
+			assertEquals("",npe.getMessage());
+		}*/
+	}
+	@Test(expected=NullPointerException.class)
+	public void test_quotespace_err() {
+		connector.quoteSpace(null);
+	}
+	
 	
 
 }

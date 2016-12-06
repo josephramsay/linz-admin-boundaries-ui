@@ -42,7 +42,7 @@ public class DABServletConfig extends DABServlet {
 		message = "Config Editor for Admin Boundarys";
 		description = String.join("\n", "This config editor sets options for the background Admin Boundaries processing script.",
 				"<br/><u>DATABASE</u>",
-				"host:: the database host name",
+				"host:: the database host name (can be omitted)",
 				"name:: the Database name (linz_db)",
 				"rolename:: the User to run downloader functions as (this user will own the created tables) (bde_dba)",
 				"user:: the user to login as (must be a member of unix_logins) (dab_user)",
@@ -54,7 +54,7 @@ public class DABServletConfig extends DABServlet {
 				"list:: comma seperated list of usernames that will be notified when import completes",
 				"domain:: email list domain name (linz.govt.nz)",
 				"smtp:: SMTP server",
-				"link:: = link provided to users in notification",
+				"link:: = link provided to users in notification message (can be omitted)",
 				"<br/><u>LAYER</u>",
 				"name:: name of table to apply grid function to (territorial_authority)",
 				"output_srid:: SRID to transfor imported layers to (4167)",
@@ -97,7 +97,7 @@ public class DABServletConfig extends DABServlet {
 				"( file2 ) : {}");
 
 		dabf = new DABFormatter();
-		ccomp = new DABContainerComp();
+		ccomp = new DABContainerComp(getServletContext());
 
 	}
 
@@ -128,7 +128,7 @@ public class DABServletConfig extends DABServlet {
 		Enumeration<?> params = request.getParameterNames(); 
 		while (params.hasMoreElements()) {
 			String pname = (String) params.nextElement();
-			String[] parts = pname.split("_");
+			String[] parts = pname.split("_",2);
 			if (config.containsKey(parts[0])) {
 				config.get(parts[0]).put(parts[1], request.getParameterValues(pname)[0]);
 			}

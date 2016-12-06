@@ -65,13 +65,16 @@ public class DABServletSummary extends DABServlet {
 				"If a table-set is in the Loaded state the import tables have been built and column changes applied. At this stage selected users "
 				+ "will be notified and if approved, changes can be pushed through to the final destiation tables.",
 				"When a table-set is in the Transferred state the import tables will match the destination tables and no action is necessary.",
+				"In the summary screen, tables are compared using row counts. For a more detailed table comparison use the 'Compare ### Table' button "
+				+ "which returns the results from the table_version function get_table_differences() indicating row number and proposed operation "
+				+ "(u)pdate, (a)dd or (d)elete",
 				"<br/><b>Actions</b>",
 				"<br/><u>LOAD</u> :: Load import tables from file",
 				"<br/><u>TRANSFER</u> :: Transfer import tables to destination tables.",
 				"<br/><u>REJECT</u> :: Delete import tables.");
 		dabc = new DABConnector();
 		dabf = new DABFormatter();
-		ccomp = new DABContainerComp();
+		ccomp = new DABContainerComp(getServletContext());
 		//updateStatus();
 	}
 	
@@ -80,7 +83,7 @@ public class DABServletSummary extends DABServlet {
 	 */
 	private void updateStatus(){
 		for (TableInfo ti : ccomp.values()){
-			LOGGER.info("Getting status for TI, "+ti);
+			LOGGER.fine("Getting status for TI, "+ti);
 			status.put(ti, dabc.getStatus(ti));
 		}
 		lowstatus = status.values().stream().sorted().findFirst().get();

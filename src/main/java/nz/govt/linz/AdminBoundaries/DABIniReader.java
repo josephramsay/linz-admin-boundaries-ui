@@ -4,35 +4,25 @@ package nz.govt.linz.AdminBoundaries;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * Reads windows style ini file see python ConfigParser
- * Code copied and adapted from https://stackoverflow.com/a/15638381
- * @author jramsay/aerospace
+ * @author jramsay
  *
  */
 public class DABIniReader extends IniReader{
 
-	//TODO relative path
-	private final static String CONF_PATH = "/opt/apache-tomcat/webapps/ab/WEB-INF/scripts/download_admin_bdys.ini";
-	//private final static String CONF_PATH = "WEB-INF/scripts/download_admin_bdys.ini";
-
+	private static final Logger LOGGER = Logger.getLogger( DABIniReader.class.getName() );
+	
 	private Pattern file_p = Pattern.compile( "\\\"(\\w+)\\\"\\:\\{\\\"table\\\"" );
 	private Pattern table_p = Pattern.compile( "\\\"table\\\"\\:\\\"(\\w+)\\\"" );
 	private Pattern primary_p = Pattern.compile( "\\\"primary\\\"\\:\\\"(\\w+)\\\"" );
 
 	//private Map<String, Map<String, String>> entries = new HashMap<>();
 	private Map<String, Map<String,String>> colmap = new HashMap<>();
-
-	/**
-	 * Null constructor setting up on default confg path
-	 * @throws IOException
-	 */
-	public DABIniReader() {
-		this(CONF_PATH);
-	}
 
 	/**
 	 * Constructor reads config file parsing meshblock and localities file blocks

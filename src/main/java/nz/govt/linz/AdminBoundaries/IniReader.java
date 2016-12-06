@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -29,6 +30,8 @@ import java.util.regex.Pattern;
  *
  */
 public class IniReader {
+	
+	private static final Logger LOGGER = Logger.getLogger( IniReader.class.getName() );
 
 	private Pattern  section_p  = Pattern.compile( "\\s*\\[([^]]*)\\]\\s*" );
 	private Pattern  option_p = Pattern.compile( "\\s*([^=]*)=(.*)" );
@@ -44,6 +47,7 @@ public class IniReader {
 	 * @throws IOException
 	 */
 	public IniReader(String p) {
+		LOGGER.finest("setpath "+p);
 		setPath(p);
 	}
 
@@ -94,11 +98,14 @@ public class IniReader {
 					value.append(value_m.group(1).trim());
 				}
 			}
-			if (save_flag){set(section,option,value.toString());}
+			if (save_flag){
+				set(section,option,value.toString());
+			}
 		}
 		catch (IOException ioe) {
-			System.out.println("Error reading config file, "+path+". "+ioe);;
+			LOGGER.warning("Error reading config file, "+path+". "+ioe);
 		}
+		LOGGER.fine("e="+entries);
 	}
 
 	/** Entries array getter */
@@ -141,10 +148,12 @@ public class IniReader {
 	 */
 	public void dump() throws IOException {
 		try( BufferedWriter bw = new BufferedWriter( new FileWriter( path ))) {
+			LOGGER.fine("e="+entries);
 			for (String section : entries.keySet()){
 				bw.write("["+section+"]\n");
 				Map<String,String> detail = entries.get(section);
 				for (String option : detail.keySet()){
+					LOGGER.finer("s="+section+",o="+option+",v="+detail.get(option));
 					bw.write(option+" = "+detail.get(option)+"\n");
 
 				}
@@ -164,6 +173,7 @@ public class IniReader {
 		if( opt_val == null ) {
 			entries.put( section, opt_val = new HashMap<>());   
 		}
+		LOGGER.finer("s="+section+",o="+option+",v="+value);
 		opt_val.put( option, value );
 	}
 

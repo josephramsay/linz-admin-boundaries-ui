@@ -139,7 +139,7 @@ if PYVER3:
 		return hasattr(v, '__iter__')
 	dec = lambda d: d
 	enc = lambda e: e
-	diter = lambda d: d.iteritems()
+	diter = lambda d: d.items()
 	unistr = str
 else:
 	def is_nonstr_iter(v):
@@ -342,8 +342,8 @@ class DB(object):
 		else: 
 			raise DBSelectionException("Choose DB using 'ogr' or 'psy'")
 
-	def get(self,q):
-		return bool(self.d.execute_query(q))
+	def get(self,q,rt=None):
+		return self.d.execute_query(q,rt)
 		
 	def __enter__(self):
 		return self
@@ -366,19 +366,25 @@ class DatabaseConn_psycopg2(object):
 		self.pconn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
 		self.pcur = self.pconn.cursor()
 		
-	def execute_query(self,q):
-		'''Execute query q and return success/failure determined by fail=any error except no results'''
+	def execute_query(self,q,rt=None):
+		'''Execute query q and return success/failure determined by fail=any error except no results
+		optional arg rt can be (s)tring or (b)oolean and (i)nt default
+		'''
+		logger.info('psyEQ'+q)
 		res = True
 		try:
 			self.pcur.execute(q)
-			res = self.pcur.rowcount or None
+			if rt == 's': res = self.pcur.fetchone()
+			elif rt == 'b': res = self.pcur.rowcount>0
+			else: res = self.pcur.rowcount or None
 		except psycopg2.ProgrammingError as pe: 
 			if hasattr(pe,'message') and pe.message=='no results to fetch': res = True
 			else: raise 
 		except Exception as e: 
 			raise DatabaseConnectionException('Database query error, {}'.format(e))
 		#for now just check if row returned as success
-		return bool(isinstance(res,int) and res>0)
+		#return bool(isinstance(res,int) and res>0)
+		return res
 	
 	def disconnect(self):
 		self.pconn.commit()
@@ -412,8 +418,9 @@ class DatabaseConn_ogr(object):
 			raise
 			#sys.exit(1)
 			
-	def execute_query(self,q):
-		logger.info("E "+q)
+	def execute_query(self,q,rs=None):
+		logger.info("ogrEQ "+q)
+		#TODO. Provide return value selection
 		return self.pg_ds.ExecuteSQL(q)
 		   
 	def disconnect(self):
@@ -684,7 +691,7 @@ class Processor(object):
 		Processor.attempt(self.conf,q)
 		
 	@staticmethod
-	def attempt(conf,q,driver_type='ogr',depth=0,r=None):#,test=False):
+	def attempt(conf,q,driver_type='ogr',depth=0,rt=None,r=None):#,test=False):
 		'''Attempt connection using ogr or psycopg drivers creating temp connection if conn object not stored'''
 		m = None
 		while depth<DEPTH:
@@ -692,12 +699,12 @@ class Processor(object):
 				logger.info('{} <- {}'.format(driver_type,q))
 				#if using active DB instance 
 				if SELECTION[driver_type]:
-					m = SELECTION[driver_type].execute_query(q)
+					m = SELECTION[driver_type].execute_query(q,rt)
 					return m
 				#otherwise setup/delete temporary connection
 				else:
 					with DB(conf,driver_type) as conn:
-						m = conn.get(q)
+						m = conn.get(q,rt)
 						return m
 			except RuntimeError as r:
 				logger.error('Attempt {} using {} failed, {}'.format(depth,driver_type,m or r))
@@ -821,6 +828,13 @@ class Version(object):
 		Processor.attempt(self.conf, q3, driver_type='psy')
 		#self.db.disconnect()
 		
+		
+	def verdiffs(self,original,imported,pk):
+		'''Get table_version diffs query string'''
+		qct = "select table_version.ver_table_key_datatype('{}','{}')".format(original,pk);
+		qvd = "select count(*) from table_version.ver_get_table_differences('{original}','{imported}','{pk}') as T(code char(1), id ###);".format(original=original,imported=imported,pk=pk)
+		return qct,qvd
+		
 	def qset(self,original,imported,pk,dstr=None):
 		'''Run table version and apply diffs'''
 		q = ''
@@ -830,6 +844,23 @@ class Version(object):
 		q += "select table_version.ver_apply_table_differences('{original}','{imported}','{pk}');".format(original=original,imported=imported,pk=pk)
 		q += "select table_version.ver_complete_revision();"
 		return [q,]
+	
+	def detectdiffs(self,tablelist):		
+		'''Identify diferences between final and interim versions of AB tables'''
+		res = []
+		for section in tablelist:
+			sec, tab = section
+			for t in tab:
+				t2 = self.cm.map[sec][t]['table']
+				pk = self.cm.map[sec][t]['primary']
+				original = '{}.{}'.format(self.conf.database_originschema,t2)
+				imported = '{}.{}{}'.format(self.conf.database_schema,PREFIX,t)
+				qct,qvd = self.verdiffs(original,imported,pk)
+				logger.debug('pQd1 {}\npQd2 {}'.format(qct,qvd))
+				rct = Processor.attempt(self.conf,qct,driver_type='psy',rt='s')[0]
+				if Processor.attempt(self.conf,qvd.replace('###',rct),driver_type='psy')>0:
+					res += [t2,]
+		return res
 		
 	def versiontables(self,tablelist):
 		'''Build and execute the import queries for each import table'''
@@ -1019,7 +1050,7 @@ class SimpleUI(object):
 		window.geometry("%dx%d+%d+%d" % (size + (x, y)))
 
 	
-def notify(c):
+def notify(c,dd=''):
 	'''Send a notification email to the recipients list to inform that New Admin Boundary Data Is Available'''
 
 	sender = 'no-reply@{}'.format(c.user_domain)
@@ -1037,13 +1068,15 @@ def notify(c):
 		<html>
 			<head></head>
 			<body>
-				<p>New Admin Boundary Data Is Available<br>
-					Below is the link to approve submission of the new data to AIMS<br>
-					Link to web form <a href="{link}">link</a> here.
+				<h3>New Admin Boundary Data Is Available</h3>
+				<p>
+				During scheduled admin_bdys importing differences were detected in the following tables; {tlist}<br/>
+				Visit the link below to approve/decline submission of the new data to overwrite affected tables<br/>
+				<a href="{link}">APPROVE/DECLINE</a>
 				</p>
 			</body>
 		</html>
-		""".format(link=c.user_link)
+		""".format(link=c.user_link,tlist=dd)
 	
 		# Record the MIME type
 		content = MIMEText(html, 'html')
@@ -1062,6 +1095,8 @@ def notify(c):
 	except Exception as exc:
 			sys.exit( 'Email sending failed; {0}'.format(exc))		
 	
+#test values for tablelist t
+_T = (('meshblock', ('statsnz_meshblock', 'statsnz_ta', 'meshblock_concordance')), ('nzlocalities', ('nz_locality',)))
 	
 def oneOrNone(a,options,args):
 	'''is A in args OR are none of the options in args'''
@@ -1079,12 +1114,16 @@ def gather(args,v,c,m):
 	if oneOrNone('meshblock',topts,args): 
 		mbk = Meshblock(c,SELECTION['ogr'],m,s)
 		t += (mbk.run(),)
+		pass
 	if oneOrNone('nzlocalities',topts,args): 
 		nzl = NZLocalities(c,SELECTION['ogr'],m,s) 
 		t += (nzl.run(),)
+		pass
 	c.save('t',t)
 	logger.info ("Stopping post import for user validation and notifying users")
-	notify(c)
+	if 'detect' in args:
+		dd = v.detectdiffs(t)
+		if dd: notify(c,dd)
 
 	return t
 	
@@ -1119,7 +1158,6 @@ def main():
 			
 def process(args):
 	t = () 
-	_t = (('meshblock', ('statsnz_meshblock', 'statsnz_ta', 'meshblock_concordance')), ('nzlocalities', ('nz_locality',)))
 	#_tloc = (('nzlocalities', ('nz_locality',)),)
 	
 	c = ConfReader()
@@ -1142,8 +1180,6 @@ def process(args):
 		#if "transfer" requested read saved 'T' and transfer to dest
 		if oneOrNone('transfer',aopts,args): 
 			v.versiontables(t)
-		if oneOrNone('notify',aopts,args): 
-			notify(c)
 
 if __name__ == "__main__":
 	main()

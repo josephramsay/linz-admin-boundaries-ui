@@ -333,14 +333,14 @@ class DBSelectionException(Exception):pass
 class DB(object):
 	def __init__(self,conf,drv):
 		self.conf = conf
+		self.d = None
 		if drv == 'ogr':
 			self.d = DatabaseConn_ogr(self.conf)
-			self.d.connect()
 		elif drv == 'psy':
 			self.d = DatabaseConn_psycopg2(self.conf)
-			self.d.connect()
 		else: 
 			raise DBSelectionException("Choose DB using 'ogr' or 'psy'")
+		if self.d: self.d.connect()
 
 	def get(self,q,rt=None):
 		return self.d.execute_query(q,rt)
@@ -370,15 +370,18 @@ class DatabaseConn_psycopg2(object):
 		'''Execute query q and return success/failure determined by fail=any error except no results
 		optional arg rt can be (s)tring or (b)oolean and (i)nt default
 		'''
-		logger.info('psyEQ'+q)
+		logger.info('psyEQ '+q)
 		res = True
+		#if rt: rt = rt.lower()
 		try:
 			self.pcur.execute(q)
 			if rt == 's': res = self.pcur.fetchone()
 			elif rt == 'b': res = self.pcur.rowcount>0
+			elif rt == 'i': res = self.pcur.rowcount
 			else: res = self.pcur.rowcount or None
 		except psycopg2.ProgrammingError as pe: 
-			if hasattr(pe,'message') and pe.message=='no results to fetch': res = True
+			if hasattr(pe,'message') and 'no results to fetch' in pe.message: res = True
+			if rt == 'e' and hasattr(pe,'pgerror') and 'does not exist' in pe.pgerror: res = True
 			else: raise 
 		except Exception as e: 
 			raise DatabaseConnectionException('Database query error, {}'.format(e))
@@ -411,15 +414,15 @@ class DatabaseConn_ogr(object):
 		try:
 			if not self.pg_ds: 
 				self.pg_ds = self.pg_drv.Open(self.pg_uri, update = 1)
-				if self.conf.database_rolename:
-					self.pg_ds.ExecuteSQL("SET ROLE " + self.conf.database_rolename)
+				#if self.conf.database_rolename:
+				#	self.pg_ds.ExecuteSQL("SET ROLE " + self.conf.database_rolename)
 		except Exception as e:
 			logger.fatal("Can't open PG output database: " + str(e))
 			raise
 			#sys.exit(1)
 			
 	def execute_query(self,q,rs=None):
-		logger.info("ogrEQ "+q)
+		logger.info('ogrEQ '+q)
 		#TODO. Provide return value selection
 		return self.pg_ds.ExecuteSQL(q)
 		   
@@ -431,11 +434,11 @@ class ConfReader(object):
 	TEMP = 'temp'
 	#database to webapi; d1d1, t1t2, p1p3
 	HostD2W = re.sub('\d{2}','0{}'.format('dtp'.index(HOST[0])+1),HOST) if HOST[0] in 'dtp' and re.search('\d{2}',HOST) else HOST
-	#webapi to database
+	#webapi to database; d1d1, t2t1, p3p1
 	HostW2D = re.sub('\d{2}','01',HOST) if HOST[0] in 'dtp' and re.search('\d{2}',HOST) else HOST
 	
 	DEF = {	'database_host':HostW2D.split('.')[0],
-			'user_link':'http://{}:8080/ab/'.format(HostW2D) }
+			'user_link':'http://{}:8080/ab/'.format(HOST) }
 	
 	def __init__(self):
 		self.path = os.path.dirname(__file__)
@@ -693,21 +696,18 @@ class Processor(object):
 	@staticmethod
 	def attempt(conf,q,driver_type='ogr',depth=0,rt=None,r=None):#,test=False):
 		'''Attempt connection using ogr or psycopg drivers creating temp connection if conn object not stored'''
-		m = None
 		while depth<DEPTH:
 			try:
 				logger.info('{} <- {}'.format(driver_type,q))
 				#if using active DB instance 
 				if SELECTION[driver_type]:
-					m = SELECTION[driver_type].execute_query(q,rt)
-					return m
+					return SELECTION[driver_type].execute_query(q,rt)
 				#otherwise setup/delete temporary connection
 				else:
 					with DB(conf,driver_type) as conn:
-						m = conn.get(q,rt)
-						return m
+						return conn.get(q,rt)
 			except RuntimeError as r:
-				logger.error('Attempt {} using {} failed, {}'.format(depth,driver_type,m or r))
+				logger.error('Attempt {} using {} failed, {}'.format(depth,driver_type,r))
 				#if re.search('table_version.ver_apply_table_differences',q) and Processor.nonOGR(conf,q,depth-1): return
 				rv = Processor.attempt(conf, q, Processor._next(driver_type), depth+1,r)
 				logger.debug('Success {}'.format(rv))
@@ -812,22 +812,28 @@ class Version(object):
 		
 	def setup(self):
 		'''Create temp schema'''
+		self.teardown(self.conf)
 		self.rebuild(self.conf)
 			   
 	@staticmethod	 
 	def rebuild(conf):			  
-		'''Drop and create import schema for fresh import'''		 
-		q1 = 'drop schema if exists {} cascade'.format(conf.database_schema)
-		q2 = 'create schema {}'.format(conf.database_schema)
-		Processor.attempt(conf, q1, driver_type='psy')
-		Processor.attempt(conf, q2, driver_type='psy')
+		'''Drop and create import schema for fresh import'''		
+		Version._wrapq(conf,'create schema {}'.format(conf.database_schema))
 		
-	def teardown(self):
+	@staticmethod
+	def teardown(conf):
 		'''drop temp schema'''
-		q3 = 'drop schema if exists {} cascade'.format(self.conf.database_schema)
-		Processor.attempt(self.conf, q3, driver_type='psy')
-		#self.db.disconnect()
+		Version._wrapq(conf,'drop schema if exists {} cascade'.format(conf.database_schema))
 		
+	@staticmethod
+	def _wrapq(conf,q):
+		'''Simple wrapper for running schema queries with a retry if error not raised'''
+		depth = DEPTH
+		while not Processor.attempt(conf, q, driver_type='psy'): 
+			msg = '{} failed. {} attempts remaining'.format(q,depth)
+			if depth: logger.warn(msg)
+			else: raise Exception(msg)
+			depth -= 1 
 		
 	def verdiffs(self,original,imported,pk):
 		'''Get table_version diffs query string'''
@@ -858,8 +864,9 @@ class Version(object):
 				qct,qvd = self.verdiffs(original,imported,pk)
 				logger.debug('pQd1 {}\npQd2 {}'.format(qct,qvd))
 				rct = Processor.attempt(self.conf,qct,driver_type='psy',rt='s')[0]
-				if Processor.attempt(self.conf,qvd.replace('###',rct),driver_type='psy')>0:
-					res += [t2,]
+				#WORKAROUND. Calling table_version.ver_table_key_datatype on a serial returns None, interpret as int
+				dif = int(Processor.attempt(self.conf,qvd.replace('###',rct if rct else 'int'),driver_type='psy',rt='s')[0])
+				if dif>0: res += [(t2,dif),]
 		return res
 		
 	def versiontables(self,tablelist):
@@ -1064,19 +1071,27 @@ def notify(c,dd=''):
 		msg['To'] = ', '.join(recipients)
 	
 	# Create the body of the message (HTML version).
+		style = '''<style>
+			table, th, td {border: 1px solid black;border-collapse: collapse;}
+			th, td {padding: 5px;}
+			th {text-align: left;}
+			</style>'''.strip('\n\t')
+		tab = '''<table>
+		<tr><th>Table</th><th>RowDiff</th></tr>
+		<tr><td>{}</td></tr></table>
+		'''.format('</td></tr><tr><td>'.join(['{}</td><td>{}'.format(x,y) for x,y in dd]));
 		html = """\
 		<html>
-			<head></head>
+			<head>{style}</head>
 			<body>
 				<h3>New Admin Boundary Data Is Available</h3>
 				<p>
-				During scheduled admin_bdys importing differences were detected in the following tables; {tlist}<br/>
-				Visit the link below to approve/decline submission of the new data to overwrite affected tables<br/>
+				During scheduled admin_bdys importing, differences were detected in the following tables:</br>{tab}<br/>
+				Visit the link below to approve/decline submission of the new data to overwrite affected tables</p><br/><br/>
 				<a href="{link}">APPROVE/DECLINE</a>
-				</p>
 			</body>
 		</html>
-		""".format(link=c.user_link,tlist=dd)
+		""".format(link=c.user_link,tab=tab,style=style)
 	
 		# Record the MIME type
 		content = MIMEText(html, 'html')
@@ -1089,6 +1104,7 @@ def notify(c,dd=''):
 		try:
 		# sendmail function takes 3 arguments: sender's address, recipient's address, and message to send.
 			conn.sendmail(sender, recipients, msg.as_string())
+			logger.info('Notifying users {}'.format(recipients))
 		finally:	
 			conn.quit()
 			
@@ -1170,7 +1186,7 @@ def process(args):
 		#if a 't' value is stored we dont want to pre-clean the import schema 
 		aopts = [a[1] for a in OPTS]
 		if 'reject' in args: 
-			v.teardown()
+			v.teardown(c)
 			return
 		#if "load" requested, import files and recreate+save 'T'
 		if oneOrNone('load', aopts,args):
@@ -1181,7 +1197,9 @@ def process(args):
 		if oneOrNone('transfer',aopts,args): 
 			v.versiontables(t)
 
+	
 if __name__ == "__main__":
 	main()
+	
 
 

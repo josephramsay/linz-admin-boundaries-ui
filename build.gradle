@@ -82,6 +82,7 @@ war {
 }
 
 task cargosetup {
+    print "> Server ${remoteHost}\n"
     dependsOn war
 	cargo {
 	    containerId = 'tomcat7x'

@@ -1,0 +1,19 @@
+---
+
+language: 
+  - java
+java: 
+  - 8.0
+
+jdk:
+  - oraclejdk8
+
+before-install:
+  - sudo apt-get update
+
+install: 
+  - tomcat
+
+services:
+  - postgresql
+  - tomcat

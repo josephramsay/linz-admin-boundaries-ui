@@ -4,3 +4,5 @@
 /test/
 /AdminBoundaries.egg-info/
 /debug.log
+/__pycache__/
+/download_admin_bdys.pyc

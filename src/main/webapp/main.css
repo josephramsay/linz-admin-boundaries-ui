@@ -81,11 +81,6 @@ a.b_green, a.b_yellow, a.b_red {
     text-align: center;
 }
 
-a.b_red {
-    pointer-events: none;
-    cursor: default;
-}
-
 a.b_green:hover, a.b_nav:hover {
     color: white;
     background-color: lightseagreen;

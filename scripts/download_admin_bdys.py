@@ -131,6 +131,7 @@ MAX_RETRY = 10
 
 ENC = 'utf-8-sig'
 ASC = 'ascii'
+RS = '###'
 
 if PYVER3:
 	def is_nonstr_iter(v):
@@ -150,15 +151,15 @@ else:
 	unistr = unicode
 	
 def convenc(input):
-    if isinstance(input, dict):
-        return {convenc(k): convenc(v) for k,v in diter(input)}
-    elif isinstance(input, list):
-        return [convenc(element) for element in input]
-    elif isinstance(input, unistr):
-        return enc(input)
-    else:
-        return input
-       
+	if isinstance(input, dict):
+		return {convenc(k): convenc(v) for k,v in diter(input)}
+	elif isinstance(input, list):
+		return [convenc(element) for element in input]
+	elif isinstance(input, unistr):
+		return enc(input)
+	else:
+		return input
+	   
 def setRetryDepth(depth):
 	global DEPTH
 	DEPTH = depth
@@ -489,8 +490,7 @@ class ConfReader(object):
 			#return json.loads(data,encoding='ascii')
 
 		
-#VARS = ConfReader.load()		
-	
+#VARS = ConfReader.load()			
 class ProcessorException(Exception):pass
 class Processor(object):
 	
@@ -555,7 +555,10 @@ class Processor(object):
 	def deletelyr(self,tname):
 		#dlayer = self.db.pg_ds.GetLayerByName('{}.{}'.format(self.conf.database_schema,tname))
 		#self.db.pg_ds.DeleteLayer(dlayer.GetName())
-		self.db.pg_ds.DeleteLayer('{}.{}{}'.format(self.conf.database_schema,PREFIX,tname))
+		try:
+			self.db.pg_ds.DeleteLayer('{}.{}{}'.format(self.conf.database_schema,PREFIX,tname))
+		except ValueError as ve:
+			logger.warn('Cannot delete layer {}. {}'.format(tname,ve))
 		
 	def insertshp(self,in_layer,retry=0):
 		if not in_layer: raise ProcessorException('Attempt to process Empty Datasource')
@@ -641,7 +644,7 @@ class Processor(object):
 		# this is a hack while using temptables
 		csvhead = self.f2t[ff]
 		with open(mbfile,'r') as fh:
-			for line in fh:
+			for line in fh:	
 				line = line.strip().encode('ascii','ignore').decode(ENC) if PYVER3 else line.strip().decode(ENC)
 				if first: 
 					headers = [h.strip().lower() for h in line.split(',')]
@@ -673,7 +676,7 @@ class Processor(object):
 		actions = ('add','drop','rename','cast','primary','trans')
 		#primary key check only checks pk before structure changes, needs to check afterward
 		#if self._pktest(self.conf.database_schema, PREFIX+tablename):
-		#	actions = tuple(x for x in actions if x!='primary')
+		#	actions = tuple(x for x in actions if x!='primar	y')
 		for qlist in [self.cm.action(self.secname,tablename.lower(),adrc) for adrc in actions]: 
 			for q in qlist: 
 				if q and (q.find('ADD PRIMARY KEY')<0 or not self._pktest(self.conf.database_schema, PREFIX+tablename)):
@@ -751,7 +754,7 @@ class Meshblock(Processor):
 				mblayer = mbhandle.GetLayer(0)
 				tname = self.layername(mblayer)
 				#self.drop(tname) #this doesn't work for some reason
-				#self.deletelyr(tname)
+				self.deletelyr(tname)
 				self.insertshp(mblayer)
 				self.mapcolumns(tname)
 				self.assignperms(tname)
@@ -814,7 +817,7 @@ class Version(object):
 		'''Create temp schema'''
 		self.teardown(self.conf)
 		self.rebuild(self.conf)
-			   
+
 	@staticmethod	 
 	def rebuild(conf):			  
 		'''Drop and create import schema for fresh import'''		
@@ -838,9 +841,9 @@ class Version(object):
 	def verdiffs(self,original,imported,pk):
 		'''Get table_version diffs query string'''
 		qct = "select table_version.ver_table_key_datatype('{}','{}')".format(original,pk);
-		qvd = "select count(*) from table_version.ver_get_table_differences('{original}','{imported}','{pk}') as T(code char(1), id ###);".format(original=original,imported=imported,pk=pk)
+		qvd = "select count(*) from table_version.ver_get_table_differences('{original}','{imported}','{pk}') as T(code char(1), id {rs});".format(original=original,imported=imported,pk=pk,rs=RS)
 		return qct,qvd
-		
+
 	def qset(self,original,imported,pk,dstr=None):
 		'''Run table version and apply diffs'''
 		q = ''
@@ -865,7 +868,7 @@ class Version(object):
 				logger.debug('pQd1 {}\npQd2 {}'.format(qct,qvd))
 				rct = Processor.attempt(self.conf,qct,driver_type='psy',rt='s')[0]
 				#WORKAROUND. Calling table_version.ver_table_key_datatype on a serial returns None, interpret as int
-				dif = int(Processor.attempt(self.conf,qvd.replace('###',rct if rct else 'int'),driver_type='psy',rt='s')[0])
+				dif = int(Processor.attempt(self.conf,qvd.replace(RS,rct if rct else 'int'),driver_type='psy',rt='s')[0])
 				if dif>0: res += [(t2,dif),]
 		return res
 		
@@ -1079,7 +1082,7 @@ def notify(c,dd=''):
 		tab = '''<table>
 		<tr><th>Table</th><th>RowDiff</th></tr>
 		<tr><td>{}</td></tr></table>
-		'''.format('</td></tr><tr><td>'.join(['{}</td><td>{}'.format(x,y) for x,y in dd]));
+		'''.format('</td></tr><tr><td>'.join(['{}</td><td>{}'.format(x,y) for x,y in dd]))
 		html = """\
 		<html>
 			<head>{style}</head>
@@ -1118,28 +1121,28 @@ def oneOrNone(a,options,args):
 	'''is A in args OR are none of the options in args'''
 	return a in args or not any([True for i in options if i in args]) 
 	 
-def gather(args,v,c,m):			
+def gather(args, v, c, m):			
 	'''fetch data from sources and prepare import schema'''
 	logger.info("Beginning meshblock/localities file download")
 	t = ()
-	#SELECTION['ogr'] = ogrdb.d
-	#SELECTION['ogr'] = DatabaseConn_ogr(c)
+	# SELECTION['ogr'] = ogrdb.d
+	# SELECTION['ogr'] = DatabaseConn_ogr(c)
 	s = PExpectSFTP(c)
 	v.setup()
-	topts = ('meshblock','nzlocalities')
-	if oneOrNone('meshblock',topts,args): 
-		mbk = Meshblock(c,SELECTION['ogr'],m,s)
+	topts = ('meshblock', 'nzlocalities')
+	if oneOrNone('meshblock', topts, args):
+		mbk = Meshblock(c, SELECTION['ogr'], m, s)
 		t += (mbk.run(),)
 		pass
-	if oneOrNone('nzlocalities',topts,args): 
-		nzl = NZLocalities(c,SELECTION['ogr'],m,s) 
+	if oneOrNone('nzlocalities', topts, args): 
+		nzl = NZLocalities(c, SELECTION['ogr'], m, s) 
 		t += (nzl.run(),)
 		pass
-	c.save('t',t)
-	logger.info ("Stopping post import for user validation and notifying users")
+	c.save('t', t)
+	logger.info ("Stopping post import for user validation")
 	if 'detect' in args:
 		dd = v.detectdiffs(t)
-		if dd: notify(c,dd)
+		if dd: notify(c, dd)
 
 	return t
 	
@@ -1201,5 +1204,4 @@ def process(args):
 if __name__ == "__main__":
 	main()
 	
-
 

@@ -63,7 +63,7 @@ public class DABServletSummary extends DABServlet {
 				+ "These can be found on the LINZ SFTP and gisdata file share respectively. The StatsNZ meshblock zip file contains two shapefiles and "
 				+ "one CSV and is used to update the tables; meshblock, meshblock_concordance and territorial_authority.",
 				"If a table-set is in the Loaded state the import tables have been built and column changes applied. At this stage selected users "
-				+ "will be notified and if approved, changes can be pushed through to the final destiation tables.",
+				+ "will be notified and if approved, changes can be pushed through to the final destination tables.",
 				"When a table-set is in the Transferred state the import tables will match the destination tables and no action is necessary.",
 				"In the summary screen, tables are compared using row counts. For a more detailed table comparison use the 'Compare ### Table' button "
 				+ "which returns the results from the table_version function get_table_differences() indicating row number and proposed operation "

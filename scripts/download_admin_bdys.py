@@ -354,18 +354,23 @@ class DB(object):
 			
 class DatabaseConnectionException(Exception):pass
 class DatabaseConn_psycopg2(object):
+	
 	def __init__(self,conf):
 		self.conf = conf
 		self.exe = None
 		
-	def connect(self):
-		self.pconn = psycopg2.connect( \
-			host=self.conf.database_host,\
-			database=self.conf.database_name,\
-			user=self.conf.database_user,\
-			password=self.conf.database_password)
-		self.pconn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
-		self.pcur = self.pconn.cursor()
+	def connect(self):	
+		self.hosts = self.conf.database_host.split(',')	
+		self.pconn = {}
+		self.pcur = {}
+		for host in self.hosts:
+			self.pconn[host] = psycopg2.connect( \
+				host=host,\
+				database=self.conf.database_name,\
+				user=self.conf.database_user,\
+				password=self.conf.database_password)
+			self.pconn[host].set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+			self.pcur[host] = self.pconn[host].cursor()
 		
 	def execute_query(self,q,rt=None):
 		'''Execute query q and return success/failure determined by fail=any error except no results
@@ -374,26 +379,28 @@ class DatabaseConn_psycopg2(object):
 		logger.info('psyEQ '+q)
 		res = True
 		#if rt: rt = rt.lower()
-		try:
-			self.pcur.execute(q)
-			if rt == 's': res = self.pcur.fetchone()
-			elif rt == 'b': res = self.pcur.rowcount>0
-			elif rt == 'i': res = self.pcur.rowcount
-			else: res = self.pcur.rowcount or None
-		except psycopg2.ProgrammingError as pe: 
-			if hasattr(pe,'message') and 'no results to fetch' in pe.message: res = True
-			if rt == 'e' and hasattr(pe,'pgerror') and 'does not exist' in pe.pgerror: res = True
-			else: raise 
-		except Exception as e: 
-			raise DatabaseConnectionException('Database query error, {}'.format(e))
-		#for now just check if row returned as success
-		#return bool(isinstance(res,int) and res>0)
-		return res
+		for host in reversed(self.hosts):
+			try:
+				self.pcur[host].execute(q)
+				if rt == 's': res = self.pcur[host].fetchone()
+				elif rt == 'b': res = self.pcur[host].rowcount>0
+				elif rt == 'i': res = self.pcur[host].rowcount
+				else: res = self.pcur[host].rowcount or None
+			except psycopg2.ProgrammingError as pe: 
+				if hasattr(pe,'message') and 'no results to fetch' in pe.message: res = True
+				if rt == 'e' and hasattr(pe,'pgerror') and 'does not exist' in pe.pgerror: res = True
+				else: raise 
+			except Exception as e: 
+				raise DatabaseConnectionException('Database query error, {}'.format(e))
+			#for now just check if row returned as success
+			#return bool(isinstance(res,int) and res>0)
+		return res	
 	
 	def disconnect(self):
-		self.pconn.commit()
-		self.pcur.close()
-		self.pconn.close()
+		for host in self.hosts:
+			self.pconn[host].commit()
+			self.pcur[host].close()
+			self.pconn[host].close()	
 
 class DatabaseConn_ogr(object):
 	
@@ -406,29 +413,36 @@ class DatabaseConn_ogr(object):
 			logger.fatal('Could not load the OGR PostgreSQL driver')
 			raise Exception('Could not load the OGR PostgreSQL driver')
 			#sys.exit(1)
-		self.pg_uri = 'PG:dbname={} host={} port={} user={} password={}'
-		self.pg_uri = self.pg_uri.format(conf.database_name,conf.database_host,conf.database_port,conf.database_user,conf.database_password)
 		
-		self.pg_ds = None
+		self.hosts = conf.database_host.split(',')
+		self.pg_uri = {}
+		for host in self.hosts:
+			self.pg_uri[host] = 'PG:dbname={} host={} port={} user={} password={}'
+			self.pg_uri[host] = self.pg_uri.format(conf.database_name,host,conf.database_port,conf.database_user,conf.database_password)
+
+		self.pg_ds = None	
 		
 	def connect(self):
-		try:
-			if not self.pg_ds: 
-				self.pg_ds = self.pg_drv.Open(self.pg_uri, update = 1)
-				#if self.conf.database_rolename:
-				#	self.pg_ds.ExecuteSQL("SET ROLE " + self.conf.database_rolename)
-		except Exception as e:
-			logger.fatal("Can't open PG output database: " + str(e))
-			raise
-			#sys.exit(1)
-			
+		if not self.pg_ds:
+			for host in self.hosts:
+				try: 
+					self.pg_ds[host] = self.pg_drv.Open(self.pg_uri[host], update = 1)
+					#if self.conf.database_rolename:
+					#	self.pg_ds.ExecuteSQL("SET ROLE " + self.conf.database_rolename)
+				except Exception as e:
+					logger.fatal("Can't open PG output database: " + str(e))
+					raise
+					#sys.exit(1)	
+					
 	def execute_query(self,q,rs=None):
 		logger.info('ogrEQ '+q)
-		#TODO. Provide return value selection
-		return self.pg_ds.ExecuteSQL(q)
-		   
+		for host in reversed(self.hosts):
+			rv = self.pg_ds[host].ExecuteSQL(q)	
+		return rv
+	
 	def disconnect(self):
-		del self.pg_ds
+		for host in self.hosts:
+			del self.pg_ds[host]	
 						  
 class ConfReader(object):
 	'''Configuration Reader reads (and writes temp objects) in cp format'''
@@ -676,7 +690,7 @@ class Processor(object):
 		actions = ('add','drop','rename','cast','primary','trans')
 		#primary key check only checks pk before structure changes, needs to check afterward
 		#if self._pktest(self.conf.database_schema, PREFIX+tablename):
-		#	actions = tuple(x for x in actions if x!='primar	y')
+		#	actions = tuple(x for x in actions if x!='primary')
 		for qlist in [self.cm.action(self.secname,tablename.lower(),adrc) for adrc in actions]: 
 			for q in qlist: 
 				if q and (q.find('ADD PRIMARY KEY')<0 or not self._pktest(self.conf.database_schema, PREFIX+tablename)):

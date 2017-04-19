@@ -1356,7 +1356,7 @@ def process(args):
 			t = c.read('t',flush=False)
 		#if "transfer" requested read saved 'T' and transfer to dest
 		if oneOrNone('transfer',aopts,args): 
-			#v.versiontables(t)
+			v.versiontables(t)
 			o.update()
 
 	

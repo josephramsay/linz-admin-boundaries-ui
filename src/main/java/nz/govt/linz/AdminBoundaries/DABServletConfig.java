@@ -161,6 +161,6 @@ public class DABServletConfig extends DABServlet {
 				getBodyContent(infomessage,configform,accdectable),
 				getBodyFooter(created,accessed,user)
 				)
-				);
+			);
 	}
 }

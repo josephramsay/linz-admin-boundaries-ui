@@ -136,6 +136,9 @@ ENC = 'utf-8-sig'
 ASC = 'ascii'
 RS = '###'
 
+#master db server which is supposed to have the correct configuration
+MASTER = 'prdassgeo01'
+
 if PYVER3:
 	def is_nonstr_iter(v):
 		if isinstance(v, str):
@@ -252,12 +255,12 @@ class DataValidator(object):
 	def validateSpatial(self):
 		'''Validates using specific queries, spatial or otherwise eg select addressPointsWithinMeshblocks()'''
 		for f in self.conf.validation_spatial:
-			Processor.attempt(self.conf, f)
+			Processor.attempt(self.conf,f,driver_type='psy')
 			
 	def validateData(self):
 		'''Validates the ref data itself, eg enforcing meshblock code length'''
 		for f in self.conf.validation_data:
-			Processor.attempt(self.conf, f)
+			Processor.attempt(self.conf,f,driver_type='psy')
 
 class ColumnMapperError(Exception):pass
 class ColumnMapper(object):
@@ -297,20 +300,21 @@ class ColumnMapper(object):
 			m = re.search('(\w+)_colmap',attr)
 			if m: self.map[m.group(1)] = json.loads(getattr(conf,attr))
 			
-	def flatten(self,lol):
+	@staticmethod
+	def flatten(lol):
 		'''Flattens a nested list into 1D'''
-		if not isinstance(lol,str) and isinstance(lol, collections.Iterable): return [a for i in lol for a in self.flatten(i)]
+		if not isinstance(lol,str) and isinstance(lol, collections.Iterable): return [a for i in lol for a in ColumnMapper.flatten(i)]
 		else: return [lol]
 		 
 	def action(self,section,table,action):
 		'''Generate queries from the column map'''
 		if section in self.map and table in self.map[section]:
 			if action == 'trans' and 'geom' in self.map[section][table] and 'srid' in self.map[section][table]:
-				return self.flatten(self.formqry(action,section,table, ''))
+				return ColumnMapper.flatten(self.formqry(action,section,table, ''))
 			elif action == 'primary' and 'primary' in self.map[section][table]:
-				return self.flatten(self.formqry(action,section,table, ''))
+				return ColumnMapper.flatten(self.formqry(action,section,table, ''))
 			elif action in self.map[section][table]:
-				return self.flatten([self.formqry(action,section,table, sta) for sta in self.map[section][table][action]])
+				return ColumnMapper.flatten([self.formqry(action,section,table, sta) for sta in self.map[section][table][action]])
 		return []
 	
 	def _getArgs(self,a):
@@ -460,7 +464,6 @@ class DatabaseConn_psycopg2(object):
 	def connect(self):	
 		self.hosts = self.conf.database_host.split(',')	
 		self.pconn = {}
-		self.pcur = {}
 		for host in self.hosts:
 			self.pconn[host] = psycopg2.connect( \
 				host=host,\
@@ -468,30 +471,33 @@ class DatabaseConn_psycopg2(object):
 				user=self.conf.database_user,\
 				password=self.conf.database_password)
 			self.pconn[host].set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
-			self.pcur[host] = self.pconn[host].cursor()
+			self.pconn[host].set_session(autocommit=True)
 		
 	def execute_query(self,q,rt=None,hosts=None):
 		'''Execute query q and return success/failure determined by fail=any error except no results
-		optional arg rt can be successful (h)ost, (s)tring, (b)oolean or (i)nt default
+		optional arg rt can be successful (h)osts, (s)tring, (b)oolean or (i)nt default
 		'''
 		hosts = hosts or self.hosts
-		res = len(hosts)*[True,]
+		res = {}#len(hosts)*[True,]
 		#if rt: rt = rt.lower()
-		for i,host in enumerate(reversed(hosts)):
+		for host in reversed(hosts):
 			logger.info('psyEQ execute {} on {}'.format(q,host))
 			try:
-				self.pcur[host].execute(q)
-				if rt == 's': res[i] = self.pcur[host].fetchone()
-				elif rt == 'b': res[i] = self.pcur[host].rowcount>0
-				elif rt == 'i': res[i] = self.pcur[host].rowcount
-				elif rt == 'h': res[i] = host if self.pcur[host].rowcount>0 else None
-				else: res[i] = self.pcur[host].rowcount or None
+				cursor = self.pconn[host].cursor()
+				cursor.execute(q)
+				if rt == 's': res[host] = cursor.fetchone()
+				elif rt == 'b': res[host] = cursor.rowcount>0
+				elif rt == 'i': res[host] = cursor.rowcount
+				#elif rt == 'h': res[i] = host if self.pcur[host].rowcount>0 else None
+				else: res[host] = cursor.rowcount or None
 			except psycopg2.ProgrammingError as pe: 
-				if hasattr(pe,'message') and 'no results to fetch' in pe.message: res[i] = True
-				if rt == 'e' and hasattr(pe,'pgerror') and 'does not exist' in pe.pgerror: res[i] = True
+				if hasattr(pe,'message') and 'no results to fetch' in pe.message: res[host] = True
+				if rt == 'e' and hasattr(pe,'pgerror') and 'does not exist' in pe.pgerror: res[host] = True
 				else: raise 
 			except Exception as e: 
 				raise DatabaseConnectionException('Database query error, {}'.format(e))
+			finally:
+				self.pconn[host].commit()
 			#for now just check if row returned as success
 			#return bool(isinstance(res,int) and res>0)
 		return res	
@@ -499,7 +505,7 @@ class DatabaseConn_psycopg2(object):
 	def disconnect(self):
 		for host in self.hosts:
 			self.pconn[host].commit()
-			self.pcur[host].close()
+			#self.pconn[host].curson().close()
 			self.pconn[host].close()	
 
 class DatabaseConn_ogr(object):
@@ -535,12 +541,16 @@ class DatabaseConn_ogr(object):
 					raise
 					#sys.exit(1)	
 					
-	def execute_query(self,q,rs=None,hosts=None):
+	def execute_query(self,q,rt=None,hosts=None):
+		#rt not needed on OGR, returns layer
 		hosts = hosts or self.hosts
-		res = len(hosts)*[True,]
-		for i,host in enumerate(reversed(hosts)):
+		res = {}
+		for host in reversed(hosts):
 			logger.info('ogrEQ execute {} on {}'.format(q,host))
-			res[i] = self.pg_ds[host].ExecuteSQL(q)	
+			try:
+				res[host] = self.pg_ds[host].ExecuteSQL(q)
+			finally:
+				self.pg_ds[host].commit()
 		return res
 	
 	def disconnect(self):
@@ -625,7 +635,6 @@ class ConfReader(object):
 			#data = enc(handle.read().replace('\n',''))
 			#return json.loads(data,encoding='ascii')
 
-		
 #VARS = ConfReader.load()			
 class ProcessorException(Exception):pass
 class Processor(object):
@@ -649,7 +658,8 @@ class Processor(object):
 			 and table_name like '{t}' \
 			 and constraint_type like 'PRIMARY KEY'".format(s=s,t=t)
 		logger.debug('pQ2 {}'.format(q))
-		return Processor.attempt(self.conf, q, driver_type='psy')
+		return Processor.attempt(self.conf, q, driver_type='psy',rt='i')
+		#return Processor.attempt(self.conf, q, driver_type='psy',rt='i')
 
 	def extract(self,file):
 		'''Takes a zip path/filename input and returns the path/names of any unzipped files'''
@@ -690,83 +700,93 @@ class Processor(object):
 		
 	def deletelyr(self,tname):
 		'''Wrap ogr delete layer function'''
-		self.db.deleteLayer(self.conf.database_schema,tname)
+		with DB(self.conf,'ogr') as ogrdb:
+			#self.db.d.deleteLayer(self.conf.database_schema,tname)
+			ogrdb.d.deleteLayer(self.conf.database_schema,tname)
 		
 	def insertshp(self,in_layer,retry=0,srid=None):
 		if not in_layer: raise ProcessorException('Attempt to process Empty Datasource')
 		in_name,out_name = None,None
-
+		out_hosts_layer= {}
+		
 		#options
 		create_opts = ['GEOMETRY_NAME='+'geom']
 		create_opts.append('SCHEMA=' + self.conf.database_schema)
 		create_opts.append('OVERWRITE=' + 'yes')
 		
-		#create new layer
-		try: 
-			in_name = in_layer.GetName()
-			out_name = PREFIX+self.f2t[in_name][0] if in_name in self.f2t else in_name
-			if srid:
-				out_srs = osr.SpatialReference()
-				out_srs.ImportFromEPSG(int(srid))
-			else: 
-				out_srs = in_layer.GetSpatialRef()
-				srid = out_srs.GetAuthorityCode(None) if out_srs.AutoIdentifyEPSG() else '<SRID>'
-			
-			logger.debug('Inserting shapefile {}->{}[{}/{}] - {}'.format(in_name,out_name,out_srs,srid,create_opts))
-			out_hosts_layer = self.db.createLayer(out_name,out_srs,create_opts)
-			#build layer fields
-			logger.debug('Structuring table {}->{}'.format(in_name,out_name))
-			in_ldef = in_layer.GetLayerDefn()
-			for i in range(0, in_ldef.GetFieldCount()):
-				in_fdef = in_ldef.GetFieldDefn(i)
-				for host in list(out_hosts_layer.keys()):
-					out_hosts_layer[host].CreateField(in_fdef)
-				logger.debug('Add {}[{}]'.format(out_name,in_fdef.GetName()))
-		except RuntimeError as r:
-			#Version.rebuild(self.conf) If a problem occurs any previously created tables are deleted
-			logger.warn('Error creating layer {}, drop and rebuild. [{}]'.format(out_name,r))
-			q1 = 'drop table if exists {} cascade'.format(out_name)
-			Processor.attempt(self.conf, q1, driver_type='psy')
-			#TODO investigate failure causes and split if invalidSRID is only one cause
-			return self.insertshp(in_layer,retry+1,self.conf.layer_output_srid) if retry<10 else None
-		except Exception as e:
-			logger.fatal('Cannot create {} output table. [{}]'.format(out_name,e))
-			raise
-			#sys.exit(1)
-			
-		#insert features
-		logger.debug('Populating table {}'.format(out_name))
-		try:
-			in_layer.ResetReading()
-			in_feat = in_layer.GetNextFeature()
-			for host in list(out_hosts_layer.keys()):
-				out_ldef = out_hosts_layer[host].GetLayerDefn()
-				while in_feat:
-					out_feat = ogr.Feature(out_ldef)
-					for i in range(0, out_ldef.GetFieldCount()):
-						value = in_feat.GetField(i)
-						if value is None:
-							out_feat.UnsetField(out_ldef.GetFieldDefn(i).GetNameRef())
-						else:
-							out_feat.SetField(out_ldef.GetFieldDefn(i).GetNameRef(), value)
-					geom = in_feat.GetGeometryRef()
-					#1. fix_esri_polygon (no longer needed?)
-					#geom = fix_esri_polyon(geom)
-					#2. shift_geom
-					if self.conf.layer_shift_geometry and out_srs.IsGeographic():
-							shift_geom(geom)
-					#3. always force, bugfix
-					geom = ogr.ForceToMultiPolygon(geom)
-					out_feat.SetGeometry(geom)
+		with DB(self.conf,'ogr') as ogrdb:
+			#create new layer
+			try: 
+				in_name = in_layer.GetName()
+				out_name = PREFIX+self.f2t[in_name][0] if in_name in self.f2t else in_name
+				if srid:
+					out_srs = osr.SpatialReference()
+					out_srs.ImportFromEPSG(int(srid))
+				else: 
+					out_srs = in_layer.GetSpatialRef()
+					srid = out_srs.GetAuthorityCode(None) if out_srs.AutoIdentifyEPSG() else '<SRID>'
+				
+				logger.debug('Inserting shapefile {}->{}[{}/{}] - {}'.format(in_name,out_name,out_srs,srid,create_opts))
+				#createLayer returns a dict of layers
+				out_hosts_layer = ogrdb.d.createLayer(out_name,out_srs,create_opts)
+				#out_hosts_layer = self.db.d.createLayer(out_name,out_srs,create_opts)
+				#build layer fields
+				logger.debug('Structuring table {}->{}'.format(in_name,out_name))
+				in_ldef = in_layer.GetLayerDefn()
+				for i in range(0, in_ldef.GetFieldCount()):
+					in_fdef = in_ldef.GetFieldDefn(i)
 					for host in list(out_hosts_layer.keys()):
-						out_hosts_layer[host].CreateFeature(out_feat)
+						out_hosts_layer[host].CreateField(in_fdef)
+					logger.debug('Add {}[{}]'.format(out_name,in_fdef.GetName()))
+			except RuntimeError as r:
+				#Version.rebuild(self.conf) If a problem occurs any previously created tables are deleted
+				logger.warn('Error creating layer {}, drop and rebuild. [{}]'.format(out_name,r))
+				q1 = 'drop table if exists {} cascade'.format(out_name)
+				Processor.attempt(self.conf, q1, driver_type='psy')
+				#TODO investigate failure causes and split if invalidSRID is only one cause
+				return self.insertshp(in_layer,retry+1,self.conf.layer_output_srid) if retry<10 else None
+			except Exception as e:
+				logger.fatal('Cannot create {} output table. [{}]'.format(out_name,e))
+				raise
+				#sys.exit(1)
+				
+			#insert features
+			logger.debug('Populating table {}'.format(out_name))
+			try:
+				for host in list(out_hosts_layer.keys()):
+					in_layer.ResetReading()
 					in_feat = in_layer.GetNextFeature()
-			
-		except Exception as e:
-			logger.fatal('Can not populate {} output table. {}'.format(out_name,e))
-			raise 
-			#sys.exit(1)
-		
+					try:
+						out_ldef = out_hosts_layer[host].GetLayerDefn()
+						while in_feat:
+							out_feat = ogr.Feature(out_ldef)
+							for i in range(0, out_ldef.GetFieldCount()):
+								value = in_feat.GetField(i)
+								if value is None:
+									out_feat.UnsetField(out_ldef.GetFieldDefn(i).GetNameRef())
+								else:
+									out_feat.SetField(out_ldef.GetFieldDefn(i).GetNameRef(), value)
+							geom = in_feat.GetGeometryRef()
+							#1. fix_esri_polygon (no longer needed?)
+							#geom = fix_esri_polyon(geom)
+							#2. shift_geom
+							if self.conf.layer_shift_geometry and out_srs.IsGeographic():
+								shift_geom(geom)
+							#3. always force, bugfix
+							geom = ogr.ForceToMultiPolygon(geom)
+							out_feat.SetGeometry(geom)
+							out_hosts_layer[host].CreateFeature(out_feat)
+							in_feat = in_layer.GetNextFeature()
+					finally:
+						#out_hosts_layer[host].commit()
+						out_hosts_layer[host].SyncToDisk()
+						#out_hosts_layer[host].close()
+				
+			except Exception as e:
+				logger.fatal('Can not populate {} output table. {}'.format(out_name,e))
+				raise 
+				#sys.exit(1)
+	
 		logger.debug('Returning table {}'.format(out_name))
 		return out_name
 			
@@ -787,23 +807,28 @@ class Processor(object):
 					createheaders   = ','.join(['"{}" VARCHAR'.format(m) if m.find(' ')>0 else '{} VARCHAR'.format(m) for m in headers])
 					storedheaders = ','.join(['"{}" VARCHAR'.format(m) if m.find(' ')>0 else '{} VARCHAR'.format(m) for m in csvhead[1]])
 					insertheaders   = ','.join(['"{}"'.format(m) if m.find(' ')>0 else '{}'.format(m) for m in headers])
-					findqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],op='find')
-					if not self._attempt(findqry) or self._attempt(findqry).GetNextFeature().GetFieldAsInteger(0) == 0:
-						#if import table doesnt exist, create it
-						if storedheaders != createheaders: logger.warn('Unexpected table column names, {}'.format(createheaders))
+					#fgres = Processor.attempt(self.conf,self.query(self.conf.database_schema,PREFIX+csvhead[0],op='find'))
+					checkqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],op='find')
+					fgres = Processor.attempt(self.conf,checkqry,driver_type='psy')
+					#cqh = [i for i in fgres if not fgres[i] or not fgres[i].GetFeature(0) or fgres[i].GetFeature(0).GetFieldAsInteger(0)==0]
+					create_hosts = [i for i in fgres if not fgres[i]]
+					trunc_hosts = [i for i in fgres if i not in create_hosts]
+					#if import table doesnt exist, create it
+					if storedheaders != createheaders: logger.warn('Unexpected table column names, {}'.format(createheaders))
+					if create_hosts:
 						createqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],createheaders,op='create')
-						self._attempt(createqry)
-					else:
-						#otherwise truncate the existing table
+						Processor.attempt(self.conf,createqry,driver_type='psy',h=create_hosts)
+					#otherwise truncate the existing table
+					if trunc_hosts:
 						truncqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],op='trunc')
-						self._attempt(truncqry)
+						Processor.attempt(self.conf,truncqry,driver_type='psy',h=trunc_hosts)
 					first = False
 				else:
 					values = line.replace("'","''").split(',',len(headers)-1)
 					#if int(values[0])<47800:continue
 					if '"NULL"' in values: continue
 					insertqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],insertheaders,values,op='insert')
-					self._attempt(insertqry)
+					Processor.attempt(self.conf,insertqry,driver_type='psy')
 		#self.db.disconnect()			
 		return csvhead[0]
 						   
@@ -811,29 +836,33 @@ class Processor(object):
 		'''Perform input to final column mapping'''
 		actions = ('add','drop','rename','cast','primary','trans')
 		#primary key check only checks pk before structure changes, needs to check afterward
-		#if self._pktest(self.conf.database_schema, PREFIX+tablename):
-		#	actions = tuple(x for x in actions if x!='primary')
-		for qlist in [self.cm.action(self.secname,tablename.lower(),adrc) for adrc in actions]: 
-			for q in qlist: 
-				if q and (q.find('ADD PRIMARY KEY')<0 or not self._pktest(self.conf.database_schema, PREFIX+tablename)):
-					self._attempt(q)
+		#For each action return a list of queries that need to be run
+		qall = {a:self.cm.action(self.secname,tablename.lower(),a) for a in actions}
+		#Filter the actions list by the configured query type requests
+		for qactive in [q for q in actions if qall[q]]: 
+			for q in qall[qactive]: 
+				#If the query is non PK query
+				if q.find('ADD PRIMARY KEY')<0:
+					Processor.attempt(self.conf,q,driver_type='psy')
+				else:
+					#Find the list of servers that don't have a PK for the named table (pktest with 0 ret val))
+					nopk = self._pktest(self.conf.database_schema, PREFIX+tablename)
+					runon = [i for i in nopk if not nopk[i]]
+					if runon: Processor.attempt(self.conf,q,driver_type='psy',h=runon)
+
 					
 	def assignperms(self,tablename):
 		'''Give select-on-table and usage-on-schema for all named users'''
 		for user in self.cm.map[self.secname][tablename]['permission']:
-			self._attempt(self.cq['permit_t'].format(self.conf.database_schema,PREFIX+tablename,user))
-			self._attempt(self.cq['permit_s'].format(self.conf.database_schema,user))
+			Processor.attempt(self.conf,self.cq['permit_t'].format(self.conf.database_schema,PREFIX+tablename,user),driver_type='psy')
+			Processor.attempt(self.conf,self.cq['permit_s'].format(self.conf.database_schema,user),driver_type='psy')
 				
 	def drop(self,table):
 		'''Clean up any previous table instances. Doesn't work!''' 
-		return self._attempt(self.cq['drop'].format(self.conf.database_schema,table))
-
-	def _attempt(self,q):
-		'''Wrapper for static attempt'''
-		Processor.attempt(self.conf,q)
+		return Processor.attempt(self.conf,self.cq['drop'].format(self.conf.database_schema,table),driver_type='psy')
 		
 	@staticmethod
-	def attempt(conf,q,driver_type='ogr',depth=0,rt=None,r=None,h=None):#,test=False):
+	def attempt(conf,q,driver_type='ogr',depth=0,rt=None,r=None,h=None,oneoff=False):#,test=False):
 		'''Attempt connection using ogr or psycopg drivers creating temp connection if conn object not stored
 		params: 
 			conf=Config Reader object
@@ -847,17 +876,17 @@ class Processor(object):
 		while depth<DEPTH:
 			try:
 				logger.info('{} <- {}'.format(driver_type,q))
-				#if using active DB instance 
-				if SELECTION[driver_type]:
-					return SELECTION[driver_type].execute_query(q,rt,h)
-				#otherwise setup/delete temporary connection
+				#if the named connection is active use it 
+				if not oneoff and SELECTION[driver_type]:
+					return SELECTION[driver_type].get(q,rt,h)
+				#otherwise setup/delete a temporary connection
 				else:
 					with DB(conf,driver_type) as conn:
 						return conn.get(q,rt,h)
 			except RuntimeError as r:
 				logger.error('Attempt {} using {} failed, {}'.format(depth,driver_type,r))
 				#if re.search('table_version.ver_apply_table_differences',q) and Processor.nonOGR(conf,q,depth-1): return
-				rv = Processor.attempt(conf, q, Processor._next(driver_type), depth+1,r,h)
+				rv = Processor.attempt(conf, q, Processor._next(driver_type), depth+1,rt,r,h)
 				logger.debug('Success {}'.format(rv))
 				return rv
 		if r: raise r
@@ -954,9 +983,10 @@ class Version(object):
 	importfile = 'aimsref_import.sql'
 	qtv = 'select table_version.ver_apply_table_differences({}, {}, {})'
 	
-	def __init__(self,conf,cm):
+	def __init__(self,conf,cm,ext):
 		self.conf = conf
 		self.cm = cm
+		self.ext = ext
 		
 	def setup(self):
 		'''Create temp schema'''
@@ -977,7 +1007,7 @@ class Version(object):
 	def _wrapq(conf,q):
 		'''Simple wrapper for running schema queries with a retry if error not raised'''
 		depth = DEPTH
-		while not Processor.attempt(conf, q, driver_type='psy'): 
+		while not all(Processor.attempt(conf, q, driver_type='psy').values()): 
 			msg = '{} failed. {} attempts remaining'.format(q,depth)
 			if depth: logger.warn(msg)
 			else: raise Exception(msg)
@@ -1011,10 +1041,15 @@ class Version(object):
 				imported = '{}.{}{}'.format(self.conf.database_schema,PREFIX,t)
 				qct,qvd = self.verdiffs(original,imported,pk)
 				logger.debug('pQd1 {}\npQd2 {}'.format(qct,qvd))
-				rct = Processor.attempt(self.conf,qct,driver_type='psy',rt='s')[0]
+				rct = Processor.attempt(self.conf,qct,driver_type='psy',rt='s')
+				#Only process servers that match the PK type on the master server
+				rct = {i:rct[i][0] for i in rct if rct[MASTER]==rct[i]}
 				#WORKAROUND. Calling table_version.ver_table_key_datatype on a serial returns None, interpret as int
-				dif = int(Processor.attempt(self.conf,qvd.replace(RS,rct if rct else 'int'),driver_type='psy',rt='s')[0])
-				if dif>0: res += [(t2,dif),]
+				q = qvd.replace(RS,rct[MASTER] if rct[MASTER] else 'int')
+				#dif = Processor.attempt(self.conf,q,rt='s',h=list(rct.keys()))
+				dif = Processor.attempt(self.conf,q,driver_type='psy',rt='s',h=list(rct.keys()),oneoff=True)
+				if sum(ColumnMapper.flatten(dif.values()))>0:
+					res += [(svr,t2,dif[svr][0]) for svr in dif if dif[svr] and dif[svr][0]>0]
 		return res
 		
 	def versiontables(self,tablelist):
@@ -1034,45 +1069,50 @@ class Version(object):
 	def gridtables(self,sec,tab,tname):
 		'''Look for grid specification and grid the table if found'''
 		if sec in self.cm.map and tab in self.cm.map[sec] and 'grid' in self.cm.map[sec][tab]:
-			e = External(self.conf)
-			e.build(tname,self.cm.map[sec][tab]['grid'])
-			
-class Optional(object):
-	def __init__(self,conf):
-		self.conf = conf
-			
-	def update(self):
-		for func in json.loads(self.conf.optional_functions):
-			fsig = re.match('.*\.(.*)\(',func).group(1)
-			qtest = "select proname from pg_proc where proname like '%{}%'".format(fsig)
-			qrun = 'select {}'.format(func)
-			res = Processor.attempt(self.conf,qtest,driver_type='psy',rt='h')
-			Processor.attempt(self.conf,qrun,driver_type='psy',h=[r for r in res if r])
+			self.ext.buildgrid(tname,self.cm.map[sec][tab]['grid'])
 		
 class External(object):
+	'''Queries run outside the scope of AdminBoundaries functionality'''
 	externals = (('table_grid.sql',"select public.create_table_polygon_grid('{schema}', '{table}', '{column}', {xres}, {yres})"),)
 	
 	def __init__(self,conf):
 		self.conf = conf
 		
 		
-	def build(self,gridtable,colres):
+	def buildgrid(self,gridtable,colres):
 		'''Create temp schema'''
 		#self.db.connect()
 		for file,query in self.externals:
 			schema,func = re.search('select ([a-zA-Z_\.]+)',query).group(1).split('.')
-			if not self._fnctest(schema, func):
+			#test for exists gridtable, if not recreate it
+			if not all(self._fnctest(schema, func).values()):
 				with open(file,'r') as handle:
 					text = handle.read()
 				#self.db.pg_ds.ExecuteSQL(text)
-				Processor.attempt(self.conf,text)
+				Processor.attempt(self.conf,text,driver_type='psy')
 			col = colres['geocol']
 			res = colres['res']
 			dstschema = self.conf.database_schema if TEST else self.conf.database_originschema
 			q = query.format(schema=dstschema, table=gridtable, column=col, xres=res, yres=res)
 			logger.debug('eQ1 {}'.format(q))
-			Processor.attempt(self.conf,q)
+			Processor.attempt(self.conf,q,driver_type='psy')
 		#self.db.disconnect()
+		
+	def optional(self):
+		'''Attempt to run optional functions on all configured hosts'''
+		for func in json.loads(self.conf.optional_functions):
+			fsig = re.match('(.*)\.(.*)\(',func).group(1,2)
+			res = self._fnctest(*fsig)
+			qrun = 'select {}'.format(func)
+			Processor.attempt(self.conf,qrun,driver_type='psy',h=[r for r in res if res[r]])	
+			
+# 	def _old_update(self):
+# 		for func in json.loads(self.conf.optional_functions):
+# 			fsig = re.match('.*\.(.*)\(',func).group(1)
+# 			qtest = "select proname from pg_proc where proname like '%{}%'".format(fsig)
+# 			qrun = 'select {}'.format(func)
+# 			res = Processor.attempt(self.conf,qtest,driver_type='psy',rt='i')
+# 			Processor.attempt(self.conf,qrun,driver_type='psy',h=[r for r in res if res[r]])
 			
 	def _fnctest(self,s,t):
 		'''Check whether the table had a primary key already. ExecuteSQL returns layer if successful OR null on error/no-result'''
@@ -1080,7 +1120,7 @@ class External(object):
 			 where routine_schema like '{s}' \
 			 and routine_name like '{t}'".format(s=s,t=t)
 		logger.debug('fQ2 {}'.format(q))
-		return Processor.attempt(self.conf, q)
+		return Processor.attempt(self.conf, q,driver_type='psy',rt='i')
 			
 class PExpectException(Exception):pass
 class PExpectSFTP(object):  
@@ -1218,7 +1258,7 @@ class SimpleUI(object):
 
 	
 def notify(c,dd=''):
-	'''Send a notification email to the recipients list to inform that New Admin Boundary Data Is Available'''
+	'''Send a notification email to the recipients list to inform that New Admin Boundary Data Is Availae were complaints that this dble'''
 
 	sender = 'no-reply@{}'.format(c.user_domain)
 	recipients = ['{}@{}'.format(u,c.user_domain) for u in c.user_list.split(',')]
@@ -1237,9 +1277,9 @@ def notify(c,dd=''):
 			th {text-align: left;}
 			</style>'''.strip('\n\t')
 		tab = '''<table>
-		<tr><th>Table</th><th>RowDiff</th></tr>
+		<tr><th>Server</th><th>Table</th><th>RowDiff</th></tr>
 		<tr><td>{}</td></tr></table>
-		'''.format('</td></tr><tr><td>'.join(['{}</td><td>{}'.format(x,y) for x,y in dd]))
+		'''.format('</td></tr><tr><td>'.join(['{}</td><td>{}</td><td>{}'.format(s,t,r) for s,t,r in dd]))
 		html = """\
 		<html>
 			<head>{style}</head>
@@ -1297,6 +1337,7 @@ def gather(args, v, c, m):
 		pass
 	c.save('t', t)
 	logger.info ("Stopping post import for user validation")
+	t = (('meshblock', ('meshblock_concordance', 'statsnz_meshblock', 'statsnz_ta')), ('nzlocalities', ('nz_locality',)))
 	if 'detect' in args:
 		dd = v.detectdiffs(t)
 		if dd: notify(c, dd)
@@ -1338,12 +1379,16 @@ def process(args):
 	
 	c = ConfReader()
 	m = ColumnMapper(c)
-	v = Version(c,m)
-	o = Optional(c)
+	e = External(c)
+	v = Version(c,m,e)
+	
 
 	global SELECTION
-	with DB(c,'ogr') as ogrdb:
-		SELECTION['ogr'] = ogrdb.d
+	#with DB(c,'ogr') as ogrdb:
+	#while 1:
+	with DB(c,'psy') as psydb:
+		SELECTION['psy'] = psydb
+		#SELECTION['ogr'] = ogrdb
 		#if a 't' value is stored we dont want to pre-clean the import schema 
 		aopts = [a[1] for a in OPTS]
 		if 'reject' in args: 
@@ -1357,7 +1402,7 @@ def process(args):
 		#if "transfer" requested read saved 'T' and transfer to dest
 		if oneOrNone('transfer',aopts,args): 
 			v.versiontables(t)
-			o.update()
+			e.optional()
 
 	
 if __name__ == "__main__":

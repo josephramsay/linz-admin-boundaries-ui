@@ -80,7 +80,7 @@ colmap = {
 
 [optional]
 functions = ["aims_stage.fnreferencedataupdatelocality('referencedata.maintainer')",
-    "aims.stage.fnreferencedataupdatemeshblock('referencedata.maintainer')"]
+    "aims_stage.fnreferencedataupdatemeshblock('referencedata.maintainer')"]
 
 [validation]
 data = [('select count(*) from meshblock where length(code)>7','0'),]

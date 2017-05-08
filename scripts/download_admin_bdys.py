@@ -68,19 +68,6 @@ else:
 
 from zipfile import ZipFile
 
-#from paramiko import Transport, SFTPClient
-
-# from twisted.internet import reactor
-# from twisted.internet.defer import Deferred
-# from twisted.conch.ssh.common import NS
-# from twisted.conch.scripts.cftp import ClientOptions
-# from twisted.conch.ssh.filetransfer import FileTransferClient
-# from twisted.conch.client.connect import connect
-# from twisted.conch.client.default import SSHUserAuthClient, verifyHostKey
-# from twisted.conch.ssh.connection import SSHConnection
-# from twisted.conch.ssh.channel import SSHChannel
-# from twisted.python.log import startLogging, err
-
 from subprocess import Popen,PIPE,check_output
 
 import pexpect
@@ -324,10 +311,6 @@ class ColumnMapper(object):
 		'''Returns the formatted query string based on request type; drop, rename, add, cast and proj'''
 		queries = []
 		ptable = PREFIX+table
-		#if action == 'drop': queries.append(self.dra[action].format(schema=self.schema,table=ptable,drop=args))
-		#elif action == 'rename': queries.append(self.dra[action].format(schema=self.schema,table=ptable,old=args['old'],new=args['new']))
-		#elif action == 'add': queries.append(self.dra[action].format(schema=self.schema,table=ptable,add=args['add'],type=args['type']))
-		#elif action == 'cast': queries.append(self.dra[action].format(schema=self.schema,table=ptable,cast=args['cast'],type=args['type']))
 		if action == 'drop': queries.append(
 			self.xcf.format(
 				func=self.xop['a'],
@@ -433,7 +416,7 @@ class ColumnMapper(object):
 		
 class DBSelectionException(Exception):pass
 class DB(object):
-	
+	'''Database wrapper object'''
 	def __init__(self,conf,drv):
 		self.conf = conf
 		self.d = None
@@ -456,7 +439,7 @@ class DB(object):
 			
 class DatabaseConnectionException(Exception):pass
 class DatabaseConn_psycopg2(object):
-	
+	'''Database connection using psycopg2 driver'''
 	def __init__(self,conf):
 		self.conf = conf
 		self.exe = None
@@ -509,7 +492,7 @@ class DatabaseConn_psycopg2(object):
 			self.pconn[host].close()	
 
 class DatabaseConn_ogr(object):
-	
+	'''Database connection using OGR driver'''
 	def __init__(self,conf):
 		
 		self.conf = conf
@@ -550,7 +533,7 @@ class DatabaseConn_ogr(object):
 			try:
 				res[host] = self.pg_ds[host].ExecuteSQL(q)
 			finally:
-				self.pg_ds[host].commit()
+				self.pg_ds[host].CommitTransaction()
 		return res
 	
 	def disconnect(self):
@@ -701,7 +684,6 @@ class Processor(object):
 	def deletelyr(self,tname):
 		'''Wrap ogr delete layer function'''
 		with DB(self.conf,'ogr') as ogrdb:
-			#self.db.d.deleteLayer(self.conf.database_schema,tname)
 			ogrdb.d.deleteLayer(self.conf.database_schema,tname)
 		
 	def insertshp(self,in_layer,retry=0,srid=None):
@@ -748,7 +730,6 @@ class Processor(object):
 			except Exception as e:
 				logger.fatal('Cannot create {} output table. [{}]'.format(out_name,e))
 				raise
-				#sys.exit(1)
 				
 			#insert features
 			logger.debug('Populating table {}'.format(out_name))
@@ -805,7 +786,6 @@ class Processor(object):
 				if first:
 					headers = [h.strip().lower() for h in line.split(',')]
 					createheaders   = ','.join(['"{}" VARCHAR'.format(m) if m.find(' ')>0 else '{} VARCHAR'.format(m) for m in headers])
-					storedheaders = ','.join(['"{}" VARCHAR'.format(m) if m.find(' ')>0 else '{} VARCHAR'.format(m) for m in csvhead[1]])
 					insertheaders   = ','.join(['"{}"'.format(m) if m.find(' ')>0 else '{}'.format(m) for m in headers])
 					#fgres = Processor.attempt(self.conf,self.query(self.conf.database_schema,PREFIX+csvhead[0],op='find'))
 					checkqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],op='find')
@@ -814,7 +794,6 @@ class Processor(object):
 					create_hosts = [i for i in fgres if not fgres[i]]
 					trunc_hosts = [i for i in fgres if i not in create_hosts]
 					#if import table doesnt exist, create it
-					if storedheaders != createheaders: logger.warn('Unexpected table column names, {}'.format(createheaders))
 					if create_hosts:
 						createqry = self.query(self.conf.database_schema,PREFIX+csvhead[0],createheaders,op='create')
 						Processor.attempt(self.conf,createqry,driver_type='psy',h=create_hosts)
@@ -872,6 +851,7 @@ class Processor(object):
 			rt=return value request, (s)tring (b)ool (i)nt
 			r=raise error if one is encountered
 			h=hosts override list
+			oneoff=Bypass stored connector, init new one-off connector
 		'''
 		while depth<DEPTH:
 			try:
@@ -1063,7 +1043,7 @@ class Version(object):
 				imported = '{}.{}{}'.format(self.conf.database_schema,PREFIX,t)
 				for q in self.qset(original,imported,pk):
 					logger.debug('pQ1 {}'.format(q))
-					Processor.attempt(self.conf,q,driver_type='psy')
+					Processor.attempt(self.conf,q,driver_type='psy',oneoff=True)
 				self.gridtables(sec,t,t2)
 					
 	def gridtables(self,sec,tab,tname):
@@ -1095,7 +1075,7 @@ class External(object):
 			dstschema = self.conf.database_schema if TEST else self.conf.database_originschema
 			q = query.format(schema=dstschema, table=gridtable, column=col, xres=res, yres=res)
 			logger.debug('eQ1 {}'.format(q))
-			Processor.attempt(self.conf,q,driver_type='psy')
+			Processor.attempt(self.conf,q,driver_type='psy',oneoff=True)#OGR throws "General Error"
 		#self.db.disconnect()
 		
 	def optional(self):
@@ -1104,16 +1084,8 @@ class External(object):
 			fsig = re.match('(.*)\.(.*)\(',func).group(1,2)
 			res = self._fnctest(*fsig)
 			qrun = 'select {}'.format(func)
-			Processor.attempt(self.conf,qrun,driver_type='psy',h=[r for r in res if res[r]])	
-			
-# 	def _old_update(self):
-# 		for func in json.loads(self.conf.optional_functions):
-# 			fsig = re.match('.*\.(.*)\(',func).group(1)
-# 			qtest = "select proname from pg_proc where proname like '%{}%'".format(fsig)
-# 			qrun = 'select {}'.format(func)
-# 			res = Processor.attempt(self.conf,qtest,driver_type='psy',rt='i')
-# 			Processor.attempt(self.conf,qrun,driver_type='psy',h=[r for r in res if res[r]])
-			
+			Processor.attempt(self.conf,qrun,driver_type='psy',h=[r for r in res if res[r]])
+	
 	def _fnctest(self,s,t):
 		'''Check whether the table had a primary key already. ExecuteSQL returns layer if successful OR null on error/no-result'''
 		q = "select * from information_schema.routines \

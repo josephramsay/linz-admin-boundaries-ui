@@ -76,6 +76,8 @@ public class DABServletConfig extends DABServlet {
 				"filepath:: (path to localities share)",
 				"filename:: (name of localities file)",
 				"colmap:: = list of table reformatting rules <i>see below</i>",
+				"<br/><u>OPTIONAL</u>",
+				"optional_functions:: AB related functions to be called during scheduled/optional run",
 				"<br/><u>VALIDATION <i>partially implemented, for future development</i></u>",
 				"test:: [[(test query) , (expected result)],[]],",
 				"data:: [[(test query) , (expected result)],[]],",

@@ -48,7 +48,7 @@ public class DABFormatter {
 		lmtr.put("Reject","Drop all import tables");
 		lmtr.put("Optional","Run optional post-processing functions");
 		//lmtr.put("Notify","Notify users imports have completed and new data is ready to review");
-		
+		//TODO Link colourmap to lmtr
 		colourmap = new HashMap<>();
 		colourmap.put(0, Arrays.asList(BGRN,BRED,BRED,BGRN));
 		colourmap.put(1, Arrays.asList(BYLW,BGRN,BGRN,BGRN));
@@ -107,7 +107,7 @@ public class DABFormatter {
     			//if ("colmap".equals(option)) itype = "textarea";
     			form += "<label for=\""+section+SEP+option+"\">"+section+"  "+option+"</label>\n";
     			
-    			if ("colmap".equals(option)) {
+    			if ("colmap".equals(option) || "functions".equals(option)) {
     				form += "<textarea name=\""+section+SEP+option+"\">"+opt_val.get(option)+"</textarea><br/>\n";
     			}
     			else {

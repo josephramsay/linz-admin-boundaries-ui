@@ -9,7 +9,7 @@ accept or reject import data.
 
 ## Install
 
-git clone https://github.com/josephramsay/AdminBoundaries.git
+git clone https://github.com/linz/AdminBoundaries
 
 WebApp install. 
     Copy gradle.properties.template to gradle.properties and edit with desired config.

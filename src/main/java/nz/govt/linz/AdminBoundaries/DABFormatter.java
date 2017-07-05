@@ -45,13 +45,14 @@ public class DABFormatter {
 		lmtr = new LinkedHashMap<>(); //NB LMH preserves order
 		lmtr.put("Load","Download new files from SFTP directory and build import tables");
 		lmtr.put("Transfer","Run table_version function to populate destination tables");
-		lmtr.put("Reject","Drop the import tables and quit");
+		lmtr.put("Reject","Drop all import tables");
+		lmtr.put("Optional","Run optional post-processing functions");
 		//lmtr.put("Notify","Notify users imports have completed and new data is ready to review");
-		
+		//TODO Link colourmap to lmtr
 		colourmap = new HashMap<>();
-		colourmap.put(0, Arrays.asList(BGRN,BRED,BRED));
-		colourmap.put(1, Arrays.asList(BYLW,BGRN,BGRN));
-		colourmap.put(2, Arrays.asList(BYLW,BYLW,BGRN));
+		colourmap.put(0, Arrays.asList(BGRN,BRED,BRED,BGRN));
+		colourmap.put(1, Arrays.asList(BYLW,BGRN,BGRN,BGRN));
+		colourmap.put(2, Arrays.asList(BYLW,BYLW,BGRN,BGRN));
 		
 	}
 	
@@ -106,7 +107,7 @@ public class DABFormatter {
     			//if ("colmap".equals(option)) itype = "textarea";
     			form += "<label for=\""+section+SEP+option+"\">"+section+"  "+option+"</label>\n";
     			
-    			if ("colmap".equals(option)) {
+    			if ("colmap".equals(option) || "functions".equals(option)) {
     				form += "<textarea name=\""+section+SEP+option+"\">"+opt_val.get(option)+"</textarea><br/>\n";
     			}
     			else {

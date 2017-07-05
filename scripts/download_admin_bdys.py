@@ -1084,7 +1084,10 @@ class External(object):
 			fsig = re.match('(.*)\.(.*)\(',func).group(1,2)
 			res = self._fnctest(*fsig)
 			qrun = 'select {}'.format(func)
-			Processor.attempt(self.conf,qrun,driver_type='psy',h=[r for r in res if res[r]])
+			try:
+				Processor.attempt(self.conf,qrun,driver_type='psy',h=[r for r in res if res[r]])
+			except Exception as e:
+				logger.error('Unhandled external exception {}'.format(e))
 	
 	def _fnctest(self,s,t):
 		'''Check whether the table had a primary key already. ExecuteSQL returns layer if successful OR null on error/no-result'''
@@ -1374,6 +1377,7 @@ def process(args):
 		#if "transfer" requested read saved 'T' and transfer to dest
 		if oneOrNone('transfer',aopts,args): 
 			v.versiontables(t)
+		if oneOrNone('optional',aopts,args): 
 			e.optional()
 
 	

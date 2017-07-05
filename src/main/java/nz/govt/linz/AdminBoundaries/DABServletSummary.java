@@ -71,7 +71,8 @@ public class DABServletSummary extends DABServlet {
 				"<br/><b>Actions</b>",
 				"<br/><u>LOAD</u> :: Load import tables from file",
 				"<br/><u>TRANSFER</u> :: Transfer import tables to destination tables.",
-				"<br/><u>REJECT</u> :: Delete import tables.");
+				"<br/><u>REJECT</u> :: Delete import tables.",
+				"<br/><u>OPTIONAL</u> :: Run any configured post-processing functions.");
 		dabc = new DABConnector();
 		dabf = new DABFormatter();
 		ccomp = new DABContainerComp(getServletContext());

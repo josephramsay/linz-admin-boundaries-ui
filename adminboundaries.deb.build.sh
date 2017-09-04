@@ -7,6 +7,7 @@ proj_lcase="${project,,}"
 proj_temp="$proj_lcase"_temp
 release="1.0"
 upstream="$proj_lcase"_$release.orig.tar
+org=linz
 
 ddate=`date --rfc-2822`
 desc1="Downloads and imports AdminBoundary shapefile data"
@@ -171,7 +172,7 @@ function setupdesktop {
 	# DESKTOP
 	dat_dir=$1
 	mkdir $dat_dir
-	cp "$src_dir/$proj_abv.png" $dat_dir
+	cp "$src_dir/src/main/webapp/$org.$proj_abv.png" "$dat_dir/$proj_abv.png"
 	cat << EOF > $dat_dir/$proj_abv.desktop
 [Desktop Entry]
 Name=$project
@@ -182,7 +183,7 @@ StartupNotify=true
 Exec=$install_dir/download_admin_bdys.py
 Path=$install_dir/
 Terminal=false
-Icon=/usr/share/pixmaps/$proj_abv.png
+Icon=$dat_dir/$proj_abv.png
 Categories=Utility;
 EOF
 }

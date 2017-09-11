@@ -1096,7 +1096,26 @@ class External(object):
 			 and routine_name like '{t}'".format(s=s,t=t)
 		logger.debug('fQ2 {}'.format(q))
 		return Processor.attempt(self.conf, q,driver_type='psy',rt='i')
-			
+	
+class SDSConnector(object):
+	'''Connector for the Stats Data Service'''
+	def __init__(self,conf):
+		self.conf = conf
+		self.target = '{}@{}:{}'.format(self.conf.connection_ftpuser,self.conf.connection_ftphost,self.conf.connection_ftppath)
+		self.opts = ['-o','PasswordAuthentication=yes',self.target]
+		self.prompt = 'sftp> '
+		self.get_timeout = 60.0
+		#-----------------
+		self.driver = None
+		
+	def getDriver(self,driver_name):
+		'''Load the specified driver'''
+		driver_name='PostgreSQL'#WFS
+		self.driver = ogr.GetDriverByName(driver_name)
+		
+	def fetch(self,dfile):
+		pass
+		
 class PExpectException(Exception):pass
 class PExpectSFTP(object):  
 	  

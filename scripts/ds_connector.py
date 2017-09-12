@@ -8,6 +8,10 @@ DSTransformer
 Linrary module for DS conversion (taken from reblocker)
 '''
  
+ # TODO
+ # 1. set dest schema 					[x]
+ # 2. remove gml_id from dest tables
+ 
 import sys
 import os
 import re
@@ -49,11 +53,12 @@ DST_SCHEMA = 'public'
 DST_TABLE_PREFIX = 'new_'
 DST_SUBDIR = '_new'
 SHP_SUFFIXES = ('shp','shx','dbf','prj','cpg')
-OGR_COPY_PREFS = ["OVERWRITE=NO","GEOM_TYPE=geometry","ENCODING=UTF-8"]
+OGR_COPY_PREFS = ["OVERWRITE=YES","GEOM_TYPE=geometry","ENCODING=UTF-8"]
 
 DEF_CREDS = '.pdb_credentials'
 DEF_HOST = '127.0.0.1'
 DEF_PORT = 5432
+DEF_SCHEMA='public'
 
 CONFIG = None
 UICONFIG = None
@@ -98,8 +103,10 @@ class _DS:
 		self.dsl = None
 		self.driver = None
 		
-	def _getprefs(self):
-		return OGR_COPY_PREFS
+	def _getprefs(self,setschema=False):
+		prefs = OGR_COPY_PREFS + (['SCHEMA={}'.format(DEF_SCHEMA)] if setschema else [])
+		print ('DS prefs',prefs)
+		return prefs
 		
 	def _findSRID(self,name,sr,useweb):
 		'''https://stackoverflow.com/a/10807867'''
@@ -136,6 +143,9 @@ class _DS:
 		except HTTPError as he:
 			print ('SRS WS Convert Error {0}'.format(he))
 		
+	def setDefSchema(self,schema):
+		global DEF_SCHEMA
+		DEF_SCHEMA = schema
 	
 	def initalise(self,dsn=None,create=True):
 		ds = None
@@ -143,10 +153,11 @@ class _DS:
 			upd = 1 if OVERWRITE else 0
 			#ds = self.driver.Open(dsn, upd)
 			#print ('DSN',dsn)
-			ds = ogr.Open(dsn, upd)
+			#ds = ogr.Open(dsn, upd)
+			ds = self.driver.Open(dsn, upd)
 			if ds is None:
 				raise DatasourceException('Null DS {}'.format(dsn))
-		except (RuntimeError, DatasourceException,Exception) as re1:
+		except (RuntimeError, DatasourceException, Exception) as re1:
 			if re.search('HTTP error code : 404',str(re1)):
 				return None
 
@@ -186,9 +197,9 @@ class _DS:
 class PGDS(_DS):
 	INIT_VAL = 1
 	DRIVER_NAME = 'PostgreSQL'
-	#DBNAME = 'reblock'
-	CS_TMPLT = 'PG:"dbname=#{1}# host=#{0}# port=#{2}# user=#{5}# password=#{3}# active_schema={4}"'
+	OVERWRITE = 'YES'
 
+	CS_TMPLT = "PG: host={0} dbname='{1}' port='{2}' user='{5}' password='{3}' active_schema={4}"
 	cur = None
 	conn = None
 	cs = None
@@ -198,6 +209,7 @@ class PGDS(_DS):
 		#pstr = self.CS_TMPLT.format(*self.connstr().values())
 		self.cs = self.connstr()
 		self.dsl = {self.cs:self.initalise(self.cs, True)}
+		print ('PG conn str ',self.cs)
 	
 	def __enter__(self):
 		self.connect()
@@ -211,12 +223,13 @@ class PGDS(_DS):
 		host,port = Authentication.hostport(PG_CREDSFILE)
 		dbn = Authentication.selection(PG_CREDSFILE,'dbname')
 		sch = Authentication.selection(PG_CREDSFILE,'schema')
+		self.setDefSchema(sch)
 		usr,pwd = Authentication.userpass(PG_CREDSFILE)
 		#dd = {'DBHOST':host,'DBPORT':port,'SCHEMA':sch,'DBNAME':dbn,'USER':usr,'PASS':pwd}
-		return self.CS_TMPLT.format(host,dbn,port,pwd,sch,usr).replace('#','\'')
+		return self.CS_TMPLT.format(host,dbn,port,pwd,sch,usr)#.replace('#','\'')
 		#return OrderedDict(sorted(dd.items(), key=lambda t: t[0]))
 		
-	def connect(self):
+	def connect(self):#this is psycopg?!?
 		if not self.cur:
 			self.conn = psycopg2.connect(self.cs if self.cs  else self.connstr())
 			self.cur = self.conn.cursor()
@@ -259,15 +272,23 @@ class PGDS(_DS):
 	
 	def write_fast(self,layerlist):
 		'''PG write writes to a single DS since a DS represents a DB connection. SRID not transferred!'''
-		self.connect()
-		for dsn in layerlist:
+		#self.connect()
+		for i in layerlist.keys():
 			#print 'PG create layer {}'.format(dsn[1])
-			list(self.dsl.values())[0].CopyLayer(layerlist[dsn],dsn[1],self._getprefs())
-			'''HACK to set SRS'''
-			q = "select UpdateGeometrySRID('{}','wkb_geometry',{})".format(dsn[1].lower(),dsn[2])
-			res = self.execute(q)
+			#list(self.dsl.values())[0].CopyLayer(layerlist[dsn],dsn,self._getprefs())
+			ogr.UseExceptions()
+			try:
+				ly_name = WFSDS.SRC_DSN[i][0]
+				ly = layerlist[i][1]
+				list(self.dsl.values())[0].CopyLayer(ly,ly_name,self._getprefs())
+			except Exception as e:
+				print (e)
+			ogr.DontUseExceptions()
+			'''HACK to set SRS (rather than at each holding across each feature)'''
+			##q = "select UpdateGeometrySRID('{}','wkb_geometry',{})".format(dsn[1].lower(),dsn[2])
+			##res = self.execute(q)
 			#print q,res
-		self.disconnect()
+		#self.disconnect()
 		return layerlist
 
 	def write_slow(self,layerlist):
@@ -319,7 +340,8 @@ class SFDS(_DS):
 	
 	INIT_VAL = 1
 	DRIVER_NAME = 'ESRI Shapefile'
-	
+	OVERWRITE = 'NO'
+		
 	def __init__(self,fname=None):
 		super(SFDS,self).__init__()
 		#print 'SFDS',fname
@@ -420,12 +442,17 @@ class WFSDS(_DS):
 
 	INIT_VAL = 1
 	DRIVER_NAME = 'WFS'
+	OVERWRITE = 'NO'
+	CREATE = False
 
-	SRC_DSN = {'mb':'layer-40077','mbc':'table-40084','ta':'layer-39939'}
+	SRC_DSN = {
+			'mb':('meshblock','layer-40077'),
+			'mbc':('meshblock_concordance','table-40084'),
+			'ta':('statsnz_ta','layer-39939')}
 	DST_DSN = {'p1':'PG:host=prdassgeo01 db=linz_db'}
 	
 	#/wfs/layer-40077?service=WFS&request=GetCapabilities
-	URI_C = 'https://{dom}/services;key={key}/wfs/{lid}?service=WFS&request=GetCapabilities'
+	URI_C = 'https://{dom}/services;key={key}/wfs/{lid}'#?service=WFS&request=GetCapabilities'
 	
 	#/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=layer-40077&count=3
 	URI_F = 'https://{dom}/services;key={key}/wfs?service=WFS&version={ver}&request={req}&typeNames={lid}&count=3'
@@ -490,12 +517,11 @@ class WFSDS(_DS):
 	
 	def read(self,dsl):
 		ly = {}
-		return ('dummy',)
-		for i in dsl:
-			lid = WFSDS.SRC_DSN[i]
-			uri = self.sourceURI(lid)
+		for ly_abv in dsl:#range(len(dsl)):
+			ly_id = WFSDS.SRC_DSN[ly_abv][1]
+			uri = self.sourceURI(ly_id)
 			self.initDS(dsn=uri)
-			ly[lid] = self.getLayer()
+			ly[ly_abv] = (ly_id,self.getLayer())
 		return ly
 		
 	def write(self):
@@ -593,9 +619,10 @@ def test():
 	sfds = SFDS()
 	pgds = PGDS()
 	
-	layer_selection = ['mb','mbc','ta']
+	layer_selection = ['ta','mb','mbc']
 	
-	res = pgds.write(wfsds.read(layer_selection))
+	for l in layer_selection:
+		pgds.write(wfsds.read([l,]))
 	
 	
 	

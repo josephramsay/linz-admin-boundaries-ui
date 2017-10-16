@@ -48,6 +48,9 @@ import smtplib
 import collections
 import socket
 
+from ds_connector import PGDS,WFSDS
+from ds_auth import Authentication
+
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -125,6 +128,14 @@ RS = '###'
 
 #master db server which is supposed to have the correct configuration
 MASTER = 'prdassgeo01'
+
+
+## COPIED FROM DSC
+PG_CREDSFILE = '.pdb_credentials'
+WFS_KEYFILE = '.stats_credentials'
+#KEY = None
+#KEYINDEX = 0
+
 
 if PYVER3:
 	def is_nonstr_iter(v):
@@ -1399,8 +1410,37 @@ def process(args):
 		if oneOrNone('optional',aopts,args): 
 			e.optional()
 
+
+
+def test():
+	global KEY, WFS_KEYFILE, PG_CREDSFILE
 	
+	try:
+		opts, args = getopt.getopt(sys.argv[1:], "hw:p:", ["help","wfskey=","pg_creds="])
+	except getopt.error as msg:
+		print (msg)
+		print ("for help use --help")
+		sys.exit(2)
+	
+	#opts
+	for o, a in opts:
+		if o in ("-h", "--help"):
+			print (__doc__)
+			sys.exit(0)
+		if o in ("-w", "--wfskey"):
+			WFS_KEYFILE = a
+		if o in ("-p", "--pgcreds"):
+			PG_CREDSFILE = a
+	
+	layer_selection = ['ta','mb','mbc']
+	for ly_ref in layer_selection:
+		ly_id = WFSDS.SRC_DSN[ly_ref][1]
+		ly_name = WFSDS.SRC_DSN[ly_ref][0]
+		with WFSDS(ly_id) as wfsds:
+			with PGDS(ly_name) as pgds:
+				pgds.write(wfsds.read())
+
 if __name__ == "__main__":
-	main()
+	test()
 	
 

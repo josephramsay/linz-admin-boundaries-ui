@@ -62,7 +62,8 @@ def packVersion = '0.1'
 
 task copyscripts(type: Copy) {
      dependsOn test
-     from('scripts') {
+     //from('scripts') {
+     from('../linz-admin-boundaries-uploader') {
          include '**/*.sh'
          include '**/*.py'
          include '**/*.ini'

@@ -39,7 +39,7 @@ colmap = {
     "statsnz_meshblock":{
     "table":"meshblock",
     "rename":[{"old":"mb_code","new":"code"},{"old":"geom","new":"shape"}],
-    "drop":["ogc_fid"],
+    "drop":["gml_id","ogc_fid"],
     "primary":"code",
     "geom":"shape",
     "srid":"4167",
@@ -48,7 +48,7 @@ colmap = {
     "statsnz_ta":{
     "table":"territorial_authority",
     "rename":[{"old":"geom","new":"shape"}],
-    "drop":["ta_code"],
+    "drop":["gml_id","ta_code"],
     "primary":"ogc_fid",
     "geom":"shape",
     "srid":"4167",
@@ -57,6 +57,7 @@ colmap = {
     },
     "meshblock_concordance":{
     "table":"meshblock_concordance",
+    "drop":["gml_id"],
     "primary":"meshblock",
     "permission":["user1","user2"]
     }
@@ -69,7 +70,7 @@ colmap = {
     "nz_locality":{
     "table":"nz_locality",
     "rename":[{"old":"geom","new":"shape"}],
-    "drop":["ogc_fid"],
+    "drop":["gml_id","ogc_fid"],
     "cast":[{"cast":"id","type":"integer"}],
     "primary":"id",
     "geom":"shape",

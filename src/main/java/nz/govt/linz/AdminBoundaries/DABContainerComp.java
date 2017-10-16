@@ -27,7 +27,7 @@ public class DABContainerComp {
 	
 	private static final Logger LOGGER = Logger.getLogger( DABContainerComp.class.getName() );
 	
-	private final static String CONF_PATH = "WEB-INF/scripts/download_admin_bdys.ini";
+	private final static String CONF_PATH = "WEB-INF/scripts/linz_admin_boundaries_uploader.ini";
 	
 	protected final static Map<String,String> TABV = new HashMap<>();
 	static {

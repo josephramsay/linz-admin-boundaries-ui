@@ -5,7 +5,7 @@ v.0.0.1
 
 DSTransformer
 
-Linrary module for DS conversion (taken from reblocker)
+Library module for DS conversion (taken from reblocker)
 '''
  
  # TODO
@@ -22,6 +22,8 @@ import json
 import shutil
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
+
+from ds_auth import Authentication
 
 
 PYVER3 = sys.version_info > (3,)
@@ -43,7 +45,6 @@ except ImportError:
 PG_CREDSFILE = '.pdb_credentials'
 WFS_KEYFILE = '.stats_credentials'
 KEY = None
-KEYINDEX = 0
 
 OVERWRITE = False
 ENABLE_VERSIONING = False
@@ -79,47 +80,63 @@ def setOverwrite(o):
 class DatasourceException(Exception): pass
 class DatasourceOpenException(DatasourceException): pass
 class DatasourceReaderException(DatasourceException): pass
-class _DS:
-	
-	__metaclass__ = ABCMeta
+
+class _DS(metaclass = ABCMeta):
 	
 	FN_SPLIT = '###'
 	CREATE = True
-	uri = None
-	dsl = {}
-	driver = None
+	_uri = None
+	_driver = None
+	_ds = None
+	
+	@property
+	def ds(self): return self._ds
+	@ds.setter
+	def ds(self,value): self._ds = value	
+	
+	@property
+	def driver(self): return self._driver
+	@driver.setter
+	def driver(self,value): self._driver = value	
+	
+	@property
+	def uri(self): return self._uri
+	@uri.setter
+	def uri(self,value): self._uri = value
 	
 	def __init__(self):
 		self.driver = ogr.GetDriverByName(self.DRIVER_NAME)
 		
 	def __enter__(self):
+		self.connect()
 		return self
 	
 	def __exit__(self, type, value, traceback):
-		for dsn in self.dsl:
-			# print 'releasing',dsn
-			if self.dsl[dsn]: self.dsl[dsn].SyncToDisk()
-			self.dsl[dsn] = None
-		self.dsl = None
+		self.disconnect()
+		if self.ds: self.ds.SyncToDisk()
+		self.ds = None
 		self.driver = None
 		
-	def _getprefs(self,setschema=False):
+	@staticmethod
+	def _getprefs(setschema=False):
 		prefs = OGR_COPY_PREFS + (['SCHEMA={}'.format(DEF_SCHEMA)] if setschema else [])
 		print ('DS prefs',prefs)
 		return prefs
 		
-	def _findSRID(self,name,sr,useweb):
+	@staticmethod
+	def _findSRID(name,sr,useweb):
 		'''https://stackoverflow.com/a/10807867'''
 		res = sr.AutoIdentifyEPSG()
 		if res == 0:
 			return sr.GetAuthorityCode(None)
 		elif useweb:
-			res = self._lookupSRID(sr.ExportToWkt())
+			res = _DS._lookupSRID(sr.ExportToWkt())
 			if res: return res
 		print ('Warning. Layer {0} using DEF_SRS {1}'.format(name,DEF_SRS))	
 		return DEF_SRS
 
-	def _lookupSRID(self,wkt): 
+	@staticmethod
+	def _lookupSRID(wkt): 
 		uu='http://prj2epsg.org/search.json?mode=wkt&terms='
 
 		purl='127.0.0.1:3128'
@@ -143,19 +160,18 @@ class _DS:
 		except HTTPError as he:
 			print ('SRS WS Convert Error {0}'.format(he))
 		
-	def setDefSchema(self,schema):
+	@staticmethod
+	def setDefSchema(schema):
 		global DEF_SCHEMA
 		DEF_SCHEMA = schema
 	
+	
 	def initalise(self,dsn=None,create=True):
-		ds = None
+		'''Initialise a new DS using uri attribute'''
 		try:
 			upd = 1 if OVERWRITE else 0
-			#ds = self.driver.Open(dsn, upd)
-			#print ('DSN',dsn)
-			#ds = ogr.Open(dsn, upd)
-			ds = self.driver.Open(dsn, upd)
-			if ds is None:
+			self.ds = self.driver.Open(dsn, upd)
+			if self.ds is None:
 				raise DatasourceException('Null DS {}'.format(dsn))
 		except (RuntimeError, DatasourceException, Exception) as re1:
 			if re.search('HTTP error code : 404',str(re1)):
@@ -171,27 +187,40 @@ class _DS:
 		finally:
 			pass
 			#ogr.UseExceptions()
-		#print ('DS',ds)
-		return ds
+
 	
 	def create(self,dsn):
-		ds = None
+		'''If writing a new layer first create it'''
 		try:
-			ds = self.driver.CreateDataSource(dsn, self._getprefs())
-			if ds is None:
+			self.ds = self.driver.CreateDataSource(dsn, self._getprefs())
+			if self.ds is None:
 				raise DatasourceException("Error opening/creating DS "+str(dsn))
 		except DatasourceException as ds1:
 			raise
 		except RuntimeError as re2:
-			'''this is only caught if ogr.UseExceptions() is enabled (which we dont enable since RunErrs thrown even when DS completes)'''
-			raise
-		return ds
+			'''this is only caught if 
+			ogr.UseExceptions() is enabled (which we dont enable since RunErrs thrown even when DS completes)'''
+
 	
 	@abstractmethod
-	def read(self,filt): pass
+	def read(self,id): 
+		raise NotImplementedError('Read method not implemented')
 	
 	@abstractmethod
-	def write(self): pass
+	def write(self,name,layer):
+		raise NotImplementedError('Write method not implemented')
+	
+	@abstractmethod
+	def connstr(self): 
+		raise NotImplementedError
+	
+	@abstractmethod
+	def connect(self):
+		raise NotImplementedError
+	
+	@abstractmethod
+	def disconnect(self):
+		raise NotImplementedError
 	
 	
 class PGDS(_DS):
@@ -204,61 +233,58 @@ class PGDS(_DS):
 	conn = None
 	cs = None
 	
-	def __init__(self):
+	drop_cols_list = ['gml_id',]
+	
+	def __init__(self,ly_id=None):
 		super(PGDS,self).__init__()
 		#pstr = self.CS_TMPLT.format(*self.connstr().values())
-		self.cs = self.connstr()
-		self.dsl = {self.cs:self.initalise(self.cs, True)}
-		print ('PG conn str ',self.cs)
-	
-	def __enter__(self):
-		self.connect()
-		return super(PGDS,self).__enter__()
-	
-	def __exit__(self, type, value, traceback):
-		self.disconnect()
-		return super(PGDS,self).__exit__(type, value, traceback)
+		self.id = ly_id
+		self.ds = None
+		self.uri = PGDS.connstr()
 		
-	def connstr(self):
+	@staticmethod
+	def connstr():
 		host,port = Authentication.hostport(PG_CREDSFILE)
 		dbn = Authentication.selection(PG_CREDSFILE,'dbname')
 		sch = Authentication.selection(PG_CREDSFILE,'schema')
-		self.setDefSchema(sch)
+		PGDS.setDefSchema(sch)
 		usr,pwd = Authentication.userpass(PG_CREDSFILE)
-		#dd = {'DBHOST':host,'DBPORT':port,'SCHEMA':sch,'DBNAME':dbn,'USER':usr,'PASS':pwd}
-		return self.CS_TMPLT.format(host,dbn,port,pwd,sch,usr)#.replace('#','\'')
-		#return OrderedDict(sorted(dd.items(), key=lambda t: t[0]))
+		return PGDS.CS_TMPLT.format(host,dbn,port,pwd,sch,usr)#.replace('#','\'')
+
 		
-	def connect(self):#this is psycopg?!?
-		if not self.cur:
-			self.conn = psycopg2.connect(self.cs if self.cs  else self.connstr())
-			self.cur = self.conn.cursor()
+	def connect(self):		
+		self.initalise(self.uri, True)
+		#if not self.cur:
+		#	self.conn = psycopg2.connect(self.cs if self.cs  else self.connstr())
+	
+	def disconnect(self):
+		pass
+		#self.cur.close()
+		#self.conn.commit()
+		#	self.cur = self.conn.cursor()
 		
 	def execute(self,qstr,results=False):
-		success = self.cur.execute(qstr)
-		return self.cur.fetchall() if results else not success or success
+		return self.ds.ExecuteSQL(qstr)
+		#need to use psycopg2 and create a cursor for fetchall
+		#return self.cur.fetchall() if results else success#not success or success
 		
-	def disconnect(self):
-		self.cur.close()
-		self.conn.commit()
 
-	def read(self,filt):
+
+	def read(self,filt=None):
 		'''Read PG tables'''
 		layerlist = {}
 		#print ('DSL',self.dsl)
-		for dsn in self.dsl:
-			#print ('dsn',dsn)
-			#print ('count',self.dsl[dsn].GetLayerCount())
-			for index in range(self.dsl[dsn].GetLayerCount()):
-				layer = self.dsl[dsn].GetLayerByIndex(index)
-				name = layer.GetLayerDefn().GetName()
-				#print ('PGLN',name)
-				if name.find(DST_TABLE_PREFIX)==0 \
-				and self._tname(name):
-					#checks if (table)name is part of or in any of the filter items
-					if not filt or max([1 if DST_TABLE_PREFIX + f == name else 0 for f in filt]) > 0: 
-						srid = self._findSRID(name,layer.GetSpatialRef(),USE_EPSG_WEBSERVICE)
-						layerlist[(dsn,name,srid)] = layer
+
+		for index in range(self.ds.GetLayerCount()):
+			layer = self.ds.GetLayerByIndex(index)
+			name = layer.GetLayerDefn().GetName()
+			#print ('PGLN',name)
+			if name.find(DST_TABLE_PREFIX)==0 \
+			and self._tname(name):
+				#checks if (table)name is part of or in any of the filter items
+				if not filt or max([1 if DST_TABLE_PREFIX + f == name else 0 for f in filt]) > 0: 
+					srid = self._findSRID(name,layer.GetSpatialRef(),USE_EPSG_WEBSERVICE)
+					layerlist[(dsn,name,srid)] = layer
 		return layerlist
 	
 	def _tname(self,name):
@@ -266,54 +292,15 @@ class PGDS(_DS):
 		return True
 		return name.find('new_contour')==0
 	 
-	def write(self,layerlist):
-		'''Exports whatever is provided to it in layerlist'''
-		return self.write_fast(layerlist)
-	
-	def write_fast(self,layerlist):
-		'''PG write writes to a single DS since a DS represents a DB connection. SRID not transferred!'''
-		#self.connect()
-		for i in layerlist.keys():
-			#print 'PG create layer {}'.format(dsn[1])
-			#list(self.dsl.values())[0].CopyLayer(layerlist[dsn],dsn,self._getprefs())
-			ogr.UseExceptions()
-			try:
-				ly_name = WFSDS.SRC_DSN[i][0]
-				ly = layerlist[i][1]
-				list(self.dsl.values())[0].CopyLayer(ly,ly_name,self._getprefs())
-			except Exception as e:
-				print (e)
-			ogr.DontUseExceptions()
-			'''HACK to set SRS (rather than at each holding across each feature)'''
-			##q = "select UpdateGeometrySRID('{}','wkb_geometry',{})".format(dsn[1].lower(),dsn[2])
-			##res = self.execute(q)
-			#print q,res
-		#self.disconnect()
-		return layerlist
-
-	def write_slow(self,layerlist):
-		'''HACK to retain SRS 
-		https://gis.stackexchange.com/questions/126705/how-to-set-the-spatial-reference-to-a-ogr-layer-using-the-python-api'''
-		for dsn in layerlist:
-			#print 'PG create layer {}'.format(dsn[1])
-			dstsrs = ogr.osr.SpatialReference()
-			dstsrs.ImportFromEPSG(dsn[2])
-			dstlayer = self.dsl.values()[0].CreateLayer(dsn[1],dstsrs,layerlist[dsn].GetLayerDefn().GetGeomType(),self._getprefs())
-			
-			# adding fields to new layer
-			layerdef = ogr.Feature(layerlist[dsn].GetLayerDefn())
-			for i in range(layerdef.GetFieldCount()):
-				dstlayer.CreateField(layerdef.GetFieldDefnRef(i))
-			
-			# adding the features from input to dest
-			for i in range(0, layerlist[dsn].GetFeatureCount()):
-				feature = layerlist[dsn].GetFeature(i)
-				try:
-					dstlayer.CreateFeature(feature)
-				except ValueError as ve:
-					print ('Error Creating Feature on Layer {}. {}'.format(dsn[1],ve))
-					
-		return layerlist
+	def write(self,ly):
+		self.ds.CopyLayer(ly,self.id,self._getprefs())
+		#self.postprocess()
+		
+	def postprocess(self):
+		'''Do some final adjustments like removing auto added columns and aligning srids'''
+		for c in self.drop_cols_list:
+			print (self.execute("ALTER TABLE {t} DROP COLUMN {c}".format(t=self.id,c=c)))
+		
 		
 class PGDS_Version(PGDS):
 	'''table versioning for PG'''
@@ -369,6 +356,10 @@ class SFDS(_DS):
 		#TODO do something intelligent here like read from a def dir?
 		return 'shapefile.shp'
 	
+	#could use these for find/read file etc
+	def connect(self): pass
+	def disconnect(self): pass
+		
 	def readdir(self,spath):
 		return [fp for fp in os.listdir(spath) if re.search('.shp$',fp)]
 		
@@ -437,6 +428,10 @@ class SFDS(_DS):
 		return layerlist
 
 class WFSDS(_DS):
+	
+	global KEY
+	KEY = Authentication.apikey(WFS_KEYFILE)
+	
 	gdal.SetConfigOption('OGR_WFS_PAGING_ALLOWED', 'YES')
 	gdal.SetConfigOption('OGR_WFS_PAGE_SIZE', '10000')
 
@@ -452,25 +447,22 @@ class WFSDS(_DS):
 	DST_DSN = {'p1':'PG:host=prdassgeo01 db=linz_db'}
 	
 	#/wfs/layer-40077?service=WFS&request=GetCapabilities
-	URI_C = 'https://{dom}/services;key={key}/wfs/{lid}'#?service=WFS&request=GetCapabilities'
+	URI_C = 'WFS:https://{dom}/services;key={key}/wfs/{lid}'#?service=WFS&request=GetCapabilities'
 	
 	#/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=layer-40077&count=3
 	URI_F = 'https://{dom}/services;key={key}/wfs?service=WFS&version={ver}&request={req}&typeNames={lid}&count=3'
 	
 	CAPS  = 'https://{dom}/services;key={key}/wfs?service=WFS&request=GetCapabilities'
 	
-	def __init__(self,fname=None):
+	def __init__(self,ly_id):
 		super(WFSDS,self).__init__()
 		self._ds = None	
+		self.uri = WFSDS.connstr(ly_id)
 		
-	@property
-	def ds(self): return self._ds
-	@ds.setter
-	def ds(self,value): self._ds = value
 	
-	def sourceURI(self,lid):
+	@staticmethod
+	def connstr(lid):
 		'''URI method returns source filename/url'''
-		#possible defaults?
 		#fmt = 'GML2'
 		dom = 'datafinder.stats.govt.nz'
 		svc = 'WFS'
@@ -478,19 +470,16 @@ class WFSDS(_DS):
 		req = 'GetFeature'
 		#typ = "&typeName="+layername
 		#fmt = "&outputFormat="+fmt
-		return self.URI_C.format(dom=dom,key=KEY,ver=ver,req=req,lid=lid)
+		return WFSDS.URI_C.format(dom=dom,key=KEY,ver=ver,req=req,lid=lid)
 	
-	def initDS(self,dsn=None):
+	def connect(self):
 		#dsn='https://data.linz.govt.nz/services;key=305723dd78bf4d89aaf968f07cc16c4f/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=layer-50804&count=3'
 		#dsn = self.CAPS
-		'''initialise a DS for reading'''
-		try:
-			self.ds = self.driver.Open('WFS:'+dsn)
-			if self.ds is None:
-				raise DatasourceOpenException('Null DS returned attempting to open {}'.format(dsn))
-		except RuntimeError as re1:
-			ldslog.error(re1)
-		return self.ds
+		'''initialise a DS for reading'''	
+		self.initalise(self.uri, True)
+	
+	def disconnect(self):
+		self.ds = None
 	
 	
 	def getLayer(self):
@@ -498,103 +487,17 @@ class WFSDS(_DS):
 			return self.ds.GetLayerByIndex(0)
 		raise DatasourceReaderException("No layers detected in this datasource.")
 	
-	def createDS(self,dsn):
-		dbopts = []
-		try:
-			ds = self.driver.CreateDataSource(dsn, dbopts)
-			if ds is None:
-				raise DatasourceReaderException("Error opening/creating DS "+str(dsn))
-		except DSReaderException as ds1:
-			#print "DSReaderException, Cannot create DS.",dsre2
-			ldslog.error(ds1,exc_info=1)
-			raise
-		except RuntimeError as re2:
-			'''this is only caught if ogr.UseExceptions() is enabled (which we dont enable since RunErrs thrown even when DS completes)'''
-			#print "GDAL RuntimeError. Error creating DS.",rte
-			ldslog.error(re2,exc_info=1)
-			raise
-		return ds if ds else None
-	
-	def read(self,dsl):
-		ly = {}
-		for ly_abv in dsl:#range(len(dsl)):
-			ly_id = WFSDS.SRC_DSN[ly_abv][1]
-			uri = self.sourceURI(ly_id)
-			self.initDS(dsn=uri)
-			ly[ly_abv] = (ly_id,self.getLayer())
-		return ly
+	def read(self):
+		'''Read the layer from the configured DS identified by ly_id'''
+		return self.getLayer()
 		
 	def write(self):
 		pass
 
 
-class Authentication(object):
-	'''Static methods to read keys/user/pass from files'''
-	
-	@staticmethod
-	def userpass(upfile):
-		return (Authentication.searchfile(upfile,'username'),Authentication.searchfile(upfile,'password'))
-	   
-	@staticmethod
-	def hostport(upfile):
-		return (Authentication.searchfile(upfile,'dbhost'),Authentication.searchfile(upfile,'dbport'))	
-	
-	@staticmethod
-	def selection(upfile,parameter):
-		return Authentication.searchfile(upfile,parameter)
-		
-	@staticmethod
-	def apikey(kfile,kk='key'):
-		'''Returns current key from a keyfile advancing KEYINDEX on subsequent calls'''
-		global KEYINDEX
-		key = Authentication.searchfile(kfile,'{0}{1}'.format(kk,KEYINDEX))
-		if not key:
-			KEYINDEX = 0
-			key = Authentication.searchfile(kfile,'{0}{1}'.format(kk,KEYINDEX))
-		else:
-			KEYINDEX += 1
-		return key
-	
-	@staticmethod
-	def creds(cfile):
-		'''Read CIFS credentials file'''
-		return (Authentication.searchfile(cfile,'username'),\
-				Authentication.searchfile(cfile,'password'),\
-				Authentication.searchfile(cfile,'domain','WGRP'))
-	
-	@staticmethod
-	def searchfile(sfile,skey,default=None):
-		#value = default
-		#look in current then app then home
-		spath = (os.path.dirname(__file__),os.path.join(os.path.dirname(__file__),'..'),os.path.expanduser('~'),'/')
-		first = [os.path.join(p,sfile) for p in spath if os.path.exists(os.path.join(p,sfile))][0]
-		with open(first,'r') as h:
-			for line in h.readlines():
-				k = re.search('^{key}=(.*)$'.format(key=skey),line)
-				if k: return k.group(1)
-		return default
-	
-	@staticmethod
-	def getHeader(korb,kfile):
-		'''Convenience method for auth header'''
-		if korb.lower() == 'basic':
-			b64s = base64.encodestring('{0}:{1}'.format(*Authentication.userpass(kfile))).replace('\n', '')
-			return ('Authorization', 'Basic {0}'.format(b64s))
-		elif korb.lower() == 'key':
-			key = Authentication.apikey(kfile)
-			return ('Authorization', 'key {0}'.format(key))
-		return None # Throw something
 
-	@staticmethod
-	def _walk(sfile,skey,default,dir):
-		'''Simple directory walker looking for named file in all sub dirs'''
-		for p,d,f in os.walk(dir):
-			if sfile in f: 
-				return Authentication.searchfile(os.path.join(p,sfile), skey, default)
-		raise FileNotFoundError('File not found during directory walk of {}'.format(dir))
-	   
 def test():
-	global KEY, WFS_KEYFILE, PG_CREDSFILE
+	global WFS_KEYFILE, PG_CREDSFILE
 	
 	try:
 		opts, args = getopt.getopt(sys.argv[1:], "hw:p:", ["help","wfskey=","pg_creds="])
@@ -615,15 +518,13 @@ def test():
 
 	KEY = Authentication.apikey(WFS_KEYFILE)
 	
-	wfsds = WFSDS()
-	sfds = SFDS()
-	pgds = PGDS()
-	
 	layer_selection = ['ta','mb','mbc']
-	
-	for l in layer_selection:
-		pgds.write(wfsds.read([l,]))
-	
+	for ly_ref in layer_selection:
+		ly_id = WFSDS.SRC_DSN[ly_ref][1]
+		ly_name = WFSDS.SRC_DSN[ly_ref][0]
+		with WFSDS(ly_id) as wfsds:
+			with PGDS(ly_name) as pgds:
+				pgds.write(wfsds.read())
 	
 	
 if __name__ == "__main__":

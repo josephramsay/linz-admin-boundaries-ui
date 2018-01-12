@@ -38,10 +38,7 @@ public class DABServletSummary extends DABServlet {
 	
 	/** Database connector and query wrapper */
 	private DABConnector dabc;		
-	/** Formatter class for converting data-maps to html strings */
-	private DABFormatter dabf;
-	/** Class holding info on tables for comparson */
-	private DABContainerComp ccomp;
+
 	
 	/** Map of the status for each table pair */ 
 	private Map<TableInfo,ImportStatus> status = new HashMap<>();
@@ -74,8 +71,6 @@ public class DABServletSummary extends DABServlet {
 				"<br/><u>REJECT</u> :: Delete import tables.",
 				"<br/><u>OPTIONAL</u> :: Run any configured post-processing functions.");
 		dabc = new DABConnector();
-		dabf = new DABFormatter();
-		ccomp = new DABContainerComp(getServletContext());
 		//updateStatus();
 	}
 	

@@ -35,8 +35,21 @@ public class DABServlet extends HttpServlet {
 	
 	public String docType = "<!DOCTYPE html public \"-//w3c//dtd html 4.0 transitional//en\">\n";
 	
-	protected final static String ABs = "admin_bdys";
-    protected final static String ABIs = "admin_bdys_import";
+	//private final static String CONF_PATH = "WEB-INF/scripts/download_admin_bdys.ini";
+	private final static String CONF_PATH = "WEB-INF/scripts/conf/linz_admin_boundaries_uploader.ini";
+	
+	//TODO use config set schema vars
+	private final static String ABs_def = "admin_bdys";
+    private final static String ABIs_def = "admin_bdys_import";	
+    protected static String ABs;
+    protected static String ABIs;
+    
+	/** Formatter class for converting data-maps to html strings */
+	protected DABFormatter dabf;
+	/** Class holding info on tables for comparson */
+	protected DABContainerComp ccomp;
+	//** Config reader */
+	protected DABIniReader reader;
 
     /**
      * Servlet initialisation method setting title and message text
@@ -51,6 +64,13 @@ public class DABServlet extends HttpServlet {
 		title = "DAB."+hostname.substring(0, 3);
 		message = "Admin Boundaries application";
 		description = "This application performs the downloading and importation of admin boundary data needed for AIMS";
+		
+		dabf = new DABFormatter();
+		reader = new DABIniReader(getServletContext().getRealPath(CONF_PATH));
+		ccomp = new DABContainerComp(reader);
+		
+		ABs = reader.get("database", "originschema", ABs_def);
+		ABIs = reader.get("database", "schema", ABIs_def);
 
 	}
 	

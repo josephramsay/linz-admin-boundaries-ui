@@ -26,12 +26,6 @@ public class DABServletConfig extends DABServlet {
 
 	static final long serialVersionUID = 105L;
 
-	/** Formatter class for converting data-maps to html strings */
-	private DABFormatter dabf;
-
-	/** Class holding info on tables for comparson */
-	private DABContainerComp ccomp;
-
 	public String docType = "<!doctype html public \"-//w3c//dtd html 4.0 transitional//en\">\n";
 
 	/**
@@ -97,10 +91,6 @@ public class DABServletConfig extends DABServlet {
 				"   },",
 				"  { table2 : ... },",
 				"( file2 ) : {}");
-
-		dabf = new DABFormatter();
-		ccomp = new DABContainerComp(getServletContext());
-
 	}
 
 

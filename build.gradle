@@ -61,12 +61,13 @@ def packVersion = '0.1'
 //packages up everything in src/main/webapp
 
 task copyscripts(type: Copy) {
-     dependsOn test
-     from('scripts') {
-         include '**/*.sh'
+     //dependsOn test
+     //from('scripts') {
+     from('../linz-admin-boundaries-uploader/labu') {
          include '**/*.py'
          include '**/*.ini'
          include '**/*.properties'
+         include '**/*.template'
      }
      into 'src/main/webapp/WEB-INF/scripts'
 }

@@ -1004,7 +1004,7 @@ class Version(object):
 		q = ''
 		dstr = dstr or datetime.datetime.now().isoformat()
 		#table_version operations must be done in one active cursor
-		q += "select table_version.ver_create_revision('DAB:{}');".format(dstr)
+		q += "select table_version.ver_create_revision('LABU:{}');".format(dstr)
 		q += "select table_version.ver_apply_table_differences('{original}','{imported}','{pk}');".format(original=original,imported=imported,pk=pk)
 		q += "select table_version.ver_complete_revision();"
 		return [q,]

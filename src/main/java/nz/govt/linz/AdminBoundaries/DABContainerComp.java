@@ -10,12 +10,11 @@ package nz.govt.linz.AdminBoundaries;
  * This program is released under the terms of the new BSD license. See the
  * LICENSE file for more information.
  */
-
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
-
-import javax.servlet.ServletContext;
 
 
 /**
@@ -68,11 +67,14 @@ public class DABContainerComp {
 		
 		//get message to display showing import status (beside compare function)
 		public String ttl(ImportStatus is){
-			switch (is) {
-			case BLANK: return "Import: "+tmp+"("+key+") &larr; WFS/SFTP";
-			case LOADED: return "Transfer: "+dst+"("+key+") &larr; "+tmp+"("+key+")";
-			case COMPLETE: return "Complete: "+dst+"("+key+") == "+tmp+"("+key+")";
-			default: return "Load: "+dst+" Unavailable";
+			if (is == null){return "Load: "+dst+" Unavailable";}
+			else {
+				switch (is) {
+				case BLANK: return "Import: "+tmp+"("+key+") &larr; WFS/SFTP";
+				case LOADED: return "Transfer: "+dst+"("+key+") &larr; "+tmp+"("+key+")";
+				case COMPLETE: return "Complete: "+dst+"("+key+") == "+tmp+"("+key+")";
+				default: return "Load: "+dst+" Unavailable";
+				}
 			}
 		}
 		//get table name to display on right of summary

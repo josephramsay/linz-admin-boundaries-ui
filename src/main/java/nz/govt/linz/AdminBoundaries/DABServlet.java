@@ -3,6 +3,8 @@ package nz.govt.linz.AdminBoundaries;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 /**
  * AdminBoundaries
@@ -16,6 +18,8 @@ import java.net.UnknownHostException;
  */
 
 import java.util.*;
+import java.util.logging.Logger;
+
 import javax.servlet.*;
 import javax.servlet.http.*;
 
@@ -27,6 +31,8 @@ import static nz.govt.linz.AdminBoundaries.DABFormatter.BNAV;
  */
 public class DABServlet extends HttpServlet {
 	
+	private static final Logger LOGGER = Logger.getLogger(DABServlet.class.getName());
+	
 	static final long serialVersionUID = 100L;
 	protected String message;
 	protected String title;	
@@ -36,7 +42,8 @@ public class DABServlet extends HttpServlet {
 	public String docType = "<!DOCTYPE html public \"-//w3c//dtd html 4.0 transitional//en\">\n";
 	
 	//private final static String CONF_PATH = "WEB-INF/scripts/download_admin_bdys.ini";
-	private final static String CONF_PATH = "WEB-INF/scripts/conf/linz_admin_boundaries_uploader.ini";
+	private final static String CONF_NAME = "linz_admin_boundaries_uploader.ini";
+	private final static String CONF_PATH = "WEB-INF/scripts/conf/";
 	
 	//TODO use config set schema vars
 	private final static String ABs_def = "admin_bdys";
@@ -63,10 +70,18 @@ public class DABServlet extends HttpServlet {
 		}
 		title = "DAB."+hostname.substring(0, 3);
 		message = "Admin Boundaries application";
-		description = "This application performs the downloading and importation of admin boundary data needed for AIMS";
+		description = "This application performs the download and import of admin boundary data needed for AIMS";
 		
 		dabf = new DABFormatter();
-		reader = new DABIniReader(getServletContext().getRealPath(CONF_PATH));
+		try {
+			reader = new DABIniReader(getServletContext().getRealPath(CONF_PATH+CONF_NAME));
+		}
+		catch (NullPointerException npe) {
+			LOGGER.warning("Error reading config, "+npe);
+			String fps = Paths.get("").toAbsolutePath().toString();
+			String rps = "/src/main/webapp/";
+			reader = new DABIniReader(fps+rps+CONF_PATH+CONF_NAME);
+		}
 		ccomp = new DABContainerComp(reader);
 		
 		ABs = reader.get("database", "originschema", ABs_def);

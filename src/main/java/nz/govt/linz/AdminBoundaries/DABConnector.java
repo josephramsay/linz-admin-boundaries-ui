@@ -49,15 +49,23 @@ public class DABConnector {
 	 * Constructor for DAB database DAO (piggy backs on AIMS DAO)
 	 */
 	public DABConnector() {
+		initDataSource();
+	}
+	
+	/**
+	 * Initialise a new data source object 
+	 * @return Datasource
+	 */
+	private void initDataSource() {
 		try {
 			datasource = (DataSource) new InitialContext().lookup("java:comp/env/jdbc/linz/aims");
 		} catch (NamingException ne) {
-			System.out.println("Cannot locate datasource. " + ne);
+			LOGGER.warning("Cannot locate datasource. " + ne);
 		}
 	}
 
 	/**
-	 * Datasource provided (for mocking)
+	 * Datasource provided (eg for mocking)
 	 * 
 	 * @param datasource_m
 	 */
@@ -76,50 +84,12 @@ public class DABConnector {
 		try {
 			ResultSet rs = exeQuery(query);
 			result = parseResultSet(rs);
-		} catch (SQLException sqle) {
+		} 
+		catch (SQLException sqle) {
 			LOGGER.warning("SQLError (q) " + sqle + "\n" + query);
 			result = parseSQLException(sqle);
 		}
-		return result;
-	}
-
-	/**
-	 * Wrapper for boolean queries
-	 * 
-	 * @param query
-	 * @return
-	 */
-	public boolean executeTFQuery(String query) {
-		boolean result = false;
-		try {
-			ResultSet rs = exeQuery(query);
-			if (rs.next()) {
-				result = rs.getBoolean(1);
-			}
-		} catch (SQLException sqle) {
-			LOGGER.warning("SQLError (tf_q) " + sqle + "\n" + query);
-		}
-		return result;
-	}
-
-	/**
-	 * Wrapper for String queries
-	 * 
-	 * @param query
-	 * @return
-	 */
-	public String executeSTRQuery(String query) {
-		String result = "";
-		try {
-			ResultSet rs = exeQuery(query);
-
-			if (rs.next()) {
-				result = rs.getString(1);
-				LOGGER.fine("Q: " + query + "\nR: " + rs + "\nS: " + result);
-			}
-		} catch (SQLException sqle) {
-			LOGGER.warning("SQLError (str_q) " + sqle + "\n" + query);
-		}
+		LOGGER.fine("RES Size "+result.size());
 		return result;
 	}
 
@@ -197,7 +167,7 @@ public class DABConnector {
 	}
 
 	/**
-	 * Single quotes column names with spaces in them
+	 * Single-quotes (v) column names with spaces in them eg ,a b, => ,'a b',
 	 * 
 	 * @param columns
 	 * @return
@@ -226,7 +196,14 @@ public class DABConnector {
 	 */
 	protected String colType(String tablename, String colname) {
 		String query = String.format("SELECT table_version.ver_table_key_datatype('%s','%s')", tablename, colname);
-		return executeSTRQuery(query);
+		String coltype = "";
+		try {
+			coltype = exeQuery(query).getString(0);
+		}
+		catch (SQLException sqle) {
+			LOGGER.warning("Col Type "+query+" failed " + sqle);
+		}
+		return coltype;
 	}
 
 	// -------------------------------------------------------------------------
@@ -262,7 +239,7 @@ public class DABConnector {
 		String rec = String.format("T(code char(1), id %s)", colType(ABs + "." + ti.dst(), ti.key()));
 		String query = String.format("SELECT T.id, T.code FROM table_version.ver_get_table_differences('%s','%s','%s') as %s",
 				t1, t2, ti.key(), rec);
-		return "<article>" + DABFormatter.formatTable(ti.dst(), executeQuery(query)) + "</article>";
+		return "<article><p>"+query+"</p>" + DABFormatter.formatTable(ti.dst(), executeQuery(query)) + "</article>";
 	}
 
 	/**
@@ -276,20 +253,48 @@ public class DABConnector {
 		String exist_query = String.format(
 				"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='%s' AND table_name='%s')", ABIs,
 				ti.tmp());
-		LOGGER.finer("1TQ " + exist_query + " / " + executeTFQuery(exist_query));
-		if (executeTFQuery(exist_query)) {
+		boolean exist_res = false;
+		try {
+			ResultSet rs = exeQuery(exist_query);
+			rs.next();
+			exist_res = rs.getBoolean(1);
+			LOGGER.finer("1CQa " + exist_query + " / " + exist_res);
+		}
+		catch (SQLException sqle) {
+			LOGGER.warning("1CQb failed " + exist_query + " / " + sqle);
+		}
+		LOGGER.finer("1TQ " + exist_query + " / " + exist_res);
+		if (exist_res) {
 			// get original column names (so column order isn't considered in comparison
 			String col_query = String.format("select array_to_string(array_agg(column_name::text),',') "
 					+ "from information_schema.columns " + "where table_schema='%s' " + "and table_name='%s'", ABs, ti.dst());
-			String columns = quoteSpace(executeSTRQuery(col_query));
-			LOGGER.finer("2CQ " + col_query + " / " + columns);
+			String columns = "";
+			try {
+				ResultSet rs = exeQuery(col_query);
+				rs.next();
+				columns = quoteSpace(rs.getString(1));
+			}
+			catch (SQLException sqle) {
+				LOGGER.warning("1CQc failed " + col_query + " / " + sqle);
+			}
+			
+			LOGGER.finer("2CQa " + col_query + " / " + columns);
 			// tmp files match dst files
 			String tt = String.format("SELECT %s FROM %s.%s", columns, ABIs, ti.tmp());
 			String dt = String.format("SELECT %s FROM %s.%s", columns, ABs, ti.dst());
 			String cmp_query = String.format("SELECT NOT EXISTS (%s EXCEPT %s UNION %s EXCEPT %s)", tt, dt, dt, tt);
-			LOGGER.finer("3CQ " + cmp_query + " / " + executeTFQuery(cmp_query));
-			if (executeTFQuery(cmp_query)) {
-				return ImportStatus.COMPLETE;
+			
+			try {
+				ResultSet rs = exeQuery(cmp_query);
+				rs.next();
+				boolean cmp_res = rs.getBoolean(1);
+				LOGGER.finer("3CQa " + cmp_query + " / " + cmp_res);
+				if (cmp_res) {
+					return ImportStatus.COMPLETE;
+				}
+			}
+			catch (SQLException sqle) {
+				LOGGER.warning("3CQb failed " + cmp_query + " / " + sqle);
 			}
 			return ImportStatus.LOADED;
 		}

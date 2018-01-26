@@ -198,7 +198,10 @@ public class DABConnector {
 		String query = String.format("SELECT table_version.ver_table_key_datatype('%s','%s')", tablename, colname);
 		String coltype = "";
 		try {
-			coltype = exeQuery(query).getString(0);
+			ResultSet rs = exeQuery(query);
+			rs.next();
+			coltype = rs.getString(1);
+			LOGGER.fine("COLTYPE="+coltype);
 		}
 		catch (SQLException sqle) {
 			LOGGER.warning("Col Type "+query+" failed " + sqle);

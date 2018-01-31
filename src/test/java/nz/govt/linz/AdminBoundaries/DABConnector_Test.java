@@ -115,8 +115,8 @@ public class DABConnector_Test {
 	 */
 	@Test
 	public void test_executeSTR() {
-		System.out.println(connector.executeSTRQuery(query_s));
-		assertEquals(connector.executeSTRQuery(query_s),result_s);
+		System.out.println(connector.executeQuery(query_s));
+		assertEquals(connector.executeQuery(query_s),result_s);
 	}
 	
 	/**
@@ -124,7 +124,9 @@ public class DABConnector_Test {
 	 */
 	@Test
 	public void test_executeTF() {
-		System.out.println(connector.executeTFQuery(query_b));
+		ResultSet rs = connector.executeQuery(query_b);
+		rs.next();
+		System.out.println(rs.getBoolean(1));
 		assertEquals(connector.executeTFQuery(query_b),result_b);
 	}
 	

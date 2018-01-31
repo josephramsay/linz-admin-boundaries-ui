@@ -201,7 +201,6 @@ public class DABConnector {
 			ResultSet rs = exeQuery(query);
 			rs.next();
 			coltype = rs.getString(1);
-			LOGGER.fine("COLTYPE="+coltype);
 		}
 		catch (SQLException sqle) {
 			LOGGER.warning("Col Type "+query+" failed " + sqle);

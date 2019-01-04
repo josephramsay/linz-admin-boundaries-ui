@@ -1,4 +1,4 @@
-package nz.govt.linz.AdminBoundaries;
+package nz.govt.linz.AdminBoundariesTest;
 
 /**
  * AdminBoundaries Test
@@ -12,6 +12,7 @@ package nz.govt.linz.AdminBoundaries;
  */
 
 import nz.govt.linz.AdminBoundaries.DABContainerComp;
+import nz.govt.linz.AdminBoundaries.DABIniReader;
 
 import static org.junit.Assert.*;
 
@@ -48,7 +49,8 @@ public class DABContainerComp_Test {
 
 	@Before
 	public void setUp() throws Exception {
-		container = new DABContainerComp(CP);		
+		DABIniReader reader = new DABIniReader(CP);
+		container = new DABContainerComp(reader);		
 	}
 
 	@After

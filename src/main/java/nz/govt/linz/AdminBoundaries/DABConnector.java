@@ -46,7 +46,7 @@ public class DABConnector {
 	DataSource datasource = null;
 
 	/**
-	 * Constructor for DAB database DAO (piggy backs on AIMS DAO)
+	 * Constructor for DAB database DAO 
 	 */
 	public DABConnector() {
 		initDataSource();
@@ -172,7 +172,7 @@ public class DABConnector {
 	 * @param columns
 	 * @return
 	 */
-	protected String quoteSpace(String columns) {
+	public String quoteSpace(String columns) {
 		LOGGER.fine("COLS. " + columns);
 		StringBuilder res = new StringBuilder();
 		for (String col : columns.split(",")) {

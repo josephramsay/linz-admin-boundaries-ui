@@ -1,9 +1,11 @@
 package nz.govt.linz.AdminBoundaries;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import javax.sql.DataSource;
 
@@ -11,6 +13,9 @@ public class UserReaderPostgreSQL extends UserReader {
 	
 	private DataSource datasource;
 	private DABConnector conn;
+	private static List<String> allowed_roles = 
+		Arrays.asList("aims_dba","aims_admin","aims_user","aims_reader");
+	private List<Map<String,String>> user_list_clone;
 	
 	/**
 	 * Null constructor using default config file location 
@@ -42,11 +47,32 @@ public class UserReaderPostgreSQL extends UserReader {
 		else {
 			conn = new DABConnector();
 		}
-		user_list = readUserSection();
+		user_list = readUserList();
+		user_list_clone = cloneUserList();
 		
 	}
 
-	public List<Map<String, String>> readUserSection() {
+	/**
+	 * Low level copy of user_list structure
+	 * @return Copy of the user list
+	 */
+	private List<Map<String,String>> cloneUserList(){
+		List<Map<String,String>> new_user_list = new ArrayList<>();
+		for (Map<String,String> user_entry : user_list) {
+			Map<String,String> new_user_entry = new HashMap<>();
+			for (String key : user_entry.keySet()) {
+				new_user_entry.put(key, user_entry.get(key));
+			}
+			new_user_list.add(new_user_entry);
+		}
+		return new_user_list;
+	}
+	
+	/**
+	 * Get the user_list and its memberships from pg_users filtering by the role 
+	 * prefix (including aims) and username prefix (excluding aims)
+	 */
+	public List<Map<String, String>> readUserList() {
 		String user_query = 
 			"select usename,passwd,rolname\n" + 
 			"from pg_user\n" + 
@@ -67,28 +93,34 @@ public class UserReaderPostgreSQL extends UserReader {
 		
 	}
 
+	/**
+	 * Writes back the user_list to the database by setting the appropriate grants 
+	 * and making sure only one role per user since permissions are supposed to be 
+	 * overlapping where needed.
+	 * We don't add/delete users because they will be existing users that just want 
+	 * (don't want) aims access
+	 */
 	@Override
-	public void addUser(String user, String pass, String role) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void delUser(String user) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void editUser(String user, String pass, String roles) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void saveUserSection() {
-		// TODO Auto-generated method stub
-		
+	public void saveUserList() {
+		for (Map<String,String> user : user_list) {
+			//IF user not in usr_list_clone AND role is allowed THEN grant
+			if (!user_list_clone.contains(user) &&
+					allowed_roles.contains(user.get("roles"))){
+				String query =	String.format("grant %s to %s", user.get("roles"), user.get("username"));
+				System.out.println(query);
+				conn.executeQuery(query);
+			}
+		}
+		for (Map<String,String> user_clone : user_list_clone) {
+			//IF user_clone not in user_list AND role is allowed THEN revoke
+			if (!user_list.contains(user_clone) && 
+				allowed_roles.contains(user_clone.get("roles"))){
+				String query =	String.format("revoke %s from %s", user_clone.get("roles"), user_clone.get("username"));
+				System.out.println(query);
+				conn.executeQuery(query);
+			}
+		}
+		user_list_clone = cloneUserList();
 	}
 
 	/**

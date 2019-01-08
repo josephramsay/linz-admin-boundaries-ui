@@ -17,27 +17,23 @@ import nz.govt.linz.AdminBoundaries.UserReaderTomcat;
 import nz.govt.linz.AdminBoundaries.UserReaderPostgreSQL;
 import static org.junit.Assert.*;
 
-import java.io.File;
 import java.util.List;
 import java.util.Map;
-
-import javax.sql.DataSource;
 
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.postgresql.ds.common.BaseDataSource;
+import org.junit.FixMethodOrder;
+import org.junit.runners.MethodSorters;
 import org.postgresql.jdbc2.optional.SimpleDataSource;
 
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class UserReaderPostgreSQL_Test {
 	
-	private static final String p = "testconfig.ini";
-	//private static final String samplefile = "../../../../../../resourxes/tomcat-users.sample.xml";
-	private static final String sampledb = "devassgeo01";
+	private static final String setupfile = "src/test/resourxes/test_setup.sql";
 	
-	/** reader obj */
 	private UserReader reader;
 	private SimpleDataSource datasource;
 
@@ -70,30 +66,30 @@ public class UserReaderPostgreSQL_Test {
 	}
 		
 	@Test
-	public void test_checkUserList() {
+	public void test_10_checkUserList() {
 		List<Map<String,String>> user_list = reader.getUserList();
-		assertEquals(6,user_list.size());
-		assertEquals("testpass1",reader.findInUserList("testuser1").get("password"));
-		assertEquals("testpass2",reader.findInUserList("testuser2").get("password"));
-	}
-	
-/*	@Test
-	public void test_addUser() {
-		String dummyuser = "dummyuser";
-		String dummypass = "dummypass";
-		String dummyrole = "dummyrole";
-		reader.addUser(dummyuser,dummypass,dummyrole);
-		List<Map<String,String>> user_list = reader.getUserList();
-		assertEquals(6,user_list.size());
-		assertEquals(UserReader.encrypt(dummypass),reader.findInUserList(dummyuser).get("password"));
+		assertEquals(8,user_list.size());
+		assertEquals("aims_dba",reader.findInUserList("testuser1").get("roles"));
+		assertEquals("aims_admin",reader.findInUserList("testuser2").get("roles"));
 	}
 	
 	@Test
-	public void test_deleteUser() {
+	public void test_20_addUser() {
+		String dummyuser = "dummyuser";
+		String dummypass = "dummypass";
+		String dummyrole = "aims_reader";
+		reader.addUser(dummyuser,dummypass,dummyrole);
+		List<Map<String,String>> user_list = reader.getUserList();
+		assertEquals(9,user_list.size());
+		assertEquals(reader.encrypt(dummypass),reader.findInUserList(dummyuser).get("password"));
+	}
+	
+	@Test
+	public void test_30_deleteUser() {
 		reader.delUser("dummyuser");
 		List<Map<String,String>> user_list = reader.getUserList();
-		assertEquals(5,user_list.size());
-	}	*/
+		assertEquals(8,user_list.size());
+	}
 
 
 }

@@ -13,9 +13,9 @@ package nz.govt.linz.AdminBoundariesTest;
 
 //import UserReader;
 import nz.govt.linz.AdminBoundaries.UserReader;
+import nz.govt.linz.AdminBoundaries.UserReaderTomcat;
 import static org.junit.Assert.*;
 
-import java.io.File;
 import java.util.List;
 import java.util.Map;
 
@@ -23,14 +23,15 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
+import org.junit.runners.MethodSorters;
 
-
-public class UserReader_Test {
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+public class UserReaderTomcat_Test {
 	
-	private static final String p = "testconfig.ini";
-	//private static final String samplefile = "../../../../../../resourxes/tomcat-users.sample.xml";
-	private static final String samplefile = "/home/jramsay/git/linz-admin-boundaries-ui/src/main/resources/tomcat-users.sample.xml";
+	private static final String samplefile = "src/test/resources/tomcat-users.sample.xml";
+	//private static final String samplefile = "/home/jramsay/git/linz-admin-boundaries-ui/src/main/resources/tomcat-users.sample.xml";
 	
 	/** reader obj */
 	private UserReader reader;
@@ -50,17 +51,16 @@ public class UserReader_Test {
 	@Before
 	public void setUp() throws Exception {
 		System.out.println("--- test ---");
-		File sample = new File(samplefile);
-		reader = new UserReader(sample);
+		reader = new UserReaderTomcat(samplefile);
 	}
 
 	@After
 	public void tearDown() throws Exception {
-		reader.saveFile();
+		reader.save();
 	}
 		
 	@Test
-	public void test_checkUserList() {
+	public void test_10_checkUserList() {
 		List<Map<String,String>> user_list = reader.getUserList();
 		assertEquals(5,user_list.size());
 		assertEquals("user1pass",reader.findInUserList("user1").get("password"));
@@ -68,18 +68,18 @@ public class UserReader_Test {
 	}
 	
 	@Test
-	public void test_addUser() {
+	public void test_20_addUser() {
 		String dummyuser = "dummyuser";
 		String dummypass = "dummypass";
 		String dummyrole = "dummyrole";
 		reader.addUser(dummyuser,dummypass,dummyrole);
 		List<Map<String,String>> user_list = reader.getUserList();
 		assertEquals(6,user_list.size());
-		assertEquals(UserReader.encrypt(dummypass),reader.findInUserList(dummyuser).get("password"));
+		assertEquals(reader.encrypt(dummypass),reader.findInUserList(dummyuser).get("password"));
 	}
 	
 	@Test
-	public void test_deleteUser() {
+	public void test_30_deleteUser() {
 		reader.delUser("dummyuser");
 		List<Map<String,String>> user_list = reader.getUserList();
 		assertEquals(5,user_list.size());

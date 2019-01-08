@@ -69,7 +69,7 @@ public class UserReaderTomcat extends UserReader {
 		File tomcat_file = new File(tomcat_filename);
 		if (tomcat_file.canRead()) {
 			user_doc = readTomcatFile(tomcat_file);
-			user_list = readUserSection();
+			user_list = readUserList();
 		}
 	}
 	
@@ -103,7 +103,7 @@ public class UserReaderTomcat extends UserReader {
 	 * Rewrites the user_doc by deleting all existing users and replacing them with the users saved in the user_list
 	 */
 	@Override
-	public void saveUserSection() {
+	public void saveUserList() {
 		Element root_element = user_doc.getDocumentElement();
 		//Delete all existing users
 		NodeList user_nl = root_element.getElementsByTagName("user");
@@ -146,7 +146,7 @@ public class UserReaderTomcat extends UserReader {
 	 * @return HashMap of user/password pairs
 	 */
 	@Override
-	public List<Map<String,String>> readUserSection(){
+	public List<Map<String,String>> readUserList(){
 		List<Map<String,String>> new_user_list = new ArrayList<>();
 		NodeList user_nl = user_doc.getDocumentElement().getElementsByTagName("user");
 		for (int i = 0; i < user_nl.getLength(); i++) {

@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
  */
 public class DABIniReader extends IniReader{
 
-	private static final Logger LOGGER = Logger.getLogger( DABIniReader.class.getName() );
+	//private static final Logger LOGGER = Logger.getLogger( DABIniReader.class.getName() );
 	
 	private Pattern file_p = Pattern.compile( "\\\"(\\w+)\\\"\\:\\{\\\"table\\\"" );
 	private Pattern table_p = Pattern.compile( "\\\"table\\\"\\:\\\"(\\w+)\\\"" );

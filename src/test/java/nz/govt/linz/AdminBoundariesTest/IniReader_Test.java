@@ -1,4 +1,4 @@
-package nz.govt.linz.AdminBoundaries;
+package nz.govt.linz.AdminBoundariesTest;
 
 /**
  * AdminBoundaries Test
@@ -11,7 +11,7 @@ package nz.govt.linz.AdminBoundaries;
  * LICENSE file for more information.
  */
 
-import nz.govt.linz.AdminBoundaries.DABIniReader;
+import nz.govt.linz.AdminBoundaries.IniReader;
 
 import static org.junit.Assert.*;
 
@@ -25,15 +25,15 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class DABIniReader_Test {
+public class IniReader_Test {
 	
 	private static final String p = "testconfig.ini";
 	/** pre change reader */
-	private DABIniReader reader1;
+	private IniReader reader1;
 	/** editing reader */
-	private DABIniReader reader2;
+	private IniReader reader2;
 	/** post change reader */
-	private DABIniReader reader3;
+	private IniReader reader3;
 	
 	private static boolean overwrite_flag;
 	private static Map<String,Map<String,String>> restore;
@@ -62,8 +62,8 @@ public class DABIniReader_Test {
 	}
 	
 	private void swapReaders(String p) throws IOException {
-		reader1 = new DABIniReader(p);
-		reader2 = new DABIniReader(p);
+		reader1 = new IniReader(p);
+		reader2 = new IniReader(p);
 		for (String sec : reader2.getSections()){
 			for (String opt : reader2.getOptions(sec)){
 				if (restore.containsKey(sec) && restore.get(sec).containsKey(opt)){
@@ -76,7 +76,7 @@ public class DABIniReader_Test {
 			}
 		}
 		reader2.dump();
-		reader3 = new DABIniReader(p);
+		reader3 = new IniReader(p);
 	}
 	
 	private void restoreReaders(String p) throws IOException {
@@ -94,7 +94,6 @@ public class DABIniReader_Test {
 			overwrite_flag = true;
 		}
 	}
-	
 
 	@Test
 	public void test_changed() {

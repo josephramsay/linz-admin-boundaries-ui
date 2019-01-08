@@ -37,6 +37,8 @@ public class IniReader {
 	private Pattern  option_p = Pattern.compile( "\\s*([^=]*)=(.*)" );
 	private Pattern  value_p = Pattern.compile( "\\s+(.*)" );
 
+	/** The entries array/map is the formatted copy of the config file */
+	//            section     option  value
 	protected Map<String, Map<String, String>> entries = new HashMap<>();
 
 	private String path;
@@ -108,12 +110,12 @@ public class IniReader {
 		LOGGER.fine("e="+entries);
 	}
 
-	/** Entries array getter */
+	/** Entries array getter. Returns the entries array in full */
 	protected Map<String, Map<String, String>> getEntries(){
 		return entries;
 	}
 	
-	/** Entries array setter */
+	/** Entries array setter. Sets the entries array variable with a map-map */
 	protected void setEntries(Map<String, Map<String, String>> entriesarg){
 		entries = entriesarg;
 	}
@@ -121,22 +123,22 @@ public class IniReader {
 	//convenience methods to save having to fetch and re-save the entries array
 	
 	/** Sets and individual value in the entries array */
-	protected void setEntry(String sec,String opt, String val){
+	public void setEntry(String sec,String opt, String val){
 		entries.get(sec).put(opt, val);
 	}
 
 	/** Returns a single entry value from the entries array */
-	protected String getEntry(String sec,String opt){
+	public String getEntry(String sec,String opt){
 		return entries.get(sec).get(opt);
 	}	
 
 	/** Returna the set of section elements */
-	protected Set<String> getSections(){
+	public Set<String> getSections(){
 		return entries.keySet();
 	}
 
 	/** Returns the set of option elements for a particular section value */
-	protected Set<String> getOptions(String sec){
+	public Set<String> getOptions(String sec){
 		return entries.get(sec).keySet();
 	}
 
@@ -181,13 +183,24 @@ public class IniReader {
 	 * Alias for getentry (NB originally returned entries array itself...)
 	 * @param section
 	 * @param option
-	 * @param value
 	 * @return
-	 */
-	public String get( String section, String option, String value) {
+	 */	
+	public String get( String section, String option ) {
 		return getEntry(section,option);
+	}	
+	/**
+	 * Alias for getentry (NB originally returned entries array itself...)
+	 * @param section
+	 * @param option
+	 * @param defaultvalue
+	 * @return
+	 */	
+	public String get( String section, String option, String defaultvalue ) {
+		String value = getEntry(section,option);
+		return value.equals(null) || value.isEmpty() ? defaultvalue : value;
 	}
 
+	//TODO. Needed?
 	public String getString( String section, String option, String defaultvalue ) {
 		Map< String, String > opt_val = entries.get( section );
 		if( opt_val == null ) {
@@ -201,7 +214,7 @@ public class IniReader {
 		if( opt_val == null ) {
 			return defaultvalue;
 		}
-		return Integer.parseInt( opt_val.get( option ));
+		return Integer.parseInt( opt_val.get( option ) );
 	}
 
 	public float getFloat( String section, String option, float defaultvalue ) {
@@ -209,7 +222,7 @@ public class IniReader {
 		if( opt_val == null ) {
 			return defaultvalue;
 		}
-		return Float.parseFloat( opt_val.get( option ));
+		return Float.parseFloat( opt_val.get( option ) );
 	}
 
 	public double getDouble( String section, String option, double defaultvalue ) {
@@ -217,6 +230,6 @@ public class IniReader {
 		if( opt_val == null ) {
 			return defaultvalue;
 		}
-		return Double.parseDouble( opt_val.get( option ));
+		return Double.parseDouble( opt_val.get( option ) );
 	}
 }

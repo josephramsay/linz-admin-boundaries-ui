@@ -25,7 +25,7 @@ import java.io.InputStreamReader;
 public class ProcessControl {
 	
 	//this is the path where the debian packager puts the py part of the app
-	private final static String DABP = "webapps/ab/WEB-INF/scripts/download_admin_bdys.py";
+	private final static String DABP = "webapps/ab/WEB-INF/scripts/linz_admin_boundaries_uploader.py";
 	private final static String SHELL = "python";
 	
 	private ProcessBuilder processbuilder;

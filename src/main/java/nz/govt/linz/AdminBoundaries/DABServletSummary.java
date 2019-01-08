@@ -1,5 +1,8 @@
 package nz.govt.linz.AdminBoundaries;
 
+import static nz.govt.linz.AdminBoundaries.DABFormatter.BGRN;
+import static nz.govt.linz.AdminBoundaries.DABFormatter.BRED;
+
 /**
  * AdminBoundaries
  *
@@ -10,20 +13,20 @@ package nz.govt.linz.AdminBoundaries;
  * This program is released under the terms of the new BSD license. See the
  * LICENSE file for more information.
  */
-
-import java.io.*;
-import java.util.*;
-
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 
-import javax.servlet.*;
-import javax.servlet.http.*;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
-import nz.govt.linz.AdminBoundaries.DABContainerComp.TableInfo;
 import nz.govt.linz.AdminBoundaries.DABContainerComp.ImportStatus;
-
-import static nz.govt.linz.AdminBoundaries.DABFormatter.BRED;
-import static nz.govt.linz.AdminBoundaries.DABFormatter.BGRN;
+import nz.govt.linz.AdminBoundaries.DABContainerComp.TableInfo;
 
 /**
  * Main servlet page displaying table import status and possible actions
@@ -38,10 +41,7 @@ public class DABServletSummary extends DABServlet {
 	
 	/** Database connector and query wrapper */
 	private DABConnector dabc;		
-	/** Formatter class for converting data-maps to html strings */
-	private DABFormatter dabf;
-	/** Class holding info on tables for comparson */
-	private DABContainerComp ccomp;
+
 	
 	/** Map of the status for each table pair */ 
 	private Map<TableInfo,ImportStatus> status = new HashMap<>();
@@ -58,10 +58,9 @@ public class DABServletSummary extends DABServlet {
 		description = String.join("\n", 
 				"The downloader interface queries the four destination admin boundary tables comparing them against their temporary source "
 				+ "counterparts. Each table-set can be in one of three states, Vacant, Loaded or Transferred. If a table-set is Vacant no temporary "
-				+ "tables exist and the import tables must be populated from file.",
-				"Two files are used to populate the admin boundaries; StatsNZ_meshblock_concordance_YYYMMDD.zip and nz_localities.csv. "
-				+ "These can be found on the LINZ SFTP and gisdata file share respectively. The StatsNZ meshblock zip file contains two shapefiles and "
-				+ "one CSV and is used to update the tables; meshblock, meshblock_concordance and territorial_authority.",
+				+ "tables exist and the import tables must be populated from file/WFS.",
+				"The admin boundaries tables are populated over WFS from the StatsNZ data service and from a locally saved file; nz_localities.csv. "
+				+ "The StatsNZ dataservice provides; meshblock, meshblock_concordance and territorial_authority.",
 				"If a table-set is in the Loaded state the import tables have been built and column changes applied. At this stage selected users "
 				+ "will be notified and if approved, changes can be pushed through to the final destination tables.",
 				"When a table-set is in the Transferred state the import tables will match the destination tables and no action is necessary.",
@@ -74,8 +73,6 @@ public class DABServletSummary extends DABServlet {
 				"<br/><u>REJECT</u> :: Delete import tables.",
 				"<br/><u>OPTIONAL</u> :: Run any configured post-processing functions.");
 		dabc = new DABConnector();
-		dabf = new DABFormatter();
-		ccomp = new DABContainerComp(getServletContext());
 		//updateStatus();
 	}
 	
@@ -139,6 +136,8 @@ public class DABServletSummary extends DABServlet {
         	TableInfo ti = ccomp.keyOf(compare.toUpperCase());
         	info.put("COMPARE",compare);
         	info.put("RESULT",ti.dst()+" &larr; "+ti.tmp());
+        	//String t = String.format("DST %s, KEY %s, TYP %s", ti.dst(), ti.key(), dabc.colType(ABs + "." +ti.dst(), ti.key()));
+        	//info.put("DST KEY",t);
         	summarytable = dabc.compareTableData(ti);
         	accdectable = dabf.getBackNav();
         }
@@ -222,5 +221,15 @@ public class DABServletSummary extends DABServlet {
 	    
 	}
 
-
+	/**
+	 * main method used for testing
+	 * 
+	 * @param args
+	 * @throws ServletException 
+	 */
+	public static void main(String[] args) throws ServletException {
+		DABServletSummary dabss = new DABServletSummary();
+		dabss.init();
+		dabss.getFullSummary();
+	}
 }

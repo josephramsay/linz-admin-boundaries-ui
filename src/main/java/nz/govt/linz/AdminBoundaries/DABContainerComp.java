@@ -10,12 +10,11 @@ package nz.govt.linz.AdminBoundaries;
  * This program is released under the terms of the new BSD license. See the
  * LICENSE file for more information.
  */
-
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
-
-import javax.servlet.ServletContext;
 
 
 /**
@@ -26,8 +25,6 @@ import javax.servlet.ServletContext;
 public class DABContainerComp {
 	
 	private static final Logger LOGGER = Logger.getLogger( DABContainerComp.class.getName() );
-	
-	private final static String CONF_PATH = "WEB-INF/scripts/download_admin_bdys.ini";
 	
 	protected final static Map<String,String> TABV = new HashMap<>();
 	static {
@@ -59,21 +56,25 @@ public class DABContainerComp {
 		private String abv;
 		public TableInfo(String dst, String tmp, String key){
 			this.dst = dst;
-			this.tmp = "temp_"+tmp;
+			this.tmp = reader.get("database", "prefix")+tmp;
 			this.key = key;
 			this.abv = TABV.get(dst);
 		}
-		public String dst(){return dst;}
-		public String tmp(){return tmp;}
-		public String key(){return key;}
-		public String abv(){return abv;}
+		public String dst(){return dst;} //name of destination table
+		public String tmp(){return tmp;} //name of temporary (import) table
+		public String key(){return key;} //primary key
+		public String abv(){return abv;} //table name abbreviation
 		
+		//get message to display showing import status (beside compare function)
 		public String ttl(ImportStatus is){
-			switch (is) {
-			case BLANK: return "Import: "+tmp+"("+key+") &larr; SFTP";
-			case LOADED: return "Transfer: "+dst+"("+key+") &larr; "+tmp+"("+key+")";
-			case COMPLETE: return "Complete: "+dst+"("+key+") == "+tmp+"("+key+")";
-			default: return "Load: "+dst+" Unavailable";
+			if (is == null){return "Load: "+dst+" Unavailable";}
+			else {
+				switch (is) {
+				case BLANK: return "Import: "+tmp+"("+key+") &larr; WFS/SFTP";
+				case LOADED: return "Transfer: "+dst+"("+key+") &larr; "+tmp+"("+key+")";
+				case COMPLETE: return "Complete: "+dst+"("+key+") == "+tmp+"("+key+")";
+				default: return "Load: "+dst+" Unavailable";
+				}
 			}
 		}
 		//get table name to display on right of summary
@@ -95,17 +96,14 @@ public class DABContainerComp {
 	
 	
 	//-------------------------------------------------------------------------
-	/**
-	 * Container constructor initialises and populates TI map
-	 * @throws IOException 
-	 */
-	public DABContainerComp(ServletContext context) {
-		this(context.getRealPath(CONF_PATH));
-	}
 	
-	public DABContainerComp(String conf) {
+	/**
+	 * Main constructor, sets up table info and config reader
+	 * @param conf
+	 */
+	public DABContainerComp(DABIniReader reader) {
 		setTIMap(new HashMap<>());
-		setReader(new DABIniReader(conf));
+		setReader(reader);
 		initTMI();
 	}
 	

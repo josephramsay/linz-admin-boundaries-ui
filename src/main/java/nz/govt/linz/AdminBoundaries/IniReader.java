@@ -123,22 +123,22 @@ public class IniReader {
 	//convenience methods to save having to fetch and re-save the entries array
 	
 	/** Sets and individual value in the entries array */
-	protected void setEntry(String sec,String opt, String val){
+	public void setEntry(String sec,String opt, String val){
 		entries.get(sec).put(opt, val);
 	}
 
 	/** Returns a single entry value from the entries array */
-	protected String getEntry(String sec,String opt){
+	public String getEntry(String sec,String opt){
 		return entries.get(sec).get(opt);
 	}	
 
 	/** Returna the set of section elements */
-	protected Set<String> getSections(){
+	public Set<String> getSections(){
 		return entries.keySet();
 	}
 
 	/** Returns the set of option elements for a particular section value */
-	protected Set<String> getOptions(String sec){
+	public Set<String> getOptions(String sec){
 		return entries.get(sec).keySet();
 	}
 

@@ -12,9 +12,9 @@
 
 ## Tomcat
 remoteProtocol=
-remoteHost=
-remoteUser=
-remotePass=
+remoteHost=tstassgeo02
+remoteUser=admin
+remotePass=Password1
 
 ## GRADLE
 

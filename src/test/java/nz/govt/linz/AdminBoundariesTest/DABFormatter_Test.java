@@ -1,4 +1,4 @@
-package nz.govt.linz.AdminBoundaries;
+package nz.govt.linz.AdminBoundariesTest;
 
 /**
  * AdminBoundaries Test

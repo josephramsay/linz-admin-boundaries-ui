@@ -1,4 +1,4 @@
-package nz.govt.linz.AdminBoundaries;
+package nz.govt.linz.AdminBoundariesTest;
 
 /**
  * AdminBoundaries Test
@@ -124,10 +124,9 @@ public class DABConnector_Test {
 	 */
 	@Test
 	public void test_executeTF() {
-		ResultSet rs = connector.executeQuery(query_b);
-		rs.next();
-		System.out.println(rs.getBoolean(1));
-		assertEquals(connector.executeTFQuery(query_b),result_b);
+		List<List<String>> lls = connector.executeQuery(query_b);
+		System.out.println(lls.get(0).get(0));
+		assertEquals(connector.executeQuery(query_b),result_b);
 	}
 	
 	/**

@@ -46,7 +46,7 @@ public class DABConnector {
 	DataSource datasource = null;
 
 	/**
-	 * Constructor for DAB database DAO (piggy backs on AIMS DAO)
+	 * Constructor for DAB database DAO 
 	 */
 	public DABConnector() {
 		initDataSource();
@@ -78,21 +78,25 @@ public class DABConnector {
 	 * 
 	 * @return {@codeList<List<String>> representing a MxN data table}
 	 */
-	public List<List<String>> executeQuery(String query) {
+	public List<List<String>> executeQuery(String query,boolean includehead) {
 		List<List<String>> result = null;
 		// System.out.println(String.format("### QRY ### %s", query));
 		try {
 			ResultSet rs = exeQuery(query);
-			result = parseResultSet(rs);
+			if (rs != null) {
+				result = parseResultSet(rs,includehead);
+				LOGGER.fine("RES Size "+result.size());
+			}
 		} 
 		catch (SQLException sqle) {
 			LOGGER.warning("SQLError (q) " + sqle + "\n" + query);
 			result = parseSQLException(sqle);
 		}
-		LOGGER.fine("RES Size "+result.size());
 		return result;
 	}
-
+	public List<List<String>> executeQuery(String query){
+		return executeQuery(query,true);
+	}
 	/**
 	 * Local query wrapper
 	 * 
@@ -104,7 +108,9 @@ public class DABConnector {
 		ResultSet result = null;
 		try (Connection conn = datasource.getConnection()) {
 			Statement stmt = conn.createStatement();
-			result = stmt.executeQuery(query);
+			if (stmt.execute(query)) {
+				result = stmt.getResultSet();
+			}
 		}
 		return result;
 	}
@@ -115,7 +121,7 @@ public class DABConnector {
 	 * @param rs
 	 * @return
 	 */
-	private List<List<String>> parseResultSet(ResultSet rs) throws SQLException {
+	private List<List<String>> parseResultSet(ResultSet rs, boolean includehead) throws SQLException {
 		List<String> head_row;// = new ArrayList<String>();
 		List<String> body_row;// = new ArrayList<String>();
 		List<List<String>> table = new ArrayList<>();
@@ -124,21 +130,19 @@ public class DABConnector {
 		int count = rsmd.getColumnCount();
 		head_row = new ArrayList<>();
 		for (int i = 1; i <= count; i++) {
-
 			String l = rsmd.getColumnLabel(i);
 			LOGGER.fine("Col Label " + l);
 			head_row.add(l);
-			// row.add(rsmd.getColumnLabel(i));
 		}
-		table.add(head_row);
+		if (includehead) {
+			table.add(head_row);
+		}
 		while (rs.next()) {
 			body_row = new ArrayList<>();
-			for (String col : head_row) {// int i=1; i<=count; i++) {
-
+			for (String col : head_row) {
 				String v = rs.getString(col);
 				LOGGER.fine("Row[" + col + "] = " + v);
 				body_row.add(v);
-				// row.add(rs.getString(col));
 			}
 			table.add(body_row);
 		}
@@ -172,7 +176,7 @@ public class DABConnector {
 	 * @param columns
 	 * @return
 	 */
-	protected String quoteSpace(String columns) {
+	public String quoteSpace(String columns) {
 		LOGGER.fine("COLS. " + columns);
 		StringBuilder res = new StringBuilder();
 		for (String col : columns.split(",")) {

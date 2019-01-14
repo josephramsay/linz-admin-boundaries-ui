@@ -21,7 +21,9 @@ import javax.xml.transform.TransformerFactoryConfigurationError;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import org.apache.catalina.CredentialHandler;
 import org.apache.catalina.realm.MessageDigestCredentialHandler;
+import org.apache.catalina.realm.UserDatabaseRealm;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;

@@ -8,7 +8,10 @@ import org.junit.runners.Suite;
 @Suite.SuiteClasses({
 	UserReaderTomcat_Test.class,
 	UserReaderPostgreSQL_Test.class,
-	IniReader_Test.class
+	IniReader_Test.class,
+	DABFormatter_Test.class,
+	DABConnector_Test.class,
+	DABContainerComp_Test.class
 })
 
 public class DABTestSuite {   

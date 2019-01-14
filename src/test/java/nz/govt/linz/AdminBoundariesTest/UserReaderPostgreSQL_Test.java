@@ -13,7 +13,6 @@ package nz.govt.linz.AdminBoundariesTest;
 
 //import UserReader;
 import nz.govt.linz.AdminBoundaries.UserReader;
-import nz.govt.linz.AdminBoundaries.UserReaderTomcat;
 import nz.govt.linz.AdminBoundaries.UserReaderPostgreSQL;
 import static org.junit.Assert.*;
 
@@ -27,7 +26,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.FixMethodOrder;
 import org.junit.runners.MethodSorters;
-import org.postgresql.jdbc2.optional.SimpleDataSource;
+//import org.postgresql.jdbc2.optional.SimpleDataSource;//DEPRECATED
+//import org.postgresql.jdbc3.Jdbc3SimpleDataSource;//DEPRECATED
+import org.postgresql.ds.PGSimpleDataSource;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class UserReaderPostgreSQL_Test {
@@ -35,7 +36,9 @@ public class UserReaderPostgreSQL_Test {
 	private static final String setupfile = "src/test/resourxes/test_setup.sql";
 	
 	private UserReader reader;
-	private SimpleDataSource datasource;
+	//private Jdbc3SimpleDataSource datasource;
+	//private SimpleDataSource datasource;
+	private PGSimpleDataSource datasource;
 
 	
 	private static boolean overwrite_flag;
@@ -51,8 +54,8 @@ public class UserReaderPostgreSQL_Test {
 
 	@Before
 	public void setUp() throws Exception {
-		System.out.println("--- test ---");
-		datasource = new SimpleDataSource();
+		//System.out.println("--- test ---");
+		datasource = new PGSimpleDataSource();
 		datasource.setServerName("localhost");
 		datasource.setDatabaseName("testdb" );
 		datasource.setUser( "testuser0" );

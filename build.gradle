@@ -38,9 +38,11 @@ plugins {
 }
 
 ext {
+    postgresqlJDBCVersion = '9.1-901.jdbc4'
     postgresqlApiVersion = '9.4-1206-jdbc42'
     postGISApiVersion = '2.2.0'
     servletApiVersion = '3.+'
+    catalinaVersion = '9.0.14'
     junitVersion = '4.12'
     jmockVersion = '2.9.0'
     jsoupVersion = '1.11.3'
@@ -66,7 +68,7 @@ def warName = 'ab.war'
 def packName = 'AdminBoundaryDownloader'
 def packVersion = '0.1'
 
-//packages up everything in src/main/webapp
+//packages the uploader component linz-admin-boundaries-uploader into src/main/webapp
 
 task copyscripts(type: Copy) {
      //dependsOn test
@@ -138,18 +140,22 @@ dependencies {
     //classpath "org.postgresql:postgresql:$postgresqlApiVersion"
     providedCompile "javax.servlet:servlet-api:$servletApiVersion"
     providedRuntime "org.postgresql:postgresql:$postgresqlApiVersion"
+    providedCompile "postgresql:postgresql:$postgresqlJDBCVersion"
     providedRuntime "net.postgis:postgis-jdbc:$postGISApiVersion"
+    //providedCompile "org.apache.tomcat:catalina:$catalinaVersion"
+    providedCompile "nz.govt.linz:catalina:$catalinaVersion"
     testCompile "junit:junit:$junitVersion" 
     testCompile "org.jmock:jmock:$jmockVersion" 
     testCompile "org.jsoup:jsoup:$jsoupVersion"
     /*
     python "pypi:pexpect:4.2.1"
     python "pypi:psycopg2:2.6.2"
-    python "pypi:GDAL:2.1.0"
+    python "pypi:GDAL:2.4.0"
     */
     test "nz.govt.linz:psycopg2:2.6.2"
     test "nz.govt.linz:pexpect:4.2.1"
-    test "nz.govt.linz:gdal:2.1.0"
+    test "nz.govt.linz:pygdal:2.2.1.3"
+    //test "org.gdal:gdal:2.4.0"
     test "nz.govt.linz:ptyprocess:0.5.1"
 }
 

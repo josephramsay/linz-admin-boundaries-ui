@@ -107,7 +107,7 @@ public class UserReaderPostgreSQL extends UserReader {
 			if (!user_list_clone.contains(user) &&
 					allowed_roles.contains(user.get("roles"))){
 				String query =	String.format("grant %s to %s", user.get("roles"), user.get("username"));
-				System.out.println(query);
+				//System.out.println(query);
 				conn.executeQuery(query);
 			}
 		}
@@ -116,7 +116,7 @@ public class UserReaderPostgreSQL extends UserReader {
 			if (!user_list.contains(user_clone) && 
 				allowed_roles.contains(user_clone.get("roles"))){
 				String query =	String.format("revoke %s from %s", user_clone.get("roles"), user_clone.get("username"));
-				System.out.println(query);
+				//System.out.println(query);
 				conn.executeQuery(query);
 			}
 		}

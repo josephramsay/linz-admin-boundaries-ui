@@ -24,7 +24,7 @@ import sys
 import re
 import sys
 import os
-import mock
+#import mock
 
 sys.path.append('../scripts')
 
@@ -88,37 +88,35 @@ class Test10_ColumnMapper(unittest.TestCase):
 				
 	def test20_action(self):
 		'''Tests query generation by matching query string length against known as a sig test'''
-		actions = {'add':0,'drop':82,'rename':162,'cast':0,'primary':75,'trans':322}
+		#actions = {'add':0,'drop':82,'rename':162,'cast':0,'primary':75,'trans':322}
+		actions = {'add':0,'drop':997,'rename':1004,'cast':0,'primary':492,'trans':1154}
 		for a in actions:
-			self.assertEqual(actions[a],sum([len(i) for i in self.cm.action("meshblock","statsnz_meshblock",a)]))
-			
+			#self.assertEqual(actions[a],sum([len(i) for i in self.cm.action("meshblock","statsnz_meshblock",a)]))
+			self.assertEqual(actions[a],sum([len(i) for i in self.cm.action("meshblock","meshblock",a)]))
 					
 	def test30_fromqry(self):
-		a = ['ALTER TABLE admin_bdys_import.temp_statsnz_meshblock ADD COLUMN A A']
-		b = ['ALTER TABLE admin_bdys_import.temp_statsnz_meshblock DROP COLUMN IF EXISTS B']
-		c = ['ALTER TABLE admin_bdys_import.temp_statsnz_meshblock ALTER COLUMN C SET DATA TYPE C']
-		d = ['ALTER TABLE admin_bdys_import.temp_statsnz_meshblock RENAME COLUMN D TO D']
-		e = ["SELECT UpdateGeometrySRID('admin_bdys_import','temp_statsnz_meshblock', 'shape', 4167)", 
-			'UPDATE admin_bdys_import.temp_statsnz_meshblock SET shape = ST_Transform(shape::geometry,4167::integer)']
-		f = ['ALTER TABLE admin_bdys_import.temp_statsnz_meshblock ADD PRIMARY KEY (code)']
-		self.assertEqual(a, self.cm.formqry('add','meshblock','statsnz_meshblock',{'add':'A','type':'A'}))
-		self.assertEqual(b, self.cm.formqry('drop','meshblock','statsnz_meshblock','B'))
-		self.assertEqual(c, self.cm.formqry('cast','meshblock','statsnz_meshblock',{'cast':'C','type':'C'}))
-		self.assertEqual(d, self.cm.formqry('rename','meshblock','statsnz_meshblock',{'old':'D','new':'D'}))
-		#self.assertEqual(e, self.cm.formqry('trans','meshblock','statsnz_meshblock',None))
-		self.assertEqual(f, self.cm.formqry('primary','meshblock','statsnz_meshblock',None))
+		a = 'ADD COLUMN A A'
+		b = 'DROP COLUMN IF EXISTS B'
+		c = 'ALTER COLUMN C SET DATA TYPE C'
+		d = 'RENAME COLUMN D TO D'
+		e = 'ADD PRIMARY KEY (code)'
+		self.assertTrue(a in self.cm.formqry('add','meshblock','meshblock',{'add':'A','type':'A'})[0])
+		self.assertTrue(b in self.cm.formqry('drop','meshblock','meshblock','B')[0])
+		self.assertTrue(c in self.cm.formqry('cast','meshblock','meshblock',{'cast':'C','type':'C'})[0])
+		self.assertTrue(d in self.cm.formqry('rename','meshblock','meshblock',{'old':'D','new':'D'})[0])
+		self.assertTrue(e in self.cm.formqry('primary','meshblock','meshblock',None)[0])
 	
 class Test20_Version(unittest.TestCase):
 	
 	def setUp(self):
 		c = ConfReader()
 		m = ColumnMapper(c)
-		self.v = Version(c, m)
+		self.v = Version(c, m, None)
 		self.dstr='19700101'
 		self.orig='ORIG'
 		self.impt='IMPT'
 		self.pkey='PKEY'
-		self.q = "select table_version.ver_create_revision('DAB:{}');".format(self.dstr)
+		self.q = "select table_version.ver_create_revision('LABU:{}');".format(self.dstr)
 		self.q += "select table_version.ver_apply_table_differences('{}','{}','{}');".format(self.orig,self.impt,self.pkey)
 		self.q += "select table_version.ver_complete_revision();"
 	

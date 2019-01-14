@@ -110,6 +110,7 @@ public class DABConnector {
 			Statement stmt = conn.createStatement();
 			if (stmt.execute(query)) {
 				result = stmt.getResultSet();
+				System.out.println("RES::"+result);
 			}
 		}
 		return result;

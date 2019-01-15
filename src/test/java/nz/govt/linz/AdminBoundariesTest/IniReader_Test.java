@@ -15,6 +15,7 @@ import nz.govt.linz.AdminBoundaries.IniReader;
 
 import static org.junit.Assert.*;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -23,23 +24,27 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
+import org.junit.runners.MethodSorters;
 
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class IniReader_Test {
 	
-	private static final String p = "testconfig.ini";
-	/** pre change reader */
-	private IniReader reader1;
-	/** editing reader */
-	private IniReader reader2;
-	/** post change reader */
-	private IniReader reader3;
+	private static final String test_path = "testconfig.ini";
+	/** reader instances each initialised seperately */
+	private IniReader reader1, reader2, reader3, reader4;
 	
 	private static boolean overwrite_flag;
 	private static Map<String,Map<String,String>> restore;
 	
+	/**
+	 * Create a new hashmap and set the test values
+	 * @throws Exception
+	 */
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {	
+		//System.out.println("before class init");
 		overwrite_flag = false;	
 		restore = new HashMap<>();
 		restore.put("user",new HashMap<String,String>(){{put("domain", "fake.domain.com");put("list", "user1,user2");}});
@@ -49,76 +54,90 @@ public class IniReader_Test {
 
 	@AfterClass
 	public static void tearDownAfterClass() throws Exception {
+		//System.out.println("after class");
+		restore = null;
 	}
 
 	@Before
 	public void setUp() throws Exception {
-		changeReaders(p);
+		System.out.println("setup");
+		//changeReaders(test_path);
+		try{init4Readers(test_path);}
+		catch (IOException ioe) {fail("Init 4 Reader failed with "+ioe);}
 	}
 
 	@After
 	public void tearDown() throws Exception {
-		restoreReaders(p);
+		System.out.println("teardown");
+		//restoreReaders(test_path);
+		try{flush4Readers();}
+		catch (Exception fnf_io_e) {fail("Flush 4 Reader failed with "+fnf_io_e);}
 	}
 	
-	private void swapReaders(String p) throws IOException {
-		reader1 = new IniReader(p);
-		reader2 = new IniReader(p);
-		for (String sec : reader2.getSections()){
-			for (String opt : reader2.getOptions(sec)){
-				if (restore.containsKey(sec) && restore.get(sec).containsKey(opt)){
-					String oldval = reader2.getEntry(sec, opt);
-					String newval = restore.get(sec).get(opt);
-					System.out.println(oldval+"//"+newval);
-					reader2.setEntry(sec,opt,newval);
-					restore.get(sec).put(opt, oldval);
-				}
+	/**
+	 * Load 3 reader instances; 
+	 * r1. init with path and dumping entries to the path 
+	 * r2. static instance with entries then dumped to a set path
+	 * r3. init and set from restore entry by entry
+	 * r4. opened from a saved r1
+	 * @param test_initpath
+	 * @throws IOException
+	 */
+	private void init4Readers(String test_initpath) throws IOException {
+		//read r1 as blank file and set using dump(arg)
+		reader1 = new IniReader("r1"+test_initpath);
+		reader1.dump(restore);
+		//init r2 using getinstance
+		reader2 = IniReader.getInstance(restore);
+		reader2.setPath("r2"+test_initpath);
+		reader2.dump();
+		//use setentry to set r3
+		reader3 = new IniReader("r3"+test_initpath);
+		for (String sec : restore.keySet()){
+			for (String opt : restore.get(sec).keySet()){
+				String newval = restore.get(sec).get(opt);
+				reader3.setEntry(sec,opt,newval);
 			}
 		}
-		reader2.dump();
-		reader3 = new IniReader(p);
+		reader3.dump();
+		//read r4 from newly saved r1 file
+		reader4 = new IniReader("r1"+test_initpath);
+		reader4.load();
 	}
 	
-	private void restoreReaders(String p) throws IOException {
+	private void flush4Readers() throws FileNotFoundException, IOException {
+		reader1.flush();
+		reader2.flush();
+		reader3.flush();
+		reader4.flush();
+	}
+	
+	/*
+	private void restoreReaders(String test_restorepath) throws IOException {
 		System.out.println("setup restore");
 		if (overwrite_flag) {
-			swapReaders(p);
+			init4Readers(test_restorepath);
 			overwrite_flag = false;
 		}
 	}
 	
-	private void changeReaders(String p) throws IOException {
+	private void changeReaders(String test_changepath) throws IOException {
 		System.out.println("setup change");
 		if (!overwrite_flag) {
-			swapReaders(p);
+			init4Readers(test_changepath);
 			overwrite_flag = true;
 		}
-	}
+	}*/
 
 	@Test
-	public void test_changed() {
-		assertNotEquals(reader1.getEntry("database", "port"), reader3.getEntry("database", "port"));
-		assertNotEquals(reader1.getEntry("database", "host"), reader3.getEntry("database", "host"));
-		assertNotEquals(reader1.getEntry("connection", "ftpport"), reader3.getEntry("connection", "ftpport"));
-		assertNotEquals(reader1.getEntry("connection", "ftphost"), reader3.getEntry("connection", "ftphost"));
-		assertNotEquals(reader1.getEntry("user", "domain"), reader3.getEntry("user", "domain"));
-		assertNotEquals(reader1.getEntry("user", "list"), reader3.getEntry("user", "list"));
-
+	public void test_10_changed() {
+		for (String sec : reader1.getSections()) {
+			for (String opt : reader1.getOptions(sec)) {
+				assertEquals(reader1.getEntry(sec,opt), reader2.getEntry(sec,opt));
+				assertEquals(reader1.getEntry(sec,opt), reader3.getEntry(sec,opt));
+				assertEquals(reader1.getEntry(sec,opt), reader4.getEntry(sec,opt));
+			}
+		}
 	}	
-	
-	@Test
-	public void test_unchanged() {
-		assertEquals(reader1.getEntry("layer", "geom_column"), reader3.getEntry("layer", "geom_column"));
-		assertEquals(reader1.getEntry("layer", "grid_res"), reader3.getEntry("layer", "grid_res"));
-		assertEquals(reader1.getEntry("user", "link"), reader3.getEntry("user", "link"));
-		assertEquals(reader1.getEntry("user", "smtp"), reader3.getEntry("user", "smtp"));
-
-	}
-	
-	@Test
-	public void test_underscore(){
-		assertEquals(reader1.getEntry("layer", "geom_column"), reader3.getEntry("layer", "geom_column"));
-		assertEquals(reader1.getEntry("layer", "shift_geometry"), reader3.getEntry("layer", "shift_geometry"));
-	}
 
 }

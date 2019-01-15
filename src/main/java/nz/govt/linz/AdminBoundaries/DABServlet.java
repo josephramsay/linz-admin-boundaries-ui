@@ -84,8 +84,8 @@ public class DABServlet extends HttpServlet {
 		}
 		ccomp = new DABContainerComp(reader);
 		
-		ABs = reader.get("database", "originschema", ABs_def);
-		ABIs = reader.get("database", "schema", ABIs_def);
+		ABs = (String) reader.get("database", "originschema", ABs_def);
+		ABIs = (String) reader.get("database", "schema", ABIs_def);
 
 	}
 	

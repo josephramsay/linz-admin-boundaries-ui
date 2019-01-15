@@ -66,7 +66,11 @@ public class DABIniReader extends IniReader{
 		return colmap.get(name);
 	}
 
-
+	/**
+	 * main method just for testing
+	 * @param args
+	 * TODO delete this method
+	 */
 	public static void main(String[] args){
 		String p = "testconfig.ini";
 		try {

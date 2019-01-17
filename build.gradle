@@ -19,7 +19,7 @@ LICENSE file for more information.
 
     dependencies {
         classpath "org.postgresql:postgresql:9.4-1206-jdbc42"
-        classpath 'com.bmuschko:gradle-cargo-plugin:2.2.3'
+        classpath 'com.bmuschko:gradle-cargo-plugin:2.4'
         //pygradle
         //classpath "gradle.plugin.com.linkedin.pygradle:pygradle-plugin:0.3.24"
         //debpackage
@@ -60,14 +60,14 @@ apply plugin: 'com.bmuschko.cargo'
 //apply plugin: "com.linkedin.python"
 //apply plugin: "nebula.deb"
 
-version = '0.1'
+version = '0.2'
 sourceCompatibility = '1.8'
 
 def webContext = 'ab'
 def warDir = 'build/libs/'
 def warName = 'ab.war'
 def packName = 'AdminBoundaryDownloader'
-def packVersion = '0.1'
+def packVersion = '0.2'
 
 //packages the uploader component linz-admin-boundaries-uploader into src/main/webapp
 
@@ -88,7 +88,6 @@ war {
     manifest {
         attributes 'Implementation-Title': 'LINZ Admin Boundaries Downloader',
             'Implementation-Version': version
-
     }
     archiveName = warName
 }

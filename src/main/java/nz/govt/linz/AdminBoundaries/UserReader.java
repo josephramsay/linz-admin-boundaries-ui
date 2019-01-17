@@ -3,6 +3,7 @@ package nz.govt.linz.AdminBoundaries;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,31 @@ public abstract class UserReader {
 		return user_list;
 	}
 	
+	/**
+	 * Convenience method to convert list-map format lists into list-list
+	 * (where the top row is the header) for use with the dabformatter
+	 * html table formatting function
+	 * @param userlist
+	 * @return
+	 */
+	public static List<List<String>> transformUserList(List<Map<String,String>> userlist){
+		int row_count = 0;
+		List<List<String>> new_userlist = new ArrayList<>();
+		for (Map<String,String> row : userlist) {
+			List<String> new_row = new ArrayList<>();
+			for (String key : row.keySet()) {
+				if (row_count == 0) {
+					new_row.add(key);
+				}
+				else {
+					new_row.add(row.get(key));
+				}
+			}
+			row_count ++;
+			new_userlist.add(new_row);
+		}
+		return new_userlist;
+	}
 	/**
 	 * Returns a matching user_list entry matching by provided key/value pair
 	 * @param key

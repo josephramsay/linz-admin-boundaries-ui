@@ -35,7 +35,7 @@ import org.xml.sax.SAXException;
 
 public class UserReaderTomcat extends UserReader {
 	
-	private static final String USRP = "conf/tomcat-users.xml";
+	private static final String USRP = "/conf/tomcat-users.xml";
 	private static final String catalina_base_path = System.getProperty( "catalina.base" );
 	private static final String test_base_path = "..";
 	//private static final File catalina_base = new File( catalina_base_path ).getAbsoluteFile();

@@ -128,7 +128,7 @@ public class IniReader {
 			}
 		}
 		catch (IOException ioe) {
-			LOGGER.warning("Error reading config file, "+path+". "+ioe);
+			LOGGER.severe("Error reading config file, "+path+". "+ioe);
 		}
 		LOGGER.fine("e="+entries);
 	}

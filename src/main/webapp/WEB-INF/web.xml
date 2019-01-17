@@ -45,6 +45,11 @@
     <servlet>
         <servlet-name>config</servlet-name>
         <servlet-class>nz.govt.linz.AdminBoundaries.DABServletConfig</servlet-class>
+    </servlet>
+    
+    <servlet>
+        <servlet-name>useradmin</servlet-name>
+        <servlet-class>nz.govt.linz.AdminBoundaries.DABServletUserAdmin</servlet-class>
     </servlet>    
     
     <!-- 
@@ -62,6 +67,11 @@
     <servlet-mapping>
         <servlet-name>config</servlet-name>
         <url-pattern>/cfg</url-pattern>
+    </servlet-mapping>
+    
+    <servlet-mapping>
+        <servlet-name>useradmin</servlet-name>
+        <url-pattern>/usr</url-pattern>
     </servlet-mapping> 
        
     <!-- 

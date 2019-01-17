@@ -17,9 +17,10 @@ public class DABIniReader extends IniReader{
 
 	//private static final Logger LOGGER = Logger.getLogger( DABIniReader.class.getName() );
 	
-	private Pattern file_p = Pattern.compile( "\\\"(\\w+)\\\"\\:\\{\\\"table\\\"" );
-	private Pattern table_p = Pattern.compile( "\\\"table\\\"\\:\\\"(\\w+)\\\"" );
-	private Pattern primary_p = Pattern.compile( "\\\"primary\\\"\\:\\\"(\\w+)\\\"" );
+	private Pattern file_p = Pattern.compile( "\\\"(\\w+)\\\"\\s*:\\s*\\{\\s*\\\"table\\\"" );
+	//private Pattern table_p = Pattern.compile( "\\\"table\\\"\\:\\\"(\\w+)\\\"" );
+	private Pattern table_p = Pattern.compile( "\\\"table\\\":\\\"(\\w+)\\\"" );
+	private Pattern primary_p = Pattern.compile( "\\\"primary\\\":\\\"(\\w+)\\\"" );
 
 	//private Map<String, Map<String, String>> entries = new HashMap<>();
 	private Map<String, Map<String,String>> colmap = new HashMap<>();
@@ -41,19 +42,22 @@ public class DABIniReader extends IniReader{
 	 * @return
 	 */
 	private void parse(String raw){
-		Matcher file_m = file_p.matcher( raw );
-		Matcher table_m = table_p.matcher( raw );
-		Matcher primary_m = primary_p.matcher( raw );
-
-		while (file_m.find() && table_m.find() && primary_m.find()){
-			HashMap<String,String> entry = new HashMap<>();
-			String tmp = file_m.group(1);
-			String dst = table_m.group(1);
-			String key = primary_m.group(1);
-			entry.put("dst",dst);
-			entry.put("tmp",tmp);
-			entry.put("key",key);
-			colmap.put(dst,entry);
+		for (String segment : raw.split("},")) {
+			Matcher file_m = file_p.matcher( segment );
+			Matcher table_m = table_p.matcher( segment );
+			Matcher primary_m = primary_p.matcher( segment );
+			
+			if (file_m.find() && table_m.find() && primary_m.find()){
+				HashMap<String,String> entry = new HashMap<>();
+				String tmp = file_m.group(1);
+				String dst = table_m.group(1);
+				String key = primary_m.group(1);
+				entry.put("dst",dst);
+				entry.put("tmp",tmp);
+				entry.put("key",key);
+				colmap.put(dst,entry);
+				System.out.println("d="+dst+" t="+tmp+" k="+key);
+			}
 		}
 	}
 

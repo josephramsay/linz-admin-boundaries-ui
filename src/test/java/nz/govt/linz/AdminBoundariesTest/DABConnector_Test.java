@@ -42,7 +42,7 @@ import org.postgresql.ds.PGSimpleDataSource;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class DABConnector_Test {
 	
-	private static Mockery context = new Mockery();
+	private static Mockery context;
 	
 	private static DataSource datasource_m;
 	private static Connection connection_m;
@@ -74,7 +74,8 @@ public class DABConnector_Test {
 	private DABConnector connector;	
 	
 	@BeforeClass
-	public static void setUpBeforeClass() throws Exception {	
+	public static void setUpBeforeClass() throws Exception {
+		context = new Mockery();
 		datasource_m = context.mock(DataSource.class);
 		connection_m = context.mock(Connection.class);
 		statement_m  = context.mock(Statement.class);
@@ -88,6 +89,16 @@ public class DABConnector_Test {
 
 	@AfterClass
 	public static void tearDownAfterClass() throws Exception {
+		context = null;
+		datasource_m = null;
+		connection_m = null;
+		statement_m  = null;
+		resultset_m1 = null;
+		resultset_m2 = null;
+		resultset_m3 = null;
+		metadata_m1 = null;
+		metadata_m2 = null;
+		metadata_m3 = null;
 	}
 
 	@Before

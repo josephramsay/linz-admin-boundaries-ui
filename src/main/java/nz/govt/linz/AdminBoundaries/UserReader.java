@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.apache.catalina.realm.MessageDigestCredentialHandler;
-
+import org.apache.catalina.realm.DigestCredentialHandlerBase;
 
 /**
  * Absract class for user reading functions incl TC and PG

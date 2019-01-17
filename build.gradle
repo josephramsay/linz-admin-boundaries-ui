@@ -43,6 +43,7 @@ ext {
     postGISApiVersion = '2.2.0'
     servletApiVersion = '3.+'
     catalinaVersion = '9.0.14'
+    tomcatVersion = '9.0.14'
     junitVersion = '4.12'
     jmockVersion = '2.9.0'
     jsoupVersion = '1.11.3'
@@ -139,11 +140,11 @@ repositories {
 dependencies {
     //classpath "org.postgresql:postgresql:$postgresqlApiVersion"
     providedCompile "javax.servlet:servlet-api:$servletApiVersion"
-    providedRuntime "org.postgresql:postgresql:$postgresqlApiVersion"
+    providedCompile "nz.govt.linz:catalina:$catalinaVersion" 
+    providedCompile "org.apache.tomcat:tomcat-util:$tomcatVersion"
     providedCompile "postgresql:postgresql:$postgresqlJDBCVersion"
     providedRuntime "net.postgis:postgis-jdbc:$postGISApiVersion"
-    //providedCompile "org.apache.tomcat:catalina:$catalinaVersion"
-    providedCompile "nz.govt.linz:catalina:$catalinaVersion"
+    providedRuntime "org.postgresql:postgresql:$postgresqlApiVersion"
     testCompile "junit:junit:$junitVersion" 
     testCompile "org.jmock:jmock:$jmockVersion" 
     testCompile "org.jsoup:jsoup:$jsoupVersion"

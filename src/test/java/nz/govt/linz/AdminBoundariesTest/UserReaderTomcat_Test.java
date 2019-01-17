@@ -72,7 +72,9 @@ public class UserReaderTomcat_Test {
 		String dummyuser = "dummyuser";
 		String dummypass = "dummypass";
 		String dummyrole = "dummyrole";
+		System.out.println("DR1-"+reader);
 		reader.addUser(dummyuser,dummypass,dummyrole);
+		System.out.println("DR2-"+reader);
 		List<Map<String,String>> user_list = reader.getUserList();
 		assertEquals(6,user_list.size());
 		assertEquals(reader.encrypt(dummypass),reader.findInUserList(dummyuser).get("password"));

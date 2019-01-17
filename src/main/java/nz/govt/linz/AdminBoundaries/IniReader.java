@@ -18,6 +18,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -174,7 +176,6 @@ public class IniReader {
 		return entries.get(sec).keySet();
 	}
 
-	//------------------------------------------------
 
 	/**
 	 * Writes entries array back to its original file (NB comments and some formatting are lost)
@@ -208,10 +209,12 @@ public class IniReader {
 
 	/**
 	 * flushes the contents of the config file
+	 * @throws IOException 
 	 * @throws FileNotFoundException 
 	 */
-	public void flush() throws FileNotFoundException,IOException {
-		(new PrintWriter(getPath())).close();
+	public void flush() throws IOException {
+		//(new PrintWriter(getPath())).close();//empties file only
+		Files.deleteIfExists(Paths.get(getPath()));
 	}
 	
 	/**

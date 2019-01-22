@@ -116,34 +116,20 @@ public class DABServletConfig extends DABServlet {
 		String user = (String) request.getAttribute("currentSessionUser");
 
 		/** check parameters list, if anything parse, store and redisplay */
-		Map<String, Map<String,String>> config = new LinkedHashMap<>();
-		Enumeration<?> params = request.getParameterNames(); 
-		while (params.hasMoreElements()) {
-			String pname = (String) params.nextElement();
-			String[] parts = pname.split("_",2);
-			if (config.containsKey(parts[0])) {
-				config.get(parts[0]).put(parts[1], request.getParameterValues(pname)[0]);
-			}
-			else {
-				config.put(parts[0], new LinkedHashMap<String,String>(){
-					private static final long serialVersionUID = 1051L;
-					{put(parts[1],request.getParameterValues(pname)[0]);}});
-			}
-		}
+		Map<String, Map<String,String>> config = readParameters(request);
 
 		Map<String, String> info = new HashMap<>(); 
-
 		if (!config.isEmpty()) {
 			//s = summary, a = 1
 			info.put("ACTION","submit");
 			info.put("RESULT",config.toString());
 			ccomp.setConfig(config);
-			configform = DABFormatter.formatForm("DAB Configuration",config);
+			info.put("FORM", DABFormatter.formatForm("DAB Configuration",config));
 		}
 		else {
 			configform = DABFormatter.formatForm("DAB Configuration (saved)",ccomp.getConfig());
 		}
-
+		
 		infomessage = dabf.getInfoMessage(info);
 		accdectable = dabf.getBackNav();
 

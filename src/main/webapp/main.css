@@ -381,3 +381,21 @@ footer {
 footer ul {
     padding-top: 10px;
 }
+/*
+.editableBox {
+    width: 75px;
+    height: 30px;
+}
+
+.timeTextBox {
+    width: 54px;
+    margin-left: -78px;
+    height: 25px;
+    border: none;
+}
+*/
+
+.multiselect {
+	width: 250px;
+	background-color: lightblue;
+}

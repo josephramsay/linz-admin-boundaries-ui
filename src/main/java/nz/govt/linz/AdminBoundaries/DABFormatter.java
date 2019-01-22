@@ -57,6 +57,21 @@ public class DABFormatter {
 	}
 	
 	/**
+	 * Simple UL list
+	 * @param plist
+	 * @return
+	 */
+	public static String formatList(Map<String, Map<String,String>> plist) {
+		String res = "<ul>";
+		for (String sec : plist.keySet()) {
+			Map<String, String> kv = plist.get(sec);
+			for (String k : kv.keySet()) {
+				res += "<li>"+sec+" [ "+k+"="+kv.get(k)+" ]</li>";
+			}
+		}
+		return res+"</ul>";
+	}
+	/**
 	 * Reformats a list/list/string as an html table with the caption tname
 	 * @param tname
 	 * @param result
@@ -71,17 +86,17 @@ public class DABFormatter {
 	    for (String cell : head) {
 	    	table += "<th>" +  cell + "</th>";
 	    }
-	    table += "</tr></thead><tbody>";
+	    table += "</tr></thead>\n<tbody>";
     	for (int i=1; i<result.size(); i++) {
     		table += "<tr>";
     		List<String> row = result.get(i);
     		for (String cell : row){
     			table += "<td>" + cell + "</td>";
     		}
-    		table += "</tr>";
+    		table += "</tr>\n";
 	    }
 
-	    table += "</tbody></table>";
+	    table += "</tbody>\n</table>\n";
 	    return table;
 	}		
 	
@@ -120,7 +135,9 @@ public class DABFormatter {
     	form += "<section><input type=\"submit\" value=\"save\"/></section>";
 	    form += "</form>\n</article>\n";
 	    return form;
-	}	
+	}
+	
+	
 	
 	/**
 	 * Returns main navigation/function buttons

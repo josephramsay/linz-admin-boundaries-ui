@@ -115,6 +115,33 @@ public class DABServlet extends HttpServlet {
 		return sb.toString();
 	}
 	
+	protected Map<String, Map<String,String>> readParameters(HttpServletRequest request){
+		Map<String, Map<String,String>> result = new LinkedHashMap<>();
+		Enumeration<?> params = request.getParameterNames(); 
+		while (params.hasMoreElements()) {
+			String pname = (String) params.nextElement();
+			String pvals = smoosh(request.getParameterValues(pname),",");
+			String[] parts = pname.split("_",2);
+			if (result.containsKey(parts[0])) {
+				result.get(parts[0]).put(parts[1], pvals);
+			}
+			else {
+				result.put(parts[0], new LinkedHashMap<String,String>(){
+					private static final long serialVersionUID = 1051L;
+					{put(parts[1],pvals);}});
+			}
+		}
+		return result;
+	}
+	
+	private String smoosh(String[] pvals, String sep) {
+		StringBuilder csl = new StringBuilder("");
+		for(String language : pvals){
+			csl.append(language).append(sep);
+		}
+		return csl.substring(0, csl.length() - sep.length());
+	}
+	
 	/**
 	 * Returns loading screen animation script text
 	 * @return
@@ -134,12 +161,26 @@ public class DABServlet extends HttpServlet {
 	}
 	
 	protected String getFavIcon(){return "<link rel=\"icon\" type=\"image/png\" href=\"/ab/linz.dab.png\"/>";}
-	protected String getScript(){return "<script src=\"https://code.jquery.com/jquery-3.1.1.js\" type=\"text/javascript\"></script>";}
+	protected String getScript(){return "<script src=\"https://code.jquery.com/jquery-3.3.1.js\" type=\"text/javascript\"></script>";}
 	protected String getLoaderDiv(){return "<div id=\"loader\"></div>";}
 	protected String getLoadScript(){return "<script>$(window).load(function(){$(\"#loader\").fadeOut(\"slow\");});</script>";}
+	protected String getEditDropDownScript(){
+		return "<script>$(document).ready(function(){" +
+			"$(\".editableBox\").change(function(){" +
+			"	$(\".timeTextBox\").val($(\".editableBox option:selected\").html());" +
+			"});});</script>"; 
+		}
+	protected String getMultiDropDownScript(){
+		return "<link href=\"https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/css/select2.min.css\" rel=\"stylesheet\" />\n" + 
+			"<script src=\"https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/js/select2.min.js\"></script>\n" +
+			"<script>$(document).ready(function() { \n" + 
+			"	$(\".multiselect\").select2({tags: true});\n" + 
+			"});</script>";
+		}
 	
 	protected String getSpinner() {return "<script>spin.js</script>";}
-	protected String activateSpinner() {return "import {Spinner} from 'spin.js';\n" + 
+	protected String activateSpinner() {
+		return "import {Spinner} from 'spin.js';\n" + 
 			"\n" + 
 			"var opts = {\n" + 
 			"  lines: 13, // The number of lines to draw\n" + 
@@ -166,7 +207,7 @@ public class DABServlet extends HttpServlet {
 			"\n" + 
 			"var target = document.getElementById('spintarget');\n" + 
 			"var spinner = new Spinner(opts).spin(target);";
-	}
+		}
 	
 	/**
 	 * Returns common header text
@@ -180,8 +221,8 @@ public class DABServlet extends HttpServlet {
 				,"<title>",title,"</title>"
 				,getScript()
 				,getLoadScript()
+				,getMultiDropDownScript()
 				,getFavIcon()
-				,getSpinner()
 				,"</head>");
 	}
 	
@@ -233,6 +274,7 @@ public class DABServlet extends HttpServlet {
 				,"<li>User : ",user,"</li>"
 		    	,"</ul></section>\n<section class=\"r_foot\">\n"
 				,"<a href=\"sum\" class=\""+BNAV+"\">S</a>\n"
+				,"<a href=\"usr\" class=\""+BNAV+"\">U</a>\n"
 				,"<a href=\"cfg\" class=\""+BNAV+"\">C</a>\n"
 				,"</section>\n</footer>"
 		    	,"<!-- </div> -->"

@@ -46,7 +46,7 @@ public class DABFormatter_Test {
 	private final static String TS_D2 = "ROW2_COL3"; 
 	
 	private final static int form_len = 1448;
-	private final static int table_len = 266;
+	private final static int table_len = 271;
 	
 	
 	@SuppressWarnings("serial")

@@ -87,6 +87,10 @@ public abstract class UserReader {
 	
 	public abstract List<Map<String,String>> readUserList();
 
+	
+	public boolean userExists(String username) {
+		return findInUserList(username) != null;
+	}
 	/**
 	 * Adds a user pass entry to the user_list and saves the result
 	 * @param user Username

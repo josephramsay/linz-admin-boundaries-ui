@@ -119,16 +119,22 @@ public class DABServlet extends HttpServlet {
 		Map<String, Map<String,String>> result = new LinkedHashMap<>();
 		Enumeration<?> params = request.getParameterNames(); 
 		while (params.hasMoreElements()) {
+			String[] parts = new String[2];
 			String pname = (String) params.nextElement();
+			LOGGER.info("Read param "+pname);
 			String pvals = smoosh(request.getParameterValues(pname),",");
-			String[] parts = pname.split("_",2);
+			if (pname.contains("_")) { parts = pname.split("_",2); }
+			else { parts[0] = pname; }
 			if (result.containsKey(parts[0])) {
 				result.get(parts[0]).put(parts[1], pvals);
 			}
 			else {
+				//result.put(parts[0],Map.of(parts[1],pvals));//J9+
+				String p1 = parts[1];
 				result.put(parts[0], new LinkedHashMap<String,String>(){
 					private static final long serialVersionUID = 1051L;
-					{put(parts[1],pvals);}});
+					{put(p1,pvals);}
+				});
 			}
 		}
 		return result;

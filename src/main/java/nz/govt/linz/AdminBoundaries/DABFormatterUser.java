@@ -44,15 +44,15 @@ public class DABFormatterUser extends DABFormatter {
 		form += getUserDropDown(torp.menuref,userlist);
 		form += getRoleDropDown(torp.menuref,userlist);
 		if (torp.pwbox) {form += getPasswordEntry(torp.menuref);};
-    	form += "<section><input type=\"submit\" value=\"save\"/></section>";
-    	form += "<section><input type=\"submit\" value=\"delete\"/></section>";
+    	form += "<section><input type=\"submit\" name=\""+torp.menuref+"_act\" value=\"save\"/></section>";
+    	form += "<section><input type=\"submit\" name=\""+torp.menuref+"_act\" value=\"delete\"/></section>";
 	    form += "</form>\n</article>\n";
 	    return form;
 	}
 
 
 	private static String getUserDropDown(String menuref,List<Map<String, String>> userlist) {
-		String form = "<label class=\"sec\">Username</label>";
+		String form = "<label class=\"sec\">Username</label>&nbsp;\n";
 		form += "<select name=\""+menuref+"_user\" class=\"multiselect\">\n";
 		for (Map<String,String> userrow : userlist) {
 			String username = userrow.get("username");
@@ -65,7 +65,7 @@ public class DABFormatterUser extends DABFormatter {
 
 
 	private static String getRoleDropDown(String menuref,List<Map<String, String>> userlist) {
-		String form = "<label class=\"sec\">Role</label>";
+		String form = "<label class=\"sec\">Role</label>&nbsp;\n";
 		form += "<select name=\""+menuref+"_role\" class=\"multiselect\" multiple>\n";
 		for (String role : consolidateRoles(userlist)) {
 			form += "<option value=\""+role+"\">"+role+"</option>\n";
@@ -75,7 +75,7 @@ public class DABFormatterUser extends DABFormatter {
 	}
 	
 	private static String getPasswordEntry(String menuref) {
-		String form = "<label class=\"sec\">Password</label>";
+		String form = "<label class=\"sec\">Password</label>&nbsp;\n";
 		form += "<input name=\""+menuref+"_pass\" value=\"\" type=\"text\"/><br/>\n";
 		return form;
 	}

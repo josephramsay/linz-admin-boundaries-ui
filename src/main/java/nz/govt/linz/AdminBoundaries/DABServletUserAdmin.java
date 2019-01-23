@@ -13,6 +13,7 @@ package nz.govt.linz.AdminBoundaries;
 
 import java.io.*;
 import java.util.*;
+import java.util.logging.Logger;
 
 import javax.servlet.*;
 import javax.servlet.http.*;
@@ -24,7 +25,8 @@ import nz.govt.linz.AdminBoundaries.DABFormatterUser.TorP;
  * @author jramsay
  */
 public class DABServletUserAdmin extends DABServlet {
-
+	
+	private static final Logger LOGGER = Logger.getLogger(DABServletUserAdmin.class.getName());
 
 	static final long serialVersionUID = 115L;
 
@@ -53,7 +55,6 @@ public class DABServletUserAdmin extends DABServlet {
 	 */
 	public void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws IOException, ServletException {
-		String configform = "";
 		String accdectable = "";
 		String infomessage = "";
 		//String sp = request.getServletPath();//  getServletContext().getRealPath("/");
@@ -75,6 +76,7 @@ public class DABServletUserAdmin extends DABServlet {
 			info.put("ACTION","submit");
 			info.put("RESULT",params.toString());
 			info.put("PARAMS",DABFormatter.formatList(params));
+			processActions(params);
 		}
 		
 		List<Map<String,String>> tomcat_userlist = urtc.readUserList();
@@ -103,5 +105,41 @@ public class DABServletUserAdmin extends DABServlet {
 				getBodyFooter(created,accessed,user)
 				)
 			);
+	}
+	
+	/**
+	 * performs the user requested actions
+	 * @param params
+	 */
+	private void processActions(Map<String, Map<String,String>> params) {
+		UserReader reader = null;
+		for (String sec : params.keySet()) {
+			if ("tc".equals(sec)) {reader = urtc;}
+			else if ("pg".equals(sec)) {reader = urpg;}
+			Map<String, String> kv = params.get(sec);
+			String user,pass,role,action;
+			user = pass = role = action = null;
+			if (kv.containsKey("user")) {user   = kv.get("user");}
+			if (kv.containsKey("role")) {role   = kv.get("role");}
+			if (kv.containsKey("pass")) {pass   = kv.get("pass");}
+			if (kv.containsKey("act"))  {action = kv.get("act");}
+			//ADD : action=save,user!=existing,role!=null,pass!=null
+			//EDIT : action=save,user==existing,role!=null,pass!=null
+			if ("save".equals(action) && user != null && role != null && pass != null) { 
+				if (reader.userExists(user)){
+					LOGGER.info("Modify user "+user);
+					reader.editUser(user,pass,role);
+				}
+				else {LOGGER.info("Add user "+user);
+					reader.addUser(user,pass,role);
+				}
+			}
+			//DEL : action=delete,user=existing
+			else if("delete".equals(action) && user != null && reader.userExists(user)) {
+				LOGGER.info("Delete user "+user);
+				reader.delUser(user);
+			}
+			else {LOGGER.warning("Cannot match ["+user+","+role+","+pass+","+action+"]");}
+		}
 	}
 }

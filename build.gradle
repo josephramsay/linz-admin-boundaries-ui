@@ -44,6 +44,8 @@ ext {
     servletApiVersion = '3.+'
     catalinaVersion = '9.0.14'
     tomcatVersion = '9.0.14'
+    javaxjsonapiVersion = '1.1.4'
+    javaxjsonVersion = '1.1.4'
     junitVersion = '4.12'
     jmockVersion = '2.9.0'
     jsoupVersion = '1.11.3'
@@ -133,10 +135,12 @@ repositories {
     mavenCentral()
     pyGradlePyPi()
     ivy { url "../../ivy/repository" }
-    //flatDir name:"local", dirs:"~/ivy/repository"
+    //flatDir name: "local", dirs: "~/ivy/repository"
+    //flatDir name: "local", dirs: "~/git/aims/build/libs"
 }
 
 dependencies {
+	//compile files("~/git/aims/build/libs/aims-dev.war")
     //classpath "org.postgresql:postgresql:$postgresqlApiVersion"
     providedCompile "javax.servlet:servlet-api:$servletApiVersion"
     providedCompile "nz.govt.linz:catalina:$catalinaVersion" 
@@ -144,6 +148,8 @@ dependencies {
     providedCompile "postgresql:postgresql:$postgresqlJDBCVersion"
     providedRuntime "net.postgis:postgis-jdbc:$postGISApiVersion"
     providedRuntime "org.postgresql:postgresql:$postgresqlApiVersion"
+    providedRuntime "javax.json:javax.json-api:$javaxjsonapiVersion"
+    providedRuntime "org.glassfish:javax.json:$javaxjsonVersion"
     testCompile "junit:junit:$junitVersion" 
     testCompile "org.jmock:jmock:$jmockVersion" 
     testCompile "org.jsoup:jsoup:$jsoupVersion"

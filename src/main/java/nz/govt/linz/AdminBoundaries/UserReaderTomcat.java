@@ -7,9 +7,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -21,11 +20,7 @@ import javax.xml.transform.TransformerFactoryConfigurationError;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import org.apache.catalina.CredentialHandler;
 import org.apache.catalina.realm.MessageDigestCredentialHandler;
-import org.apache.catalina.realm.DigestCredentialHandlerBase;
-import org.apache.catalina.realm.UserDatabaseRealm;
-import org.apache.tomcat.util.res.StringManager;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -33,7 +28,52 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import nz.govt.linz.AdminBoundaries.User.GSMethod;
+
 public class UserReaderTomcat extends UserReader {
+	
+	public class UserTC extends User {
+		public String password;
+		public EnumSet<TCRoles> roles;
+		
+		public UserTC(){ 
+			setPassword("");
+			setRoles(EnumSet.of(TCRoles.AIMS));
+		}
+		public UserTC(UserTC other){ 
+			super(other);
+			setPassword(other.getPassword());
+			setRoles(other.getRoles());
+		}
+		
+		public void setPassword(String password) {this.password = password;}
+		public String getPassword() {return this.password;}
+		public void setRoleStr(String rolestr) {
+			for (String role : rolestr.split(",")){
+				roles.add(TCRoles.valueOf(role.replace("-","_")));
+			}
+		}
+		public EnumSet<TCRoles> getRoles(){return roles;}
+		public void setRoles(EnumSet<TCRoles> roles) { this.roles = roles;}
+		
+		public String getRoleStr() {
+			String rolestr = "";
+			for (TCRoles role : roles) {
+				rolestr += role._name()+",";
+			}
+			return rolestr.substring(0, rolestr.length() - 1);
+		}
+		@Override
+		public List<String> getSpringRolls() {
+			List<String> springrolls = new ArrayList<>();
+			for (TCRoles role : roles) {springrolls.add(role.name());}
+			return springrolls;
+		}
+	}
+	
+	private enum TCRoles { AIMS,manager_gui,manager_script,manager_jmx,manager_status,admin_gui,admin_script; 
+		public String _name() {return name().replace("_","-"); }
+		}
 	
 	private static final String USRP = "/conf/tomcat-users.xml";
 	private static final String catalina_base_path = System.getProperty( "catalina.base" );
@@ -118,15 +158,15 @@ public class UserReaderTomcat extends UserReader {
 			}
 		}
 		//add back modified users
-		for (Map<String, String> entry : user_list) {
+		for (User user : user_list) {
 			Element new_element = user_doc.createElement("user");
-			new_element.setAttribute("username",entry.get("username"));
-			new_element.setAttribute("password",entry.get("password"));
-			new_element.setAttribute("roles",entry.get("roles"));
+			new_element.setAttribute("username",user.getUserName());
+			new_element.setAttribute("password",((UserTC)user).getPassword());
+			new_element.setAttribute("roles",((UserTC)user).getRoleStr());
 			root_element.appendChild(new_element);
 			user_doc.normalize();
 			//root_element.insertBefore(new_element, refChild)  appendChild(new_element);
-			System.out.println("appending "+entry.get("username"));
+			System.out.println("appending "+user.getUserName());
 		}
 		//Tidy up by removing blank lines
 		int i=0;
@@ -145,17 +185,17 @@ public class UserReaderTomcat extends UserReader {
 	 * @return HashMap of user/password pairs
 	 */
 	@Override
-	public List<Map<String,String>> readUserList(){
-		List<Map<String,String>> new_user_list = new ArrayList<>();
+	public List<User> readUserList(){
+		List<User> new_user_list = new ArrayList<>();
 		NodeList user_nl = user_doc.getDocumentElement().getElementsByTagName("user");
 		for (int i = 0; i < user_nl.getLength(); i++) {
 			Node n = user_nl.item(i);
-			Map<String,String> user_entry = new HashMap<>();
+			User user = new UserTC();
 			for (String upr : Arrays.asList("username","password","roles")) {
-				user_entry.put(upr, n.getAttributes().getNamedItem(upr).getNodeValue());
+				user.setUserMethod(GSMethod.valueOf(upr), n.getAttributes().getNamedItem(upr.toLowerCase()).getNodeValue());
 			}
-			new_user_list.add(user_entry);
-			System.out.println("READ - "+user_entry.get("username"));
+			new_user_list.add(user);
+			System.out.println("READ - "+user.getUserName());
 		}
 		return new_user_list;
 	}
@@ -206,13 +246,22 @@ public class UserReaderTomcat extends UserReader {
 		}
 		return plain;
 	}
+	
+	@Override
+	public List<User> cloneUserList() {
+		List<User> new_user_list = new ArrayList<>();
+		for (User user : user_list) {
+			new_user_list.add(new UserTC((UserTC)user));
+		}
+		return new_user_list;
+	}
+	
 	/** Simple tostring */
 	public String toString(){
 		String users = "";
-		for (Map<String,String> ul : user_list) {
-			users += ul.get("username")+",";
+		for (User user : user_list) {
+			users += user.getUserName()+",";
 		}
 		return "UserReader::"+tomcat_filename+"\n"+users;
 	}
-
 }

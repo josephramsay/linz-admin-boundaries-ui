@@ -21,7 +21,8 @@ public class DABFormatterUser extends DABFormatter {
 	
 	public enum TorP {
 		Tomcat("tc","Add / Delete Tomcat User",true), 
-		PostgreSQL("pg","Add / Delete PostgreSQL User",false);
+		PostgreSQL("pg","Add / Delete PostgreSQL User",false),
+		AIMS("aa","Add / Delete AIMS User",false);
 		private final String menuref,title;
 		private final boolean pwbox;
 		TorP(String menuref,String title, boolean pwbox){
@@ -37,7 +38,7 @@ public class DABFormatterUser extends DABFormatter {
 	 * @param config
 	 * @return
 	 */	
-	public static String formatUserForm(TorP torp, List<Map<String, String>> userlist) {
+	public static String formatUserForm(TorP torp, List<User> userlist) {
 		String form = "";
 		form += "<article><form method=\"post\">\n";
 		form += "<legend>"+torp.title+"</legend>\n";
@@ -51,12 +52,11 @@ public class DABFormatterUser extends DABFormatter {
 	}
 
 
-	private static String getUserDropDown(String menuref,List<Map<String, String>> userlist) {
+	private static String getUserDropDown(String menuref,List<User> userlist) {
 		String form = "<label class=\"sec\">Username</label>&nbsp;\n";
 		form += "<select name=\""+menuref+"_user\" class=\"multiselect\">\n";
-		for (Map<String,String> userrow : userlist) {
-			String username = userrow.get("username");
-			form += "<option value=\""+username+"\">"+username+"</option>\n";
+		for (User user : userlist) {
+			form += "<option value=\""+user.getUserName()+"\">"+user.getUserName()+"</option>\n";
 		}
 		form += "</select>\n";
 
@@ -64,7 +64,7 @@ public class DABFormatterUser extends DABFormatter {
 	}
 
 
-	private static String getRoleDropDown(String menuref,List<Map<String, String>> userlist) {
+	private static String getRoleDropDown(String menuref,List<User> userlist) {
 		String form = "<label class=\"sec\">Role</label>&nbsp;\n";
 		form += "<select name=\""+menuref+"_role\" class=\"multiselect\" multiple>\n";
 		for (String role : consolidateRoles(userlist)) {
@@ -85,11 +85,11 @@ public class DABFormatterUser extends DABFormatter {
 	 * @param userlist
 	 * @return
 	 */
-	private static Set<String> consolidateRoles(List<Map<String, String>> userlist){
+	private static Set<String> consolidateRoles(List<User> userlist){
 		Set<String> rolelist = new HashSet<>();
-		for (Map<String,String> userrow : userlist) {
-			for (String role : userrow.get("roles").split(",")) {
-				rolelist.add(role);
+		for (User user : userlist) {
+			for (String rolestr : user.getSpringRolls()) {
+				rolelist.add(rolestr);
 			}
 		}
 		return rolelist;

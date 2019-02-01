@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import nz.govt.linz.AdminBoundaries.UserAdmin.User;
+
 
 /**
  * Formatter class specifically for users incorporating user-view (as a table). 

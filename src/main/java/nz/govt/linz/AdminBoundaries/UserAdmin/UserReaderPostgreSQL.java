@@ -1,59 +1,17 @@
-package nz.govt.linz.AdminBoundaries;
+package nz.govt.linz.AdminBoundaries.UserAdmin;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-
 import javax.sql.DataSource;
 
-import nz.govt.linz.AdminBoundaries.UserReaderAIMS.UserAIMS;
+import nz.govt.linz.AdminBoundaries.DABConnector;
+import nz.govt.linz.AdminBoundaries.UserAdmin.UserPostgreSQL.PGRoles;
 
 public class UserReaderPostgreSQL extends UserReader {
 	
-	public class UserPG extends User {
-		public String password;
-		public EnumSet<PGRoles> roles;
-		
-		public UserPG(){ 
-			setPassword("");
-			setRoles(EnumSet.of(PGRoles.aims_reader));
-		}
-		public UserPG(UserPG other){ 
-			super(other);
-			setPassword(other.getPassword());
-			setRoles(other.getRoles());
-		}
-		public void setPassword(String password) {this.password = password;}
-		public String getPassword() {return this.password;}
-		public void setRoleStr(String rolestr) {
-			for (String role : rolestr.split(",")){
-				roles.add(PGRoles.valueOf(role));
-			}
-		}
-		public void setRoles(EnumSet<PGRoles> roles) { this.roles = roles;}
-		public EnumSet<PGRoles> getRoles() { return roles; }
-		public String getRoleStr() {
-			String rolestr = "";
-			for (PGRoles role : roles) {
-				rolestr += role+",";
-			}
-			return rolestr.substring(0, rolestr.length() - 1);
-		}
-		@Override
-		public List<String> getSpringRolls() {
-			List<String> springrolls = new ArrayList<>();
-			for (PGRoles role : roles) {springrolls.add(role.name());}
-			return springrolls;
-		}
-	}
-	
 	private DataSource datasource;
 	private DABConnector conn;
-	private enum PGRoles { aims_dba, aims_admin, aims_user, aims_reader; }
+
 	private List<User> user_list_clone;
 	
 	/**
@@ -91,6 +49,19 @@ public class UserReaderPostgreSQL extends UserReader {
 		
 	}
 
+	/**
+	 * Adds a user entry to the user_list and saves the result
+	 * @param user Username
+	 * @param pass Password unencrypted
+	 */
+	public void addUser(String username, String password, String roles) {
+		User user = new UserPostgreSQL();
+		user.setUserName(username);
+		((UserPostgreSQL)user).setPassword(password);
+		((UserPostgreSQL)user).setRoleStr(roles);
+		user_list.add(user);
+		saveUserList();
+	}
 	
 	/**
 	 * Get the user_list and its memberships from pg_users filtering by the role 
@@ -106,10 +77,10 @@ public class UserReaderPostgreSQL extends UserReader {
 			"and usename not like 'aims%'";
 		List<User> new_user_list = new ArrayList<>();
 		for (List<String> row : conn.executeQuery(user_query,false)) {
-			User user = new UserPG();
+			User user = new UserPostgreSQL();
 			user.setUserName(row.get(0)); 
-			((UserPG)user).setPassword(row.get(1)); 
-			((UserPG)user).setRoleStr(row.get(2));
+			((UserPostgreSQL)user).setPassword(row.get(1)); 
+			((UserPostgreSQL)user).setRoleStr(row.get(2));
 			new_user_list.add(user);
 		}
 		return new_user_list;
@@ -128,7 +99,7 @@ public class UserReaderPostgreSQL extends UserReader {
 		for (User user : user_list) {
 			//IF user not in usr_list_clone AND role is allowed THEN grant
 			if (!user_list_clone.contains(user)){
-				for (PGRoles role : ((UserPG)user).getRoles()) {
+				for (PGRoles role : ((UserPostgreSQL)user).getRoles()) {
 					String query =	String.format("grant %s to %s", role.name(), user.getUserName());
 					//System.out.println(query);
 					conn.executeQuery(query);
@@ -138,7 +109,7 @@ public class UserReaderPostgreSQL extends UserReader {
 		for (User user_clone : user_list_clone) {
 			//IF user_clone not in user_list AND role is allowed THEN revoke
 			if (!user_list.contains(user_clone)) {
-				for (PGRoles role : ((UserPG)user_clone).getRoles()) {
+				for (PGRoles role : ((UserPostgreSQL)user_clone).getRoles()) {
 					String query =	String.format("revoke %s from %s", role.name(), user_clone.getUserName());
 					//System.out.println(query);
 					conn.executeQuery(query);
@@ -152,7 +123,7 @@ public class UserReaderPostgreSQL extends UserReader {
 	public List<User> cloneUserList() {
 		List<User> new_user_list = new ArrayList<>();
 		for (User user : user_list) {
-			new_user_list.add(new UserPG((UserPG)user));
+			new_user_list.add(new UserPostgreSQL((UserPostgreSQL)user));
 		}
 		return new_user_list;
 	}

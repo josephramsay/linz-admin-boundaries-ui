@@ -1,13 +1,14 @@
-package nz.govt.linz.AdminBoundaries;
+package nz.govt.linz.AdminBoundaries.UserAdmin;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.lang.reflect.Method;
 
-import nz.govt.linz.AdminBoundaries.User.GSMethod;
+import nz.govt.linz.AdminBoundaries.UserAdmin.User.GSMethod;
+
+import java.lang.reflect.Method;
 
 /**
  * Absract class for user reading functions incl TC and PG
@@ -15,7 +16,6 @@ import nz.govt.linz.AdminBoundaries.User.GSMethod;
  *
  */
 public abstract class UserReader {
-
 	
 	protected List<User> user_list;
 	
@@ -86,7 +86,7 @@ public abstract class UserReader {
 	 */
 	private User findInUserList(String key, String value){
 		for (User user : user_list){
-			if (Objects.equals(user.getUserMethod(GSMethod.valueOf(key)),value)) {
+			if (Objects.equals(user.getUserMethod(user.matchFieldName(key)),value)) {
 				return user;
 			}
 		}
@@ -148,5 +148,19 @@ public abstract class UserReader {
 			addUser(user);
 		}
 	}
+	
+	/**
+	 * Replaces the user/pass combo in the user_list and saves.
+	 * Only adds a replacement if the original exists
+	 * @param user Username
+	 * @param pass Password unencrypted
+	 */
+	public abstract void addUser(String username,String password, String roles);
+	/*{
+		User user = findInUserList(username);
+		if (user_list.remove(user)) {
+			addUser(user);
+		}
+	}*/
 }
 

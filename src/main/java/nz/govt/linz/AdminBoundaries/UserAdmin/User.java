@@ -1,12 +1,10 @@
-package nz.govt.linz.AdminBoundaries;
+package nz.govt.linz.AdminBoundaries.UserAdmin;
 
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-
-import nz.govt.linz.AdminBoundaries.UserReaderAIMS.UserAIMS;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -16,11 +14,13 @@ import java.lang.reflect.Method;
  * @author jramsay
  *
  */
-public abstract class User {
+public abstract class User implements Comparator<User> {
 	
 	private static final Logger LOGGER = Logger.getLogger(User.class.getName());
 	
-	public enum GSMethod { Version, UserId, UserName, Email, RequiresProgress, Organisation, Role, Password; }
+	public enum GSMethod { Version, UserId, UserName, Email, RequiresProgress, Organisation, Role, Password; 
+		public String lc() {return name().toLowerCase();}
+	}
 	public enum GSOp { get, set; }
 	public enum Action { Add,Delete,Update; }
 	
@@ -45,9 +45,31 @@ public abstract class User {
 	public String getUserName() { return this.userName; }
 	public abstract List<String> getSpringRolls();
 	
-	public int compare(User other) {
-		return (new UserComparator()).compare(this,other);
+	@Override
+	public int compare(User user1, User user2) {
+		return user1.userName.compareTo(user2.userName);
 	}
+	
+	public int compareTo(User user) {
+		return compare(this,user);
+	}
+
+	@Override 
+	public boolean equals(Object obj) {
+		if (obj == null) { return false; }
+		if (!User.class.isAssignableFrom(obj.getClass())) { return false; }
+	
+		if ((this.userName == null) ? (((User) obj).userName != null) : this.compareTo((User) obj) != 0 ) { return false; }
+		
+		return true;
+	}
+	
+	@Override
+    public int hashCode() {
+        int hash = 3;
+        hash = 53 * hash + (this.userName != null ? this.userName.hashCode() : 0);
+        return hash;
+    }
 	
 	/**
 	 * Reflective getter/setter method caller
@@ -60,7 +82,7 @@ public abstract class User {
 		try {
 			Method method;
 			if (gsop == GSOp.get) {
-				method = this.getClass().getMethod("get"+gsname.name(), String.class);
+				method = this.getClass().getMethod("get"+gsname.name());
 			}
 			else {
 				method = this.getClass().getMethod("set"+gsname.name(), String.class);
@@ -88,13 +110,44 @@ public abstract class User {
 		}
 		return null;
 	}
+	
+	/**
+	 * Call the getter for this field ref
+	 * @param gsname
+	 * @return
+	 */
 	public Object getUserMethod(GSMethod gsname){
 		return callMethod(gsname, GSOp.get, null);
 	}
+	
+	/**
+	 * Call the setter for this field ref using a string arg
+	 * @param gsname
+	 * @param param
+	 * @return
+	 */
 	public Object setUserMethod(GSMethod gsname,String param){
 		return callMethod(gsname, GSOp.set, param);
 	}
 	
+	/**
+	 * Given the name of a field find a matching method ref
+	 * @param name
+	 * @return
+	 */
+	public GSMethod matchFieldName(String name) {
+		for (GSMethod gsm : GSMethod.values()) {
+			if (name.equals(gsm.lc())){return gsm;}
+		}
+		return null;
+		
+	}
+	
+	/**
+	 * Find all the getter/setter methods for this user type
+	 * @param user
+	 * @return Map of getters/setters against their respective names
+	 */
 	public static Map<String,Method> getReadMethods(User user) {
 		Map<String,Method> glist = new HashMap<>();
 		Class<? extends User> objClass= user.getClass();

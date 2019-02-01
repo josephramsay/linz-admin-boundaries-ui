@@ -1,19 +1,10 @@
 package nz.govt.linz.AdminBoundariesTest;
 
-/**
- * AdminBoundaries Test
- *
- * Copyright 2014 Crown copyright (c)
- * Land Information New Zealand and the New Zealand Government.
- * All rights reserved
- *
- * This program is released under the terms of the new BSD license. See the
- * LICENSE file for more information.
- */
+import nz.govt.linz.AdminBoundaries.UserAdmin.User;
+import nz.govt.linz.AdminBoundaries.UserAdmin.UserReader;
+import nz.govt.linz.AdminBoundaries.UserAdmin.UserReaderPostgreSQL;
+import nz.govt.linz.AdminBoundaries.UserAdmin.UserPostgreSQL;
 
-//import UserReader;
-import nz.govt.linz.AdminBoundaries.UserReader;
-import nz.govt.linz.AdminBoundaries.UserReaderPostgreSQL;
 import static org.junit.Assert.*;
 
 import java.util.List;
@@ -70,10 +61,10 @@ public class UserReaderPostgreSQL_Test {
 		
 	@Test
 	public void test_10_checkUserList() {
-		List<Map<String,String>> user_list = reader.getUserList();
+		List<User> user_list = reader.getUserList();
 		assertEquals(8,user_list.size());
-		assertEquals("aims_dba",reader.findInUserList("testuser1").get("roles"));
-		assertEquals("aims_admin",reader.findInUserList("testuser2").get("roles"));
+		assertEquals("aims_dba",((UserPostgreSQL)reader.findInUserList("testuser1")).getRoles());
+		assertEquals("aims_admin",((UserPostgreSQL)reader.findInUserList("testuser2")).getRoles());
 	}
 	
 	@Test
@@ -81,16 +72,16 @@ public class UserReaderPostgreSQL_Test {
 		String dummyuser = "dummyuser";
 		String dummypass = "dummypass";
 		String dummyrole = "aims_reader";
-		reader.addUser(dummyuser,dummypass,dummyrole);
-		List<Map<String,String>> user_list = reader.getUserList();
+		((UserReaderPostgreSQL)reader).addUser(dummyuser,dummypass,dummyrole);
+		List<User> user_list = reader.getUserList();
 		assertEquals(9,user_list.size());
-		assertEquals(reader.encrypt(dummypass),reader.findInUserList(dummyuser).get("password"));
+		assertEquals(reader.encrypt(dummypass),((UserPostgreSQL)reader.findInUserList(dummyuser)).getPassword());
 	}
 	
 	@Test
 	public void test_30_deleteUser() {
 		reader.delUser("dummyuser");
-		List<Map<String,String>> user_list = reader.getUserList();
+		List<User> user_list = reader.getUserList();
 		assertEquals(8,user_list.size());
 	}
 

@@ -19,6 +19,11 @@ import javax.servlet.*;
 import javax.servlet.http.*;
 
 import nz.govt.linz.AdminBoundaries.DABFormatterUser.TorP;
+import nz.govt.linz.AdminBoundaries.UserAdmin.User;
+import nz.govt.linz.AdminBoundaries.UserAdmin.UserReader;
+import nz.govt.linz.AdminBoundaries.UserAdmin.UserReaderAIMS;
+import nz.govt.linz.AdminBoundaries.UserAdmin.UserReaderPostgreSQL;
+import nz.govt.linz.AdminBoundaries.UserAdmin.UserReaderTomcat;
 
 /**
  * Servlet to allow user to edit python dab config file without redeploying
@@ -121,18 +126,55 @@ public class DABServletUserAdmin extends DABServlet {
 	 * @param params
 	 */
 	private void processActions(Map<String, Map<String,String>> params) {
-		UserReader reader = null;
-		Map<String, String> upra = null;
 		if (params.containsKey("tc")) {
-			reader = urtc;
-			upra = params.get("tc");
+			processTCPG(urtc,params.get("tc"));
+			urtc.save();
 		}
 		else if (params.containsKey("pg")) {
-			reader = urpg;
-			upra = params.get("pg");
+			processTCPG(urpg,params.get("pg"));
+			urpg.save();
 		}
-		else return;
-
+		else if (params.containsKey("aa")) {
+			processAIMS(uraa,params.get("aa"));
+			uraa.save();
+		}
+	}
+	
+	private void processAIMS(UserReaderAIMS reader,Map<String, String> upra) {
+		String ver,uid,uname,org,role,reqprg,email,action;
+		ver = uid = uname = org = role = reqprg = email = action = null;
+		if (upra.containsKey("uname"))  {uname  = upra.get("uname");}
+		if (upra.containsKey("role"))   {role   = upra.get("role");}
+		if (upra.containsKey("uid"))    {uid    = upra.get("uid");}
+		if (upra.containsKey("ver"))    {ver    = upra.get("ver");}
+		if (upra.containsKey("reqprg")) {reqprg = upra.get("reqprg");}
+		if (upra.containsKey("email"))  {email  = upra.get("email");}
+		if (upra.containsKey("org"))    {org    = upra.get("org");}
+		if (upra.containsKey("action")) {action = upra.get("act");}
+		//ADD : action=save,user!=existing,role!=null,pass!=null
+		//EDIT : action=save,user==existing,role!=null,pass!=null
+		if ("save".equals(action) && uname != null && role != null && org != null && reqprg != null && email != null) { 
+			if (reader.userExists(uname) && uid != null && ver != null){
+				LOGGER.info("Modify user "+uname);
+				reader.editUser(ver,uid,uname,email,reqprg,org,role);
+			}
+			else {
+				LOGGER.info("Add user "+uname);
+				reader.addUser(uname,email,reqprg,org,role);
+			}
+		}
+		//DEL : action=delete,user=existing
+		else if("delete".equals(action) && uname != null && reader.userExists(uname)) {
+			LOGGER.info("Delete user "+uname);
+			reader.delUser(uname);//ver,uid);
+		}
+		else {
+			LOGGER.warning("Cannot match ["+uname+","+role+","+action+"]");
+			return;
+		}
+	}
+	
+	private void processTCPG(UserReader reader,Map<String, String> upra) {
 		String user,pass,role,action;
 		user = pass = role = action = null;
 		if (upra.containsKey("user")) {user   = upra.get("user");}
@@ -148,8 +190,7 @@ public class DABServletUserAdmin extends DABServlet {
 			}
 			else {
 				LOGGER.info("Add user "+user);
-				//TODO Fix adduser
-				//reader.addUser(user,pass,role);
+				reader.addUser(user,pass,role);
 			}
 		}
 		//DEL : action=delete,user=existing
@@ -161,6 +202,5 @@ public class DABServletUserAdmin extends DABServlet {
 			LOGGER.warning("Cannot match ["+user+","+role+","+pass+","+action+"]");
 			return;
 		}
-		reader.save();
 	}
 }

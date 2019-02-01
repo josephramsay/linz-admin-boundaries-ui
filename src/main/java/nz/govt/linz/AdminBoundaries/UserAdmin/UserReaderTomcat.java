@@ -1,4 +1,4 @@
-package nz.govt.linz.AdminBoundaries;
+package nz.govt.linz.AdminBoundaries.UserAdmin;
 
 import java.io.File;
 import java.io.IOException;
@@ -7,7 +7,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.List;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -28,53 +27,10 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-import nz.govt.linz.AdminBoundaries.User.GSMethod;
+import nz.govt.linz.AdminBoundaries.UserAdmin.User.GSMethod;
 
 public class UserReaderTomcat extends UserReader {
-	
-	public class UserTC extends User {
-		public String password;
-		public EnumSet<TCRoles> roles;
-		
-		public UserTC(){ 
-			setPassword("");
-			setRoles(EnumSet.of(TCRoles.AIMS));
-		}
-		public UserTC(UserTC other){ 
-			super(other);
-			setPassword(other.getPassword());
-			setRoles(other.getRoles());
-		}
-		
-		public void setPassword(String password) {this.password = password;}
-		public String getPassword() {return this.password;}
-		public void setRoleStr(String rolestr) {
-			for (String role : rolestr.split(",")){
-				roles.add(TCRoles.valueOf(role.replace("-","_")));
-			}
-		}
-		public EnumSet<TCRoles> getRoles(){return roles;}
-		public void setRoles(EnumSet<TCRoles> roles) { this.roles = roles;}
-		
-		public String getRoleStr() {
-			String rolestr = "";
-			for (TCRoles role : roles) {
-				rolestr += role._name()+",";
-			}
-			return rolestr.substring(0, rolestr.length() - 1);
-		}
-		@Override
-		public List<String> getSpringRolls() {
-			List<String> springrolls = new ArrayList<>();
-			for (TCRoles role : roles) {springrolls.add(role.name());}
-			return springrolls;
-		}
-	}
-	
-	private enum TCRoles { AIMS,manager_gui,manager_script,manager_jmx,manager_status,admin_gui,admin_script; 
-		public String _name() {return name().replace("_","-"); }
-		}
-	
+
 	private static final String USRP = "/conf/tomcat-users.xml";
 	private static final String catalina_base_path = System.getProperty( "catalina.base" );
 	private static final String test_base_path = "..";
@@ -104,6 +60,21 @@ public class UserReaderTomcat extends UserReader {
 		load();
 	}
 
+	
+	/**
+	 * Adds a user entry to the user_list and saves the result
+	 * @param user Username
+	 * @param pass Password unencrypted
+	 */
+	public void addUser(String username, String password, String roles) {
+		User user = new UserTomcat();
+		user.setUserName(username);
+		((UserTomcat)user).setPassword(password);
+		((UserTomcat)user).setRoleStr(roles);
+		user_list.add(user);
+		saveUserList();
+	}
+	
 	/**
 	 * Load the tomcat-users file into local doc object and read a map of the user entries
 	 * @param tomcat_file File object for tomcat-users.xml
@@ -161,8 +132,8 @@ public class UserReaderTomcat extends UserReader {
 		for (User user : user_list) {
 			Element new_element = user_doc.createElement("user");
 			new_element.setAttribute("username",user.getUserName());
-			new_element.setAttribute("password",((UserTC)user).getPassword());
-			new_element.setAttribute("roles",((UserTC)user).getRoleStr());
+			new_element.setAttribute("password",((UserTomcat)user).getPassword());
+			new_element.setAttribute("roles",((UserTomcat)user).getRoleStr());
 			root_element.appendChild(new_element);
 			user_doc.normalize();
 			//root_element.insertBefore(new_element, refChild)  appendChild(new_element);
@@ -190,7 +161,7 @@ public class UserReaderTomcat extends UserReader {
 		NodeList user_nl = user_doc.getDocumentElement().getElementsByTagName("user");
 		for (int i = 0; i < user_nl.getLength(); i++) {
 			Node n = user_nl.item(i);
-			User user = new UserTC();
+			User user = new UserTomcat();
 			for (String upr : Arrays.asList("username","password","roles")) {
 				user.setUserMethod(GSMethod.valueOf(upr), n.getAttributes().getNamedItem(upr.toLowerCase()).getNodeValue());
 			}
@@ -251,7 +222,7 @@ public class UserReaderTomcat extends UserReader {
 	public List<User> cloneUserList() {
 		List<User> new_user_list = new ArrayList<>();
 		for (User user : user_list) {
-			new_user_list.add(new UserTC((UserTC)user));
+			new_user_list.add(new UserTomcat((UserTomcat)user));
 		}
 		return new_user_list;
 	}

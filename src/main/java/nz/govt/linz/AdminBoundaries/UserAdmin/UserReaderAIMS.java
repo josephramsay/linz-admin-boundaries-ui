@@ -40,7 +40,19 @@ public class UserReaderAIMS extends UserReader {
 	
 	private static final Logger LOGGER = Logger.getLogger(UserReaderAIMS.class.getName());
 	
-	private static final String user_ref_base = "http://<SVR>:8080/aims/api/admin/users/";
+	private static final String user_ref_base = "http://<SVR>:8080/aims/api/admin/users";
+	
+	/** Simple pair class for actions put/post and their json payloads */
+	class ActionPayload {
+		public String plus;
+		public Action action;
+		public JsonObject payload;
+		ActionPayload(String plus,Action action, JsonObject payload){
+			this.plus = plus;
+			this.action = action;
+			this.payload = payload;
+		}
+	}
 	
 	private String aims_url;
 	private JsonObject aims_json_obj;
@@ -127,6 +139,8 @@ public class UserReaderAIMS extends UserReader {
 		user.setRequiresProgress(requiresProgress);
 		user.setOrganisation(organisation);
 		user.setRole(AARoles.valueOf(role));
+		addUser(user);
+		/*
 		if (!user_list.contains(user)) {
 			user_list.add(user);
 		}
@@ -136,6 +150,7 @@ public class UserReaderAIMS extends UserReader {
 			user_list.remove(orig);
 			user_list.add(orig);
 		}
+		*/
 		saveUserList();
 	}
 	
@@ -154,7 +169,9 @@ public class UserReaderAIMS extends UserReader {
 	 */
 	public void delUser(String uname) {
 		User user = findInUserList(uname);
-		user_list.remove(user);
+		delUser(user);
+		//user_list.remove(user);
+		saveUserList();
 	}
 	
 	public void editUser(String ver, String uid, String uname, String email, String reqprg, String org, String role) {
@@ -166,8 +183,8 @@ public class UserReaderAIMS extends UserReader {
 		user.setRequiresProgress(reqprg);
 		user.setOrganisation(org);
 		user.setRole(AARoles.valueOf(role));
-		//deluser...
-		user_list.add(user);
+		//user_list.add(user);
+		editUser(user);
 	}
 	
 	
@@ -184,51 +201,58 @@ public class UserReaderAIMS extends UserReader {
 	public void save() {
 
 		try {
-			URL url = new URL(aims_url);
-			HttpURLConnection uc = (HttpURLConnection) url.openConnection();
-			setParams(uc);
-			for (JsonObject payload : buildPayloads()){
+			for (ActionPayload ap : buildPayloadList()){
+				URL url = new URL(aims_url+ap.plus);
+				HttpURLConnection uc = (HttpURLConnection) url.openConnection();
+				setParams(uc,ap.action.ppd);
 				try (JsonWriter writer = Json.createWriter(uc.getOutputStream())) {
-					writer.writeObject(payload);
+					writer.writeObject(ap.payload);
+				}
+				catch (Exception e) {
+					LOGGER.warning("HTTP write failed with "+e);
 				}
 				int rc = uc.getResponseCode();
-				System.out.println(rc);
+				System.out.println("**RC** "+rc);
+				if (rc<200 || rc>299) {
+					LOGGER.warning("HTTP write failed with "+uc.getResponseMessage());
+					//throw new Exception(uc.getResponseMessage().toString());
+				}
 			}
 		}
 		catch (IOException ioe) {
 			System.err.println(ioe);
 		}
-		user_list = readUserList();
+		load();
 	}
 
-	private List<JsonObject> buildPayloads() {
-		List<JsonObject> pd_list = new ArrayList<>();
+	private List<ActionPayload> buildPayloadList() {
+		List<ActionPayload> ap_list = new ArrayList<>();
 		//if active has X not in clone : add X
 		for (User user : user_list) {
-			System.out.println("--------------------\nTESTING :: "+user.userName);
 			if (!user_list_clone.contains(user)) {
-				pd_list.add(constructPayload(user,Action.Add));
+				ap_list.add(buildPayload(user,Action.Add));
 			}
 		}
 		//if clone has X not in active : del X
 		for (User user_clone : user_list_clone) {
 			if (!user_list.contains(user_clone)) {
-				pd_list.add(constructPayload(user_clone,Action.Delete));
+				ap_list.add(buildPayload(user_clone,Action.Delete));
 			}
 		}
 		//if active X haschanged from clone X : edit X
 		for (User user_clone : user_list_clone) {
 			for (User user : user_list) {
 				if (((UserAIMS)user).hasChanged((UserAIMS)user_clone)) {
-					pd_list.add(constructPayload(user,Action.Update));
+					ap_list.add(buildPayload(user,Action.Update));
 				}
 			}
 		}
-		return pd_list;
+		return ap_list;
 		
 	}
 	
-	private JsonObject constructPayload(User user, Action action) {
+	private ActionPayload buildPayload(User user, Action action) {
+		String plus = "";
 		JsonObject juser = null;
 		switch(action) {
 		case Add: 
@@ -258,10 +282,12 @@ public class UserReaderAIMS extends UserReader {
 				.build();
 			break;
 		}
-		System.out.println(juser);
-		return juser;
+		
+		if (Action.Add!=action) { plus = "/"+String.valueOf(((UserAIMS)user).getUserId()); }
+		System.out.println("JPayload - "+action.ppd+"-["+plus+"]-"+juser);
+		return new ActionPayload(plus,action,juser);
 	}
-	private void setParams(HttpURLConnection uc) {
+	private void setParams(HttpURLConnection uc,String ppd) {
 		try {
 			uc.setConnectTimeout(5000);
 			uc.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
@@ -269,40 +295,14 @@ public class UserReaderAIMS extends UserReader {
 			uc.setChunkedStreamingMode(0);
 			uc.setDoOutput(true);
 			uc.setDoInput(true);
-			uc.setRequestMethod("POST");
+			uc.setRequestMethod(ppd);
 		} catch (ProtocolException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
 	}
-	private void setCreds() {
-		JsonObject credsx = Json.createObjectBuilder()
-			.add("auth", Json.createObjectBuilder()
-				.add("tenantName", "adm")
-				.add("passwordCredentials", Json.createObjectBuilder()
-					.add("username", "John")
-					.add("password", "Smith")))
-			.build();
-		//return creds;
-		JsonObject creds = Json.createObjectBuilder()
-				.add("authentication", Json.createObjectBuilder()
-						.add("username", "<u>")
-						.add("password", "<p>"))
-					.build();
-		//return creds;
-		/*
-		String[] u_p = readCreds().get(0).split(":",2);
-		System.out.println(u_p[0]+"//"+u_p[1]);
-		Authenticator.setDefault (new Authenticator() { 
-		    protected PasswordAuthentication getPasswordAuthentication() {
-		        return new PasswordAuthentication (u_p[0], u_p[1].toCharArray());
-		    }
-		});
-		*/
-	}
-	
-	
+
 	/**
 	 * Rewrites the user_doc by deleting all existing users and replacing them with the users saved in the user_list
 	 */

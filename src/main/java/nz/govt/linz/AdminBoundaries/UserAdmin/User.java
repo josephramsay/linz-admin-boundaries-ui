@@ -22,7 +22,10 @@ public abstract class User implements Comparator<User> {
 		public String lc() {return name().toLowerCase();}
 	}
 	public enum GSOp { get, set; }
-	public enum Action { Add,Delete,Update; }
+	public enum Action { Add("POST"),Delete("DELETE"),Update("PUT"); 
+		String ppd;
+		Action(String ppd){this.ppd = ppd;}
+	}
 	
 	public String userName;
 	
@@ -62,6 +65,12 @@ public abstract class User implements Comparator<User> {
 		if ((this.userName == null) ? (((User) obj).userName != null) : this.compareTo((User) obj) != 0 ) { return false; }
 		
 		return true;
+	}
+	
+	/** Merge user_new into user_old by replacing where changed */
+	public void merge(User user) {
+		//This only really applies in the AIMS case
+		this.setUserName(((UserAIMS)user).getUserName());
 	}
 	
 	@Override
@@ -159,6 +168,13 @@ public abstract class User implements Comparator<User> {
 			}
 		}
 		return glist;
+	}
+	
+	/**
+	 * default string rep
+	 */
+	public String toString() {
+		return "User:"+userName;
 	}
 
 }

@@ -28,6 +28,16 @@ public class UserPostgreSQL extends User {
 			roles.add(PGRoles.valueOf(role));
 		}
 	}
+	
+	@Override
+	public void merge(User user) {
+		//super.merge(user);
+		//role add extra to set
+		this.setRoles(((UserPostgreSQL)user).getRoles());
+		//cant change password in PG because all we're doing re AIMS is adding/deleting fro AIMS groups
+		//this.setPassword(((UserPostgreSQL)user).getPassword());
+	}
+	
 	public String getRoleStr() {
 		String rolestr = "";
 		for (PGRoles role : roles) {
@@ -40,5 +50,12 @@ public class UserPostgreSQL extends User {
 		List<String> springrolls = new ArrayList<>();
 		for (PGRoles role : roles) {springrolls.add(role.name());}
 		return springrolls;
+	}
+	
+	/**
+	 * default string rep
+	 */
+	public String toString() {
+		return "UserPostgreSQL:"+userName;
 	}
 }

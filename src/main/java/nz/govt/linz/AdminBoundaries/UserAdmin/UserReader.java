@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.logging.Logger;
 
 import nz.govt.linz.AdminBoundaries.UserAdmin.User.GSMethod;
 
@@ -16,6 +17,8 @@ import java.lang.reflect.Method;
  *
  */
 public abstract class UserReader {
+	
+	private static final Logger LOGGER = Logger.getLogger( UserReader.class.getName() );
 	
 	protected List<User> user_list;
 	
@@ -122,10 +125,42 @@ public abstract class UserReader {
 		return findInUserList(username) != null;
 	}
 
+	/* user obj functions */
 	public void addUser(User user) {
-		user_list.add(user);
+		if (user_list.contains(user)) {
+			LOGGER.warning("Cannot add user "+user+". Already exists. Updating instead.");
+			editUser(user);
+		}
+		else {
+			user_list.add(user);
+			saveUserList();
+		}
+	}
+	public void delUser(User user) {
+		if (user_list.contains(user)) {
+			user_list.remove(user);
+			saveUserList();
+		}
+		else {
+			LOGGER.warning("Cannot delete user "+user+". Does not exist");
+		}
+	}
+	
+	public void editUser(User user) {
+		User user_old = user_list.get(user_list.indexOf(user));
+		user_old.merge(user);
 		saveUserList();
 	}
+
+	/* user string functions */
+	
+	/**
+	 * Replaces the user/pass combo in the user_list and saves.
+	 * Only adds a replacement if the original exists
+	 * @param user Username
+	 * @param pass Password unencrypted
+	 */
+	public abstract void addUser(String username,String password, String roles);
 	
 	/**
 	 * Removes the selected user from the user_list and saves
@@ -134,7 +169,7 @@ public abstract class UserReader {
 	public void delUser(String username) {
 		user_list.remove(findInUserList(username));
 		saveUserList();
-	}	
+	}
 	
 	/**
 	 * Replaces the user/pass combo in the user_list and saves.
@@ -148,19 +183,5 @@ public abstract class UserReader {
 			addUser(user);
 		}
 	}
-	
-	/**
-	 * Replaces the user/pass combo in the user_list and saves.
-	 * Only adds a replacement if the original exists
-	 * @param user Username
-	 * @param pass Password unencrypted
-	 */
-	public abstract void addUser(String username,String password, String roles);
-	/*{
-		User user = findInUserList(username);
-		if (user_list.remove(user)) {
-			addUser(user);
-		}
-	}*/
 }
 

@@ -4,8 +4,14 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.logging.Logger;
+
+import nz.govt.linz.AdminBoundaries.DABServletSummary;
 
 public class UserAIMS extends User {
+	
+	private static final Logger LOGGER = Logger.getLogger( UserAIMS.class.getName() );
+	
 	public int version,userId;
 	public String email;
 	public boolean requiresProgress;
@@ -15,11 +21,25 @@ public class UserAIMS extends User {
 	enum AARoles { Administrator,Publisher,Reviewer,Follower; }
 	
 	enum Organisation { 
-		LINZ("linz.govt.nz"), 
-		e_Spatial("e-spatial.co.nz"); 
-		private final String domain;
-		Organisation(String domain){ this.domain = domain;}
-		private String _name() {return name().replace("_","-");}
+		LINZ("linz.govt.nz","LINZ"), 
+		e_Spatial("e-spatial.co.nz","e-Spatial"),
+		NZFS("fire.org.nz","NZFS"),
+		Statistics_NZ("stats.govt.nz","Statistics NZ");
+		private final String domain, db_name;
+		Organisation(String domain, String db_name){ 
+			this.domain = domain;
+			this.db_name = db_name;
+		}
+		static Organisation translate(String org){
+		    switch (org) {
+		    case "LINZ": return LINZ;
+		    case "e-Spatial": return e_Spatial;
+		    case "NZFS": return NZFS;
+		    case "Statistics NZ": return Statistics_NZ;
+		    default: throw new IllegalArgumentException(String.valueOf(org));
+		    }
+		}
+		private String _name() { return db_name; }
 	}
 	
 	public UserAIMS(String userName) {
@@ -54,7 +74,7 @@ public class UserAIMS extends User {
 	public void setRequiresProgress(String requiresProgress) { this.requiresProgress = Boolean.valueOf(requiresProgress); }
 	public void setRequiresProgress(boolean requiresProgress) { this.requiresProgress = requiresProgress; }
 	public boolean getRequiresProgress() { return this.requiresProgress; }
-	public void setOrganisation(String  organisation) { this.organisation = Organisation.valueOf(organisation.replace("-","_")); }
+	public void setOrganisation(String  organisation) { this.organisation = Organisation.translate(organisation); }
 	public String getOrganisation() { return organisation._name(); }
 	public void setEmail(String email) { this.email = email != null && email != "" ? email : constructEmail(); }
 	public String getEmail() { return this.email != null && this.email != "" ? this.email : constructEmail(); }
@@ -64,6 +84,7 @@ public class UserAIMS extends User {
 	public void setRole(AARoles role) { this.roles = EnumSet.of(role);}
 	public void setRole(String role) { this.roles = EnumSet.of(AARoles.valueOf(role));}
 	public AARoles getRole() { return (AARoles) roles.toArray()[0]; }
+	public String getRoleStr() { return getRole().name(); }
 	@Override
 	public List<String> getSpringRolls() {
 		List<String> springrolls = new ArrayList<>();
@@ -74,19 +95,21 @@ public class UserAIMS extends User {
 	/**
 	 * The rules for merge are;
 	 * dont bother with version and userid, they're set in the api 
-	 * username must be the same
+	 * username must be the same? maybe not if user id is the pkey 
 	 * orig<-copy if orig is null
 	 * change org and email
 	 * add role to enumset<role>. for useraims which has only one role change it
 	 * @param user
 	 */
-	public void merge(UserAIMS user) {
+	@Override
+	public void merge(User user) {
+		super.merge(user);
 		//roll add extra to set
-		this.setRole(user.getRole());
+		this.setRole(((UserAIMS)user).getRole());
 		//change to new org
-		this.setOrganisation(user.getOrganisation());
+		this.setOrganisation(((UserAIMS)user).getOrganisation());
 		//change to new email
-		this.setEmail(user.getEmail());
+		this.setEmail(((UserAIMS)user).getEmail());
 	}
 	
 	private String constructEmail() {
@@ -121,12 +144,12 @@ public class UserAIMS extends User {
 		//if (super.compareTo((User)obj) != 0 ) { return false; }
 		//Minimal check of username 
 		if (!this.userName.equals( ((UserAIMS)obj).userName )) { 
-			System.out.println("NOT EQUAL :: "+this.userName+"/"+((UserAIMS)obj).userName);
+			LOGGER.finest("NOT EQUAL :: "+this.userName+"/"+((UserAIMS)obj).userName);
 			return false; 
 		}
 		//Comprehensive equals() using compareTo() to compare each object field
 		//if (this.compareTo((UserAIMS) obj) != 0 ) { return false; }
-		System.out.println("EQUAL :: "+this.userName+"/"+((UserAIMS)obj).userName);
+		LOGGER.finest("EQUAL :: "+this.userName+"/"+((UserAIMS)obj).userName);
 		return true;
 	}	
 	
@@ -159,5 +182,12 @@ public class UserAIMS extends User {
 		}
 		return false;
 		
+	}
+	
+	/**
+	 * default string rep
+	 */
+	public String toString() {
+		return "UserAIMS:"+userName;
 	}
 }

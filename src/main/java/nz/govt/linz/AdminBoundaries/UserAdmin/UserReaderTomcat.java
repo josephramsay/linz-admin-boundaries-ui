@@ -211,7 +211,7 @@ public class UserReaderTomcat extends UserReader {
 			handler.setIterations(UserReaderTomcat.ITER);
 			handler.setSaltLength(UserReaderTomcat.SALT);
 			handler.setEncoding(UserReaderTomcat.ENC.name());
-			return handler.mutate(plain); 
+			return handler.mutate(plain);
 		} catch (NoSuchAlgorithmException nsae) {
 			nsae.printStackTrace();
 		}

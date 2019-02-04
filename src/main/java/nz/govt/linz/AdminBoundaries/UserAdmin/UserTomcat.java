@@ -26,8 +26,7 @@ public class UserTomcat extends User {
 		setPassword(password);
 		setRoles(EnumSet.of(TCRoles.valueOf(roles)));
 	}
-	
-	
+
 	public void setPassword(String password) {this.password = password;}
 	public String getPassword() {return this.password;}
 	public void setRoleStr(String rolestr) {
@@ -37,6 +36,19 @@ public class UserTomcat extends User {
 	}
 	public EnumSet<TCRoles> getRoles(){return roles;}
 	public void setRoles(EnumSet<TCRoles> roles) { this.roles = roles;}
+	
+	
+	/**
+	 * merge tomcat user can include role add/del and password changes
+	 */
+	@Override
+	public void merge(User user) {
+		//super.merge(user);
+		//role add extra to set
+		this.setRoles(((UserTomcat)user).getRoles());
+		//change to new password
+		this.setPassword(((UserTomcat)user).getPassword());
+	}
 	
 	public String getRoleStr() {
 		String rolestr = "";
@@ -50,5 +62,12 @@ public class UserTomcat extends User {
 		List<String> springrolls = new ArrayList<>();
 		for (TCRoles role : roles) {springrolls.add(role.name());}
 		return springrolls;
+	}
+	
+	/**
+	 * default string rep
+	 */
+	public String toString() {
+		return "UserTomcat:"+userName;
 	}
 }

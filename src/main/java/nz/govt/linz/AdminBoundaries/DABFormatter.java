@@ -13,6 +13,7 @@ package nz.govt.linz.AdminBoundaries;
 
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -26,6 +27,8 @@ import java.util.LinkedHashMap;
  *
  */
 public class DABFormatter {
+	
+	private static final Logger LOGGER = Logger.getLogger(DABFormatter.class.getName());
 	
 	/** Main function button text array*/
 	private static Map<String,String> lmtr;
@@ -82,6 +85,8 @@ public class DABFormatter {
 	    table += "<table>";
 	    table += "<caption>"+tname+"</caption>";
 	    table += "<thead><tr>";
+	    LOGGER.warning("SZ"+result.size());
+	    LOGGER.warning("H00"+result.get(0).get(0));
 	    List<String> head = result.get(0);
 	    for (String cell : head) {
 	    	table += "<th>" +  cell + "</th>";

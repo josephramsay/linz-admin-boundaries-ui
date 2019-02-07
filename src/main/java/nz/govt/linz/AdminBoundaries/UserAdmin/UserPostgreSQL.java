@@ -8,11 +8,13 @@ public class UserPostgreSQL extends User {
 	public String password;
 	public EnumSet<PGRoles> roles;
 	
-	enum PGRoles { aims_dba, aims_admin, aims_user, aims_reader; }
+	public enum PGRoles { aims_dba, aims_admin, aims_user, aims_reader; }
+	
+	public enum GSMethod { UserName, Password, Roles; }
 	
 	public UserPostgreSQL(){ 
 		setPassword("");
-		setRoles(EnumSet.of(PGRoles.aims_reader));
+		setRoles(EnumSet.noneOf(PGRoles.class));
 	}
 	public UserPostgreSQL(UserPostgreSQL other){ 
 		super(other);
@@ -21,7 +23,9 @@ public class UserPostgreSQL extends User {
 	}
 	public void setPassword(String password) {this.password = password;}
 	public String getPassword() {return this.password;}
-	public void setRoles(EnumSet<PGRoles> roles) { this.roles = roles;}
+	public void setRoles(EnumSet<PGRoles> roles) { this.roles = roles; }
+	public void setRole(PGRoles role) { this.roles.add(role); }
+	public void mergeRoles(EnumSet<PGRoles> roles) { this.roles.addAll(roles); }
 	public EnumSet<PGRoles> getRoles() { return roles; }
 	public void setRoleStr(String rolestr) {
 		for (String role : rolestr.split(",")){
@@ -33,7 +37,7 @@ public class UserPostgreSQL extends User {
 	public void merge(User user) {
 		//super.merge(user);
 		//role add extra to set
-		this.setRoles(((UserPostgreSQL)user).getRoles());
+		this.mergeRoles(((UserPostgreSQL)user).getRoles());
 		//cant change password in PG because all we're doing re AIMS is adding/deleting fro AIMS groups
 		//this.setPassword(((UserPostgreSQL)user).getPassword());
 	}

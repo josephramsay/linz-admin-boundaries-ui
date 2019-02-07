@@ -52,7 +52,7 @@ public class DABServletUserAdmin extends DABServlet {
 
 		urtc = new UserReaderTomcat();
 		urpg = new UserReaderPostgreSQL();
-		uraa = new UserReaderAIMS();//getServletContext());
+		uraa = new UserReaderAIMS(reader);//getServletContext());
 	}
 
 
@@ -90,13 +90,13 @@ public class DABServletUserAdmin extends DABServlet {
 		List<User> tomcat_userlist = urtc.readUserList();
 		List<User> postgres_userlist = urpg.readUserList();
 		List<User> aims_userlist = uraa.readUserList();
-		
+
 		String users_tc = DABFormatter.formatTable(
-			"Tomcat Users",UserReader.transformUserList(tomcat_userlist));
+			"Tomcat Users",urtc.transformUserList(tomcat_userlist));
 		String users_pg = DABFormatter.formatTable(
-			"PostgreSQL Users",UserReader.transformUserList(postgres_userlist));
+			"PostgreSQL Users",urpg.transformUserList(postgres_userlist));
 		String users_aa = DABFormatter.formatTable(
-			"AIMS Users",UserReader.transformUserList(aims_userlist));
+			"AIMS Users",uraa.transformUserList(aims_userlist));
 
 		String userform_tc = DABFormatterUser.formatUserForm(
 			TorP.Tomcat,tomcat_userlist);

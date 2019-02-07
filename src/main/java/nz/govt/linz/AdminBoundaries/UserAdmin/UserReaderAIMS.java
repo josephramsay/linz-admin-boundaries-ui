@@ -4,29 +4,30 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.Authenticator;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.PasswordAuthentication;
 import java.net.ProtocolException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
 import javax.json.JsonWriter;
-import javax.json.stream.JsonGenerationException;
 
-import nz.govt.linz.AdminBoundaries.DABServletUserAdmin;
+import nz.govt.linz.AdminBoundaries.DABIniReader;
 import nz.govt.linz.AdminBoundaries.UserAdmin.User.Action;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserAIMS.AARoles;
+import nz.govt.linz.AdminBoundaries.UserAdmin.UserAIMS.GSMethod;
 
 //import org.apache.catalina.realm.UserDatabaseRealm;
 //
@@ -40,7 +41,7 @@ public class UserReaderAIMS extends UserReader {
 	
 	private static final Logger LOGGER = Logger.getLogger(UserReaderAIMS.class.getName());
 	
-	private static final String user_ref_base = "http://<SVR>:8080/aims/api/admin/users";
+	public static final String user_ref_base = "http://<SVR>:8080/aims/api/admin/users";
 	
 	/** Simple pair class for actions put/post and their json payloads */
 	class ActionPayload {
@@ -57,45 +58,28 @@ public class UserReaderAIMS extends UserReader {
 	private String aims_url;
 	private JsonObject aims_json_obj;
 	private List<User> user_list_clone;
-	
-	/**
-	 * Null constructor using default config file location 
-	 */
-	public UserReaderAIMS(){
-		this(user_ref_base.replace("<SVR>",readCreds().get(1).split(":",2)[1]));
-	}
 
+	public UserReaderAIMS(DABIniReader reader){
+		this(user_ref_base.replace("<SVR>",reader.get("api", "host")),
+			reader.get("api", "user"),
+			reader.get("api", "password"));
+	}
 	/**
 	 * url constructor inits API access to aims user db
 	 * @param procarg
 	 */
-	public UserReaderAIMS(String _aims_url){
+	public UserReaderAIMS(String _aims_url, String u, String p){
 		aims_url =  _aims_url;
-		setDefAuth();
+		setDefAuth(u,p);
 		load();
 	}
 	
-	private void setDefAuth() {
-		String[] u_p = readCreds().get(0).split(":",2);
-		System.out.println(u_p[0]+"//"+u_p[1]);
+	private void setDefAuth(String u, String p) {
 		Authenticator.setDefault (new Authenticator() {
 		    protected PasswordAuthentication getPasswordAuthentication() {
-		        return new PasswordAuthentication (u_p[0], u_p[1].toCharArray());
+		        return new PasswordAuthentication (u,p.toCharArray());
 		    }
 		});
-	}
-	
-	private static List<String> readCreds() { 
-		List<String> lines = new ArrayList<String>();
-		try {
-			String line;
-			BufferedReader reader = new BufferedReader(new FileReader("tempdat"));
-			while ((line = reader.readLine()) != null) { lines.add(line);}
-			reader.close();
-		}
-		catch (IOException ioe) {}
-		return lines;//.get(0).split(":",2);
-		
 	}
 
 	/**
@@ -104,7 +88,9 @@ public class UserReaderAIMS extends UserReader {
 	 */
 	@Override
 	public void load() {
+		LOGGER.info("Fetching "+aims_url);
 		aims_json_obj = getJO(aims_url);
+		LOGGER.info("AJO "+aims_json_obj);
 		user_list = readUserList();
 		user_list_clone = cloneUserList();
 
@@ -119,8 +105,11 @@ public class UserReaderAIMS extends UserReader {
 			reader.close();
 			return jobj;
 		}
+		catch (MalformedURLException mue) {
+			LOGGER.severe("Unable to fetch "+urlstr+". "+mue);
+		}
 		catch (IOException ioe) {
-			System.err.println(ioe);
+			LOGGER.severe("Unable to connect to API. "+ioe);
 		}
 		return null;
 	}
@@ -339,7 +328,6 @@ public class UserReaderAIMS extends UserReader {
 		return user_list_new;
 
 	}
-
 
 	/** Simple tostring */
 	public String toString(){

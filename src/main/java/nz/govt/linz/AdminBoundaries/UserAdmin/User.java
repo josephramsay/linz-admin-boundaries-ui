@@ -1,10 +1,13 @@
 package nz.govt.linz.AdminBoundaries.UserAdmin;
 
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+
+import nz.govt.linz.AdminBoundaries.UserAdmin.UserAIMS.Organisation;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -18,9 +21,30 @@ public abstract class User implements Comparator<User> {
 	
 	private static final Logger LOGGER = Logger.getLogger(User.class.getName());
 	
-	public enum GSMethod { Version, UserId, UserName, Email, RequiresProgress, Organisation, Role, Password; 
-		public String lc() {return name().toLowerCase();}
-	}
+//	public enum GSMethod { Version, UserId, UserName, Email, RequiresProgress, Organisation, Role, Roles, RoleStr, Password;		
+//		public String lc() {return name().toLowerCase();}
+//		/**
+//		 * Given a string 
+//		 * @param gsm
+//		 * @return
+//		 */
+//		static GSMethod translate(String gsm){
+//		    switch (gsm) {
+//		    case "version": return Version;
+//		    case "userid": return UserId;
+//		    case "username": return UserName;
+//		    case "email": return Email;
+//		    case "requiresprogress": return RequiresProgress;
+//		    case "organisation": return Organisation;
+//		    case "role": return Role;
+//		    case "roles": return Roles;
+//		    case "rolestr": return RoleStr;
+//		    case "password": return Password;
+//		    default: throw new IllegalArgumentException(String.valueOf(gsm));
+//		    }
+//		}
+//	}
+	
 	public enum GSOp { get, set; }
 	public enum Action { Add("POST"),Delete("DELETE"),Update("PUT"); 
 		String ppd;
@@ -80,6 +104,22 @@ public abstract class User implements Comparator<User> {
         return hash;
     }
 	
+	
+	Object invokeMethod(Method method) {
+		try {
+			return method.invoke(this);
+		} catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalArgumentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvocationTargetException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
+	}
 	/**
 	 * Reflective getter/setter method caller
 	 * @param gsname
@@ -87,23 +127,22 @@ public abstract class User implements Comparator<User> {
 	 * @param param
 	 * @return
 	 */
-	private Object callMethod(GSMethod gsname, GSOp gsop, String param){
+	private Object callMethod(String gsname, GSOp gsop, String param){
 		try {
-			Method method;
 			if (gsop == GSOp.get) {
-				method = this.getClass().getMethod("get"+gsname.name());
+				Method method = this.getClass().getMethod("get"+gsname);
+				return method.invoke(this);
 			}
 			else {
-				method = this.getClass().getMethod("set"+gsname.name(), String.class);
+				Method method = this.getClass().getMethod("set"+gsname, String.class);
+				return method.invoke(this,param);
 			}
-			
-			return method.invoke(this);
 		} 
 		catch (SecurityException se) { 
-			LOGGER.warning("Error calling geter method" + se);
+			LOGGER.warning("Error calling "+gsop.name()+"ter method" + se);
 		}
 		catch (NoSuchMethodException nsme) { 
-			LOGGER.warning("Requested getter method doesn't exist. " + nsme); 
+			LOGGER.warning("Requested "+gsop.name()+"ter method doesn't exist. " + nsme); 
 		} 
 		catch (IllegalAccessException e) {
 			// TODO Auto-generated catch block
@@ -125,7 +164,7 @@ public abstract class User implements Comparator<User> {
 	 * @param gsname
 	 * @return
 	 */
-	public Object getUserMethod(GSMethod gsname){
+	public Object userGetterMethod(String gsname){
 		return callMethod(gsname, GSOp.get, null);
 	}
 	
@@ -135,39 +174,33 @@ public abstract class User implements Comparator<User> {
 	 * @param param
 	 * @return
 	 */
-	public Object setUserMethod(GSMethod gsname,String param){
+	public Object userSetterMethod(String gsname, String param){
 		return callMethod(gsname, GSOp.set, param);
 	}
 	
-	/**
-	 * Given the name of a field find a matching method ref
-	 * @param name
-	 * @return
-	 */
-	public GSMethod matchFieldName(String name) {
-		for (GSMethod gsm : GSMethod.values()) {
-			if (name.equals(gsm.lc())){return gsm;}
-		}
-		return null;
-		
-	}
 	
 	/**
 	 * Find all the getter/setter methods for this user type
 	 * @param user
 	 * @return Map of getters/setters against their respective names
 	 */
-	public static Map<String,Method> getReadMethods(User user) {
+	private static Map<String,Method> userAccessorMethods(User user,String prefix) {
 		Map<String,Method> glist = new HashMap<>();
-		Class<? extends User> objClass= user.getClass();
+		Class<? extends User> objClass = user.getClass();
 
 		Method[] methods = objClass.getMethods();
 		for (Method method : methods) {
-			if ("et".equals(method.getName().substring(1,3))) {
+			if (prefix.equals(method.getName().substring(0,3))) {
 				glist.put(method.getName().substring(3),method);
 			}
 		}
 		return glist;
+	}
+	public static Map<String,Method> readMethods(User user) {
+		return userAccessorMethods(user,"get");
+	}
+	public static Map<String,Method> writeMethods(User user) {
+		return userAccessorMethods(user,"set");
 	}
 	
 	/**

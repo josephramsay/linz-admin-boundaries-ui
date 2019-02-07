@@ -1,15 +1,13 @@
 package nz.govt.linz.AdminBoundaries.UserAdmin;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Logger;
 
-import nz.govt.linz.AdminBoundaries.UserAdmin.User.GSMethod;
-
-import java.lang.reflect.Method;
+import nz.govt.linz.AdminBoundaries.UserAdmin.UserAIMS.GSMethod;
 
 /**
  * Absract class for user reading functions incl TC and PG
@@ -30,55 +28,52 @@ public abstract class UserReader {
 		return user_list;
 	}
 	
-	
-	private static Map<String,Method> getReadMethods(User user) {
-		Map<String,Method> glist = new HashMap<>();
-		Class<? extends User> objClass= user.getClass();
 
-		Method[] methods = objClass.getMethods();
-		for (Method method : methods) {
-			if ("et".equals(method.getName().substring(1,3))) {
-				glist.put(method.getName().substring(3),method);
-			}
-		}
-		return glist;
-	}
 	/**
-	 * Convenience method to convert list-map format lists into list-list
-	 * (where the top row is the header) for use with the dabformatter
-	 * html table formatting function
+	 * Transforms a list of users into a "row" of strings by calling their 
+	 * GSMethod approved getter methods 
 	 * @param userlist
 	 * @return
 	 */
-	public static List<List<String>> transformUserList_OLD(List<Map<String,String>> userlist){
-		int row_count = 0;
-		List<List<String>> new_userlist = new ArrayList<>();
-		for (Map<String,String> row : userlist) {
-			List<String> new_row = new ArrayList<>();
-			for (String key : row.keySet()) {
-				if (row_count == 0) { new_row.add(key); }
-				else { new_row.add(row.get(key)); }
-			}
-			row_count ++;
-			new_userlist.add(new_row);
-		}
-		return new_userlist;
-	}	
-	
-	public static List<List<String>> transformUserList(List<User> userlist){
+	public List<List<String>> transformUserList(List<? extends User> userlist){
 		int row_count = 0;
 		List<List<String>> new_userlist = new ArrayList<>();
 		for (User user : userlist) {
 			List<String> new_row = new ArrayList<>();
-			for (String key : User.getReadMethods(user).keySet()) {
-				if (row_count == 0) { new_row.add(key); }
-				else { new_row.add((String) user.getUserMethod(GSMethod.valueOf(key))); }
+			Map<String,Method> getters = User.readMethods(user);
+			Iterable<String> giter = getters
+				.keySet()
+				.stream()
+				.filter(x -> isInEnum(x,GSMethod.class))::iterator;
+			for (String key : giter) {
+				//if (isInEnum(key,GSMethod.class))
+				if (row_count == 0) { 
+					new_row.add(key); 
+				}
+				else { 
+					Object o = user.invokeMethod(getters.get(key));
+					new_row.add(String.valueOf(o));//useraims.getUserMethod(key)); 
+				}
 			}
 			row_count ++;
 			new_userlist.add(new_row);
 		}
 		return new_userlist;
 	}
+	
+	/**
+	 * Checks whether a value exists in an enum based on its name string 
+	 * @param value
+	 * @param enumClass
+	 * @return
+	 */
+	public <E extends Enum<E>> boolean isInEnum(String value, Class<E> enumClass) {
+		  for (E e : enumClass.getEnumConstants()) {
+		    if(e.name().equals(value)) { return true; }
+		  }
+		  return false;
+	}
+	
 	
 	
 	/**
@@ -89,7 +84,7 @@ public abstract class UserReader {
 	 */
 	private User findInUserList(String key, String value){
 		for (User user : user_list){
-			if (Objects.equals(user.getUserMethod(user.matchFieldName(key)),value)) {
+			if (Objects.equals(user.userGetterMethod(key),value)) {
 				return user;
 			}
 		}
@@ -102,7 +97,17 @@ public abstract class UserReader {
 	 * @return
 	 */
 	public User findInUserList(String value){
-		return findInUserList("username", value);
+		return findInUserList("UserName", value);
+	}
+	
+	/**
+	 * Match the provided user with one from the user list and return
+	 * @param user
+	 * @return
+	 */
+	public User findInUserList(User user) {
+		if (user_list.contains(user)) {return user;}
+		return null;
 	}
 	
 	/**

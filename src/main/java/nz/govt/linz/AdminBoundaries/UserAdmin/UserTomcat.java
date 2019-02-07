@@ -8,9 +8,11 @@ public class UserTomcat extends User {
 	public String password;
 	public EnumSet<TCRoles> roles;
 	
-	private enum TCRoles { AIMS,manager_gui,manager_script,manager_jmx,manager_status,admin_gui,admin_script; 
+	private enum TCRoles { AIMS, manager_gui, manager_script, manager_jmx, manager_status, admin_gui, admin_script; 
 		public String _name() {return name().replace("_","-"); }
 		}
+	
+	public enum GSMethod { UserName, Password, Roles; }
 	
 	public UserTomcat(){ 
 		setPassword("");
@@ -36,7 +38,8 @@ public class UserTomcat extends User {
 	}
 	public EnumSet<TCRoles> getRoles(){return roles;}
 	public void setRoles(EnumSet<TCRoles> roles) { this.roles = roles;}
-	
+	public void setRoles(String roles) { setRoleStr(roles); }
+	public void mergeRoles(EnumSet<TCRoles> roles) { this.roles.addAll(roles);}
 	
 	/**
 	 * merge tomcat user can include role add/del and password changes
@@ -45,7 +48,7 @@ public class UserTomcat extends User {
 	public void merge(User user) {
 		//super.merge(user);
 		//role add extra to set
-		this.setRoles(((UserTomcat)user).getRoles());
+		this.mergeRoles(((UserTomcat)user).getRoles());
 		//change to new password
 		this.setPassword(((UserTomcat)user).getPassword());
 	}

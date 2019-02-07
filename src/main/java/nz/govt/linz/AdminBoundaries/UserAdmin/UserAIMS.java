@@ -19,6 +19,9 @@ public class UserAIMS extends User {
 	public EnumSet<AARoles> roles;
 	
 	enum AARoles { Administrator,Publisher,Reviewer,Follower; }
+	enum GSMethod { Version, UserId, UserName, Email, RequiresProgress, Organisation, RoleStr; }
+	
+	//public enum GSMethod { Version, UserId, UserName, Email, RequiresProgress, Organisation, Role; }
 	
 	enum Organisation { 
 		LINZ("linz.govt.nz","LINZ"), 

@@ -8,6 +8,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Logger;
+
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -27,9 +29,9 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-import nz.govt.linz.AdminBoundaries.UserAdmin.User.GSMethod;
-
 public class UserReaderTomcat extends UserReader {
+	
+	private static final Logger LOGGER = Logger.getLogger( UserReaderTomcat.class.getName() );
 
 	private static final String USRP = "/conf/tomcat-users.xml";
 	private static final String catalina_base_path = System.getProperty( "catalina.base" );
@@ -162,8 +164,8 @@ public class UserReaderTomcat extends UserReader {
 		for (int i = 0; i < user_nl.getLength(); i++) {
 			Node n = user_nl.item(i);
 			User user = new UserTomcat();
-			for (String upr : Arrays.asList("username","password","roles")) {
-				user.setUserMethod(GSMethod.valueOf(upr), n.getAttributes().getNamedItem(upr.toLowerCase()).getNodeValue());
+			for (String upr : Arrays.asList("UserName","Password","Roles")) {
+				user.userSetterMethod(upr, n.getAttributes().getNamedItem(upr.toLowerCase()).getNodeValue());
 			}
 			new_user_list.add(user);
 			System.out.println("READ - "+user.getUserName());
@@ -235,4 +237,5 @@ public class UserReaderTomcat extends UserReader {
 		}
 		return "UserReader::"+tomcat_filename+"\n"+users;
 	}
+
 }

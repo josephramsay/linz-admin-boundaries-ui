@@ -59,7 +59,11 @@ public class UserReaderPostgreSQL extends UserReader {
 		user.setUserName(username);
 		((UserPostgreSQL)user).setPassword(password);
 		((UserPostgreSQL)user).setRoleStr(roles);
-		user_list.add(user);
+		if (user_list.contains(user)) {	
+			User existing = user_list.get(user_list.indexOf(user));
+			((UserPostgreSQL)existing).merge((UserPostgreSQL)user); 
+		}
+		else { user_list.add(user); }
 		saveUserList();
 	}
 	
@@ -77,11 +81,18 @@ public class UserReaderPostgreSQL extends UserReader {
 			"and usename not like 'aims%'";
 		List<User> new_user_list = new ArrayList<>();
 		for (List<String> row : conn.executeQuery(user_query,false)) {
-			User user = new UserPostgreSQL();
+			UserPostgreSQL user = new UserPostgreSQL();
 			user.setUserName(row.get(0)); 
-			((UserPostgreSQL)user).setPassword(row.get(1)); 
-			((UserPostgreSQL)user).setRoleStr(row.get(2));
-			new_user_list.add(user);
+			user.setPassword(row.get(1)); 
+			user.setRoleStr(row.get(2));
+			//new_user_list.add(user);
+			//merge roles
+
+			if (new_user_list.contains(user)) {	
+				User existing = new_user_list.get(new_user_list.indexOf(user));
+				((UserPostgreSQL)existing).merge((UserPostgreSQL)user); 
+			}
+			else { new_user_list.add(user); }
 		}
 		return new_user_list;
 		

@@ -19,7 +19,7 @@ LICENSE file for more information.
 
     dependencies {
         classpath "org.postgresql:postgresql:9.4-1206-jdbc42"
-        classpath 'com.bmuschko:gradle-cargo-plugin:2.4'
+        classpath 'com.bmuschko:gradle-cargo-plugin:2.5'
         //pygradle
         //classpath "gradle.plugin.com.linkedin.pygradle:pygradle-plugin:0.3.24"
         //debpackage
@@ -44,8 +44,8 @@ ext {
     servletApiVersion = '3.+'
     catalinaVersion = '9.0.14'
     tomcatVersion = '9.0.14'
-    javaxjsonapiVersion = '1.1.4'
-    javaxjsonVersion = '1.1.4'
+    javaxJSONAPIVersion = '1.1.4'
+    javaxJSONVersion = '1.1.4'
     junitVersion = '4.12'
     jmockVersion = '2.9.0'
     jsoupVersion = '1.11.3'
@@ -148,8 +148,8 @@ dependencies {
     providedCompile "postgresql:postgresql:$postgresqlJDBCVersion"
     providedRuntime "net.postgis:postgis-jdbc:$postGISApiVersion"
     providedRuntime "org.postgresql:postgresql:$postgresqlApiVersion"
-    providedRuntime "javax.json:javax.json-api:$javaxjsonapiVersion"
-    providedRuntime "org.glassfish:javax.json:$javaxjsonVersion"
+    compile "javax.json:javax.json-api:$javaxJSONAPIVersion"
+    compile "org.glassfish:javax.json:$javaxJSONVersion"
     testCompile "junit:junit:$junitVersion" 
     testCompile "org.jmock:jmock:$jmockVersion" 
     testCompile "org.jsoup:jsoup:$jsoupVersion"

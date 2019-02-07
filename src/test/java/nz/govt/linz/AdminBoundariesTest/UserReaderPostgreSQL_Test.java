@@ -4,11 +4,14 @@ import nz.govt.linz.AdminBoundaries.UserAdmin.User;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserReader;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserReaderPostgreSQL;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserPostgreSQL;
+import nz.govt.linz.AdminBoundaries.UserAdmin.UserPostgreSQL.PGRoles;
 
 import static org.junit.Assert.*;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -24,16 +27,11 @@ import org.postgresql.ds.PGSimpleDataSource;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class UserReaderPostgreSQL_Test {
 	
-	private static final String setupfile = "src/test/resourxes/test_setup.sql";
+	private static int user_count = 5;
 	
 	private UserReader reader;
-	//private Jdbc3SimpleDataSource datasource;
-	//private SimpleDataSource datasource;
-	private PGSimpleDataSource datasource;
 
-	
-	private static boolean overwrite_flag;
-	private static Map<String,Map<String,String>> restore;
+	private PGSimpleDataSource datasource;
 	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {	
@@ -62,27 +60,46 @@ public class UserReaderPostgreSQL_Test {
 	@Test
 	public void test_10_checkUserList() {
 		List<User> user_list = reader.getUserList();
-		assertEquals(8,user_list.size());
-		assertEquals("aims_dba",((UserPostgreSQL)reader.findInUserList("testuser1")).getRoles());
-		assertEquals("aims_admin",((UserPostgreSQL)reader.findInUserList("testuser2")).getRoles());
+		assertEquals(user_count,user_list.size());
+		assertEquals(EnumSet.of(PGRoles.aims_dba),((UserPostgreSQL)reader.findInUserList("testuser1")).getRoles());
+		assertEquals(EnumSet.of(PGRoles.aims_admin),((UserPostgreSQL)reader.findInUserList("testuser2")).getRoles());
 	}
 	
 	@Test
 	public void test_20_addUser() {
-		String dummyuser = "dummyuser";
-		String dummypass = "dummypass";
+		String dummyuser = "testuser5";//testuser5 must exist in test db but without aims_* roles
+		String dummypass = "testpass5";
 		String dummyrole = "aims_reader";
 		((UserReaderPostgreSQL)reader).addUser(dummyuser,dummypass,dummyrole);
 		List<User> user_list = reader.getUserList();
-		assertEquals(9,user_list.size());
-		assertEquals(reader.encrypt(dummypass),((UserPostgreSQL)reader.findInUserList(dummyuser)).getPassword());
+		assertEquals(user_count+1,user_list.size());
+		assertEquals(EnumSet.of(PGRoles.aims_reader),((UserPostgreSQL)reader.findInUserList(dummyuser)).getRoles());
+	}	
+	
+	@Test
+	public void test_21_addUser() {
+		String dummyuser = "testuser5";
+		String dummypass = "testpass5";
+		String dummyrole = "aims_admin";//adding an additional role shouldn't change the user count
+		((UserReaderPostgreSQL)reader).addUser(dummyuser,dummypass,dummyrole);
+		List<User> user_list = reader.getUserList();
+		assertEquals(user_count+1,user_list.size());
+		assertEquals(EnumSet.of(PGRoles.aims_reader,PGRoles.aims_admin),((UserPostgreSQL)reader.findInUserList(dummyuser)).getRoles());
 	}
 	
 	@Test
 	public void test_30_deleteUser() {
-		reader.delUser("dummyuser");
+		reader.delUser("testuser5");
 		List<User> user_list = reader.getUserList();
-		assertEquals(8,user_list.size());
+		assertEquals(user_count,user_list.size());
+	}
+	
+	@Test
+	public void test_40_transformer() {
+		List<User> user_list = reader.getUserList();
+		List<List<String>> table_data = reader.transformUserList(user_list);
+		System.out.println("DR40-"+table_data);
+		assertEquals(user_count,table_data.size());
 	}
 
 

@@ -91,12 +91,12 @@ public class DABServletUserAdmin extends DABServlet {
 		List<User> postgres_userlist = urpg.readUserList();
 		List<User> aims_userlist = uraa.readUserList();
 
-		String users_tc = DABFormatter.formatTable(
-			"Tomcat Users",urtc.transformUserList(tomcat_userlist));
-		String users_pg = DABFormatter.formatTable(
-			"PostgreSQL Users",urpg.transformUserList(postgres_userlist));
-		String users_aa = DABFormatter.formatTable(
-			"AIMS Users",uraa.transformUserList(aims_userlist));
+		String users_tc = DABFormatter.formatTable( "Tomcat Users",
+			urtc.transformUserList(tomcat_userlist));
+		String users_pg = DABFormatter.formatTable( "PostgreSQL Users",
+			urpg.transformUserList(postgres_userlist));
+		String users_aa = DABFormatter.formatTable( "AIMS Users",
+			uraa.transformUserList(aims_userlist));
 
 		String userform_tc = DABFormatterUser.formatUserForm(
 			TorP.Tomcat,tomcat_userlist);
@@ -127,11 +127,11 @@ public class DABServletUserAdmin extends DABServlet {
 	 */
 	private void processActions(Map<String, Map<String,String>> params) {
 		if (params.containsKey("tc")) {
-			processTCPG(urtc,params.get("tc"));
+			processTomcat(urtc,params.get("tc"));
 			urtc.save();
 		}
 		else if (params.containsKey("pg")) {
-			processTCPG(urpg,params.get("pg"));
+			processPostgreSQL(urpg,params.get("pg"));
 			urpg.save();
 		}
 		else if (params.containsKey("aa")) {
@@ -141,40 +141,40 @@ public class DABServletUserAdmin extends DABServlet {
 	}
 	
 	private void processAIMS(UserReaderAIMS reader,Map<String, String> upra) {
-		String ver,uid,uname,org,role,reqprg,email,action;
-		ver = uid = uname = org = role = reqprg = email = action = null;
-		if (upra.containsKey("uname"))  {uname  = upra.get("uname");}
-		if (upra.containsKey("role"))   {role   = upra.get("role");}
-		if (upra.containsKey("uid"))    {uid    = upra.get("uid");}
-		if (upra.containsKey("ver"))    {ver    = upra.get("ver");}
-		if (upra.containsKey("reqprg")) {reqprg = upra.get("reqprg");}
-		if (upra.containsKey("email"))  {email  = upra.get("email");}
-		if (upra.containsKey("org"))    {org    = upra.get("org");}
-		if (upra.containsKey("action")) {action = upra.get("act");}
+		String user,org,role,rp,email,action;
+		user = org = role = rp = email = action = null;
+		if (upra.containsKey("user"))  { user  = upra.get("user"); }
+		if (upra.containsKey("role"))  { role   = upra.get("role"); }
+		if (upra.containsKey("rp"))    { rp = "true"; }
+		else                           { rp = "false"; }
+		if (upra.containsKey("email")) { email  = upra.get("email"); }
+		if (upra.containsKey("org"))   { org    = upra.get("org"); }
+		if (upra.containsKey("act"))   { action = upra.get("act"); }
 		//ADD : action=save,user!=existing,role!=null,pass!=null
 		//EDIT : action=save,user==existing,role!=null,pass!=null
-		if ("save".equals(action) && uname != null && role != null && org != null && reqprg != null && email != null) { 
-			if (reader.userExists(uname) && uid != null && ver != null){
-				LOGGER.info("Modify user "+uname);
-				reader.editUser(ver,uid,uname,email,reqprg,org,role);
+		boolean exists = reader.userExists(user);
+		if ("save".equals(action) && user != null && role != null && org != null && rp != null && email != null) { 
+			if (exists){
+				LOGGER.info("Modify AA user "+user);
+				reader.editUser(user, email, rp, org, role);
 			}
 			else {
-				LOGGER.info("Add user "+uname);
-				reader.addUser(uname,email,reqprg,org,role);
+				LOGGER.info("Add AA user "+user);
+				reader.addUser(user, email, rp, org, role);
 			}
 		}
 		//DEL : action=delete,user=existing
-		else if("delete".equals(action) && uname != null && reader.userExists(uname)) {
-			LOGGER.info("Delete user "+uname);
-			reader.delUser(uname);//ver,uid);
+		else if("delete".equals(action) && user != null && exists) {
+			LOGGER.info("Delete AA user "+user);
+			reader.delUser(user);//ver,uid);
 		}
 		else {
-			LOGGER.warning("Cannot match ["+uname+","+role+","+action+"]");
+			LOGGER.warning("Cannot match [u:"+user+"/"+(exists?"E":"x")+",r:"+role+",p:"+rp+",e:"+email+",o:"+org+",a:"+action+"]");
 			return;
 		}
 	}
 	
-	private void processTCPG(UserReader reader,Map<String, String> upra) {
+	private void processTomcat(UserReaderTomcat reader,Map<String, String> upra) {
 		String user,pass,role,action;
 		user = pass = role = action = null;
 		if (upra.containsKey("user")) {user   = upra.get("user");}
@@ -183,23 +183,55 @@ public class DABServletUserAdmin extends DABServlet {
 		if (upra.containsKey("act"))  {action = upra.get("act");}
 		//ADD : action=save,user!=existing,role!=null,pass!=null
 		//EDIT : action=save,user==existing,role!=null,pass!=null
-		if ("save".equals(action) && user != null && role != null && pass != null) { 
-			if (reader.userExists(user)){
-				LOGGER.info("Modify user "+user);
+		boolean exists = reader.userExists(user);
+		if ("save".equals(action) && user != null && role != null) { 
+			if (exists){
+				LOGGER.info("Modify TC user "+user);
 				reader.editUser(user,pass,role);
 			}
-			else {
-				LOGGER.info("Add user "+user);
+			else if (pass != null) {
+				LOGGER.info("Add TC user "+user);
 				reader.addUser(user,pass,role);
 			}
 		}
 		//DEL : action=delete,user=existing
-		else if("delete".equals(action) && user != null && reader.userExists(user)) {
-			LOGGER.info("Delete user "+user);
+		else if("delete".equals(action) && user != null && exists) {
+			LOGGER.info("Delete TC user "+user);
 			reader.delUser(user);
 		}
 		else {
-			LOGGER.warning("Cannot match ["+user+","+role+","+pass+","+action+"]");
+			LOGGER.warning("Cannot match [u:"+user+"/"+(exists?"E":"x")+",r:"+role+",p:"+pass+",a:"+action+"]");
+			return;
+		}
+	}
+	
+	private void processPostgreSQL(UserReaderPostgreSQL reader,Map<String, String> upra) {
+		String user,role,action;
+		user = role = action = null;
+		if (upra.containsKey("user")) {user   = upra.get("user");}
+		if (upra.containsKey("role")) {role   = upra.get("role");}
+		if (upra.containsKey("act"))  {action = upra.get("act");}
+		//ADD : action=save,user!=existing,role!=null,pass!=null
+		//EDIT : action=save,user==existing,role!=null,pass!=null
+		boolean exists = reader.userExists(user);
+		LOGGER.info("UL:"+reader.getUserList().toString());
+		if ("save".equals(action) && user != null && role != null) { 
+			if (exists){
+				LOGGER.info("Modify PG user "+user);
+				reader.editUser(user,role);
+			}
+			else {
+				LOGGER.info("Add PG user "+user);
+				reader.addUser(user,role);
+			}
+		}
+		//DEL : action=delete,user=existing
+		else if("delete".equals(action) && user != null && exists) {
+			LOGGER.info("Delete PG user "+user);
+			reader.delUser(user);
+		}
+		else {
+			LOGGER.warning("Cannot match [u:"+user+"/"+(exists?"E":"x")+",r:"+role+",a:"+action+"]");
 			return;
 		}
 	}

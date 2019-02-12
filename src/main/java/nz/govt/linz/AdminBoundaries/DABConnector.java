@@ -58,7 +58,7 @@ public class DABConnector {
 	 */
 	private void initDataSource() {
 		try {
-			datasource = (DataSource) new InitialContext().lookup("java:comp/env/jdbc/linz/aims");
+			datasource = (DataSource) new InitialContext().lookup("java:comp/env/jdbc/linz/dab");
 		} catch (NamingException ne) {
 			LOGGER.warning("Cannot locate datasource. " + ne);
 		}
@@ -70,7 +70,8 @@ public class DABConnector {
 	 * @param datasource_m
 	 */
 	public DABConnector(DataSource datasource_m) {
-		datasource = datasource_m;
+		if ( datasource_m == null ){ initDataSource(); }
+		else { datasource = datasource_m; }
 	}
 
 	/**

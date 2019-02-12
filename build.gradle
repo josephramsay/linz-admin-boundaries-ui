@@ -49,6 +49,7 @@ ext {
     junitVersion = '4.12'
     jmockVersion = '2.9.0'
     jsoupVersion = '1.11.3'
+    //seleniumVersion '3.141.59'
     cargoVersion = '2.4'
 }
 //latest unavailable 
@@ -87,6 +88,7 @@ task copyscripts(type: Copy) {
 
 war {
     dependsOn copyscripts
+    //exclude 'src/test/java/nz/govt/linz/AdminBoundariesUITest/**'
     manifest {
         attributes 'Implementation-Title': 'LINZ Admin Boundaries Downloader',
             'Implementation-Version': version
@@ -153,6 +155,7 @@ dependencies {
     testCompile "junit:junit:$junitVersion" 
     testCompile "org.jmock:jmock:$jmockVersion" 
     testCompile "org.jsoup:jsoup:$jsoupVersion"
+    //testCompile "org.seleniumhq.selenium:selenium-java:$seleniumVersion"
     /*
     python "pypi:pexpect:4.2.1"
     python "pypi:psycopg2:2.6.2"

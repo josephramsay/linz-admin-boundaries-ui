@@ -45,7 +45,7 @@ public class DABFormatter {
 	 * Formatter constructor sets up colourmap and button text
 	 */
 	public DABFormatter(){
-		lmtr = new LinkedHashMap<>(); //NB LMH preserves order
+		lmtr = new LinkedHashMap<>(); //NB LHM preserves order
 		lmtr.put("Load","Download new files from SFTP directory and build import tables");
 		lmtr.put("Transfer","Run table_version function to populate destination tables");
 		lmtr.put("Reject","Drop all import tables");
@@ -76,25 +76,26 @@ public class DABFormatter {
 	}
 	/**
 	 * Reformats a list/list/string as an html table with the caption tname
-	 * @param tname
+	 * @param caption
 	 * @param result
 	 * @return
 	 */	
-	public static String formatTable(String tname, List<List<String>> result) {
+	public static String formatTable(String caption, List<List<String>> result) {
 		String table = "";
 	    table += "<table>";
-	    table += "<caption>"+tname+"</caption>";
+	    table += "<caption>"+caption+"</caption>";
 	    table += "<thead><tr>";
-	    LOGGER.warning("SZ"+result.size());
-	    LOGGER.warning("H00"+result.get(0).get(0));
+	    //LOGGER.info("Tsz:"+result.size());
 	    List<String> head = result.get(0);
+	    //LOGGER.info("H:"+String.join(",",head));
 	    for (String cell : head) {
 	    	table += "<th>" +  cell + "</th>";
 	    }
-	    table += "</tr></thead>\n<tbody>";
+	    table += "</tr></thead>\n<tbody>\n";
     	for (int i=1; i<result.size(); i++) {
     		table += "<tr>";
     		List<String> row = result.get(i);
+    		//LOGGER.info("B:"+String.join(",",row));
     		for (String cell : row){
     			table += "<td>" + cell + "</td>";
     		}
@@ -102,9 +103,9 @@ public class DABFormatter {
 	    }
 
 	    table += "</tbody>\n</table>\n";
+
 	    return table;
-	}		
-	
+	}
 	
 	/**
 	 * Reformats a list/list/string as an html table with the caption tname

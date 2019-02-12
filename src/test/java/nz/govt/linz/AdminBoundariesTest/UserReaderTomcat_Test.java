@@ -2,16 +2,12 @@ package nz.govt.linz.AdminBoundariesTest;
 
 import nz.govt.linz.AdminBoundaries.UserAdmin.User;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserReader;
-import nz.govt.linz.AdminBoundaries.UserAdmin.UserReaderPostgreSQL;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserReaderTomcat;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserTomcat;
 
 import static org.junit.Assert.*;
 
 import java.util.List;
-import java.util.Map;
-import java.util.logging.Logger;
-
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -85,7 +81,7 @@ public class UserReaderTomcat_Test {
 		List<User> user_list = reader.getUserList();
 		List<List<String>> table_data = reader.transformUserList(user_list);
 		System.out.println("DR40-"+table_data);
-		assertEquals(user_count,table_data.size());
+		assertEquals(user_count+1,table_data.size());
 	}
 
 

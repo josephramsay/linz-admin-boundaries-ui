@@ -1,11 +1,7 @@
 package nz.govt.linz.AdminBoundaries.UserAdmin;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.Authenticator;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -14,10 +10,7 @@ import java.net.ProtocolException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.logging.Logger;
-import java.util.stream.Stream;
-
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
@@ -27,7 +20,6 @@ import javax.json.JsonWriter;
 import nz.govt.linz.AdminBoundaries.DABIniReader;
 import nz.govt.linz.AdminBoundaries.UserAdmin.User.Action;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserAIMS.AARoles;
-import nz.govt.linz.AdminBoundaries.UserAdmin.UserAIMS.GSMethod;
 
 //import org.apache.catalina.realm.UserDatabaseRealm;
 //
@@ -140,7 +132,7 @@ public class UserReaderAIMS extends UserReader {
 			user_list.add(orig);
 		}
 		*/
-		saveUserList();
+		//saveUserList();
 	}
 	
 	/**
@@ -156,12 +148,12 @@ public class UserReaderAIMS extends UserReader {
 	 * Shortcut to delete which finds existing user in list with highest ver 
 	 * @uname User name
 	 */
-	public void delUser(String uname) {
-		User user = findInUserList(uname);
-		delUser(user);
-		//user_list.remove(user);
-		saveUserList();
-	}
+//	public void delUser(String uname) {
+//		User user = findInUserList(uname);
+//		delUser(user);
+//		//user_list.remove(user);
+//		saveUserList();
+//	}
 	
 	public void editUser(String ver, String uid, String uname, String email, String reqprg, String org, String role) {
 		UserAIMS user = new UserAIMS();		
@@ -176,12 +168,16 @@ public class UserReaderAIMS extends UserReader {
 		editUser(user);
 	}
 	
-	
-	/*
-	addUser(uname,email,reqprg,org,role) X
-	delUser(ver,uid)
-	editUser(ver,uid,uname,email,reqprg,org,role)
-	*/
+	public void editUser(String uname, String email, String reqprg, String org, String role) {
+		UserAIMS user = new UserAIMS();
+		user.setUserName(uname);
+		user.setEmail(email);
+		user.setRequiresProgress(reqprg);
+		user.setOrganisation(org);
+		user.setRole(AARoles.valueOf(role));
+		//user_list.add(user);
+		editUser(user);
+	}
 	
 	/**
 	 * Save changes to the user_list back to AIMS via the API
@@ -309,7 +305,9 @@ public class UserReaderAIMS extends UserReader {
 		List<User> user_list_new = new ArrayList<>();
 		JsonArray entities = aims_json_obj.getJsonArray("entities");
 		//get the entities hrefs to get userpages
+		//LOGGER.info("J ents "+entities.size()); //sometimes the wrong number of entities are returned
 		for (int i=0; i<entities.size(); i++) {
+			//LOGGER.info("J get "+i);
 			JsonObject jo1 = (JsonObject) entities.get(i);
 			String href = jo1.getString("href");
 			JsonObject userprops = getJO(href).getJsonObject("properties");
@@ -351,12 +349,6 @@ public class UserReaderAIMS extends UserReader {
 			new_user_list.add(new UserAIMS((UserAIMS) user));
 		}
 		return new_user_list;
-	}
-
-	@Override
-	public void addUser(String username, String password, String roles) {
-		LOGGER.warning("Require additional parameters to add AIMS user");
-		
 	}
 
 }

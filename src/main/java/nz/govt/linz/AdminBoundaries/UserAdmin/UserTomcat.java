@@ -1,14 +1,16 @@
 package nz.govt.linz.AdminBoundaries.UserAdmin;
 
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 
 public class UserTomcat extends User {
 	public String password;
 	public EnumSet<TCRoles> roles;
 	
-	private enum TCRoles { AIMS, manager_gui, manager_script, manager_jmx, manager_status, admin_gui, admin_script; 
+	public enum TCRoles { AIMS, manager_gui, manager_script, manager_jmx, manager_status, admin_gui, admin_script; 
 		public String _name() {return name().replace("_","-"); }
 		}
 	
@@ -60,12 +62,10 @@ public class UserTomcat extends User {
 		}
 		return rolestr.substring(0, rolestr.length() - 1);
 	}
-	@Override
-	public List<String> getSpringRolls() {
-		List<String> springrolls = new ArrayList<>();
-		for (TCRoles role : roles) {springrolls.add(role.name());}
-		return springrolls;
-	}
+	
+	//public List<String> getGSMethod() {return Stream.of(GSMethod.values()).map(Enum::name).collect(Collectors.toList()); }
+	public List<String> getGSMethod() {return UserReader.getNames(GSMethod.class);}
+	
 	
 	/**
 	 * default string rep

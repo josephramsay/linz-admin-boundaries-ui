@@ -1,7 +1,7 @@
 package nz.govt.linz.AdminBoundariesTest;
 
 /**
- * AdminBoundaries Test
+ * UserAdmin Test.
  *
  * Copyright 2014 Crown copyright (c)
  * Land Information New Zealand and the New Zealand Government.
@@ -9,6 +9,10 @@ package nz.govt.linz.AdminBoundariesTest;
  *
  * This program is released under the terms of the new BSD license. See the
  * LICENSE file for more information.
+ */
+
+
+/* Test is independent of build as run against deployed application
  */
 
 import nz.govt.linz.AdminBoundaries.DABFormatter;
@@ -23,7 +27,6 @@ import java.util.Map;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -46,7 +49,7 @@ public class DABFormatter_Test {
 	private final static String TS_D2 = "ROW2_COL3"; 
 	
 	private final static int form_len = 1448;
-	private final static int table_len = 271;
+	private final static int table_len = 272;
 	
 	
 	@SuppressWarnings("serial")

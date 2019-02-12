@@ -29,13 +29,16 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import nz.govt.linz.AdminBoundaries.UserAdmin.UserAIMS.AARoles;
+import nz.govt.linz.AdminBoundaries.UserAdmin.UserTomcat.GSMethod;
+import nz.govt.linz.AdminBoundaries.UserAdmin.UserTomcat.TCRoles;
+
 public class UserReaderTomcat extends UserReader {
 	
 	private static final Logger LOGGER = Logger.getLogger( UserReaderTomcat.class.getName() );
 
 	private static final String USRP = "/conf/tomcat-users.xml";
 	private static final String catalina_base_path = System.getProperty( "catalina.base" );
-	private static final String test_base_path = "..";
 	//private static final File catalina_base = new File( catalina_base_path ).getAbsoluteFile();
 	
 	public static final String ALG = "SHA-256";
@@ -69,12 +72,22 @@ public class UserReaderTomcat extends UserReader {
 	 * @param pass Password unencrypted
 	 */
 	public void addUser(String username, String password, String roles) {
-		User user = new UserTomcat();
+		UserTomcat user = new UserTomcat();
 		user.setUserName(username);
-		((UserTomcat)user).setPassword(password);
-		((UserTomcat)user).setRoleStr(roles);
-		user_list.add(user);
-		saveUserList();
+		user.setPassword(password);
+		user.setRoles(roles);
+		//user_list.add(user);
+		//saveUserList();
+		addUser(user);
+	}
+	
+	public void editUser(String uname, String password, String roles) {
+		UserTomcat user = new UserTomcat();		
+		user.setUserName(uname);
+		user.setPassword(uname);
+		user.setRoles(roles);
+		//user_list.add(user);
+		editUser(user);
 	}
 	
 	/**
@@ -164,7 +177,7 @@ public class UserReaderTomcat extends UserReader {
 		for (int i = 0; i < user_nl.getLength(); i++) {
 			Node n = user_nl.item(i);
 			User user = new UserTomcat();
-			for (String upr : Arrays.asList("UserName","Password","Roles")) {
+			for (String upr : UserReader.getNames(GSMethod.class)) {
 				user.userSetterMethod(upr, n.getAttributes().getNamedItem(upr.toLowerCase()).getNodeValue());
 			}
 			new_user_list.add(user);

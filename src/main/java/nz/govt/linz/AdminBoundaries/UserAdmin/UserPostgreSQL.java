@@ -1,14 +1,17 @@
 package nz.govt.linz.AdminBoundaries.UserAdmin;
 
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.logging.Logger;
 
 public class UserPostgreSQL extends User {
+	
+	private static final Logger LOGGER = Logger.getLogger(UserPostgreSQL.class.getName());
+	
 	public String password;
 	public EnumSet<PGRoles> roles;
 	
-	public enum PGRoles { aims_dba, aims_admin, aims_user, aims_reader; }
+	public enum PGRoles { aims_admin, aims_user, aims_reader; }
 	
 	public enum GSMethod { UserName, Password, Roles; }
 	
@@ -24,6 +27,7 @@ public class UserPostgreSQL extends User {
 	public void setPassword(String password) {this.password = password;}
 	public String getPassword() {return this.password;}
 	public void setRoles(EnumSet<PGRoles> roles) { this.roles = roles; }
+	public void setRoles(String roles) { setRoleStr(roles); }
 	public void setRole(PGRoles role) { this.roles.add(role); }
 	public void mergeRoles(EnumSet<PGRoles> roles) { this.roles.addAll(roles); }
 	public EnumSet<PGRoles> getRoles() { return roles; }
@@ -33,15 +37,6 @@ public class UserPostgreSQL extends User {
 		}
 	}
 	
-	@Override
-	public void merge(User user) {
-		//super.merge(user);
-		//role add extra to set
-		this.mergeRoles(((UserPostgreSQL)user).getRoles());
-		//cant change password in PG because all we're doing re AIMS is adding/deleting fro AIMS groups
-		//this.setPassword(((UserPostgreSQL)user).getPassword());
-	}
-	
 	public String getRoleStr() {
 		String rolestr = "";
 		for (PGRoles role : roles) {
@@ -49,12 +44,32 @@ public class UserPostgreSQL extends User {
 		}
 		return rolestr.substring(0, rolestr.length() - 1);
 	}
+	
+	//public List<String> getGSMethod() {return Stream.of(GSMethod.values()).map(Enum::name).collect(Collectors.toList()); }
+	public List<String> getGSMethod() {return UserReader.getNames(GSMethod.class);}
+	
 	@Override
-	public List<String> getSpringRolls() {
-		List<String> springrolls = new ArrayList<>();
-		for (PGRoles role : roles) {springrolls.add(role.name());}
-		return springrolls;
+	public void merge(User user) {
+		//super.merge(user);
+		//role add extra to set
+		LOGGER.info("add roles: "+((UserPostgreSQL)user).getRoles());
+		this.setRoles(((UserPostgreSQL)user).getRoles());
+		//cant change password in PG because all we're doing re AIMS is adding/deleting fro AIMS groups
+		//this.setPassword(((UserPostgreSQL)user).getPassword());
 	}
+	
+	
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) { return false; }
+		final UserPostgreSQL that = (UserPostgreSQL) obj;
+		
+		if ( this.getRoles() != that.getRoles() ) { return false; }
+		
+		return true;
+	}
+	
 	
 	/**
 	 * default string rep

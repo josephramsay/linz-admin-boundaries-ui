@@ -1,13 +1,10 @@
 package nz.govt.linz.AdminBoundaries.UserAdmin;
 
 import java.util.Comparator;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-
-import nz.govt.linz.AdminBoundaries.UserAdmin.UserAIMS.Organisation;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -20,30 +17,6 @@ import java.lang.reflect.Method;
 public abstract class User implements Comparator<User> {
 	
 	private static final Logger LOGGER = Logger.getLogger(User.class.getName());
-	
-//	public enum GSMethod { Version, UserId, UserName, Email, RequiresProgress, Organisation, Role, Roles, RoleStr, Password;		
-//		public String lc() {return name().toLowerCase();}
-//		/**
-//		 * Given a string 
-//		 * @param gsm
-//		 * @return
-//		 */
-//		static GSMethod translate(String gsm){
-//		    switch (gsm) {
-//		    case "version": return Version;
-//		    case "userid": return UserId;
-//		    case "username": return UserName;
-//		    case "email": return Email;
-//		    case "requiresprogress": return RequiresProgress;
-//		    case "organisation": return Organisation;
-//		    case "role": return Role;
-//		    case "roles": return Roles;
-//		    case "rolestr": return RoleStr;
-//		    case "password": return Password;
-//		    default: throw new IllegalArgumentException(String.valueOf(gsm));
-//		    }
-//		}
-//	}
 	
 	public enum GSOp { get, set; }
 	public enum Action { Add("POST"),Delete("DELETE"),Update("PUT"); 
@@ -70,7 +43,9 @@ public abstract class User implements Comparator<User> {
 	/** getters/setters */
 	public void setUserName(String  userName) { this.userName = userName; }
 	public String getUserName() { return this.userName; }
-	public abstract List<String> getSpringRolls();
+	
+	public abstract List<String> getGSMethod();
+	//public List<String> getGSMethod() {return Stream.of(GSMethod.values().toString()).collect(Collectors.toList()); }
 	
 	@Override
 	public int compare(User user1, User user2) {
@@ -81,6 +56,9 @@ public abstract class User implements Comparator<User> {
 		return compare(this,user);
 	}
 
+	/**
+	 * Basic equals override tests usernames only
+	 */
 	@Override 
 	public boolean equals(Object obj) {
 		if (obj == null) { return false; }
@@ -93,6 +71,7 @@ public abstract class User implements Comparator<User> {
 	
 	/** Merge user_new into user_old by replacing where changed */
 	public void merge(User user) {
+		LOGGER.info("user merge");
 		//This only really applies in the AIMS case
 		this.setUserName(((UserAIMS)user).getUserName());
 	}

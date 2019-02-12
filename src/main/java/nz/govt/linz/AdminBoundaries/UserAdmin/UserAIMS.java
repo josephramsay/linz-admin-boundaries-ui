@@ -1,12 +1,10 @@
 package nz.govt.linz.AdminBoundaries.UserAdmin;
 
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.logging.Logger;
-
-import nz.govt.linz.AdminBoundaries.DABServletSummary;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class UserAIMS extends User {
 	
@@ -18,12 +16,10 @@ public class UserAIMS extends User {
 	public Organisation organisation;
 	public EnumSet<AARoles> roles;
 	
-	enum AARoles { Administrator,Publisher,Reviewer,Follower; }
-	enum GSMethod { Version, UserId, UserName, Email, RequiresProgress, Organisation, RoleStr; }
+	public enum AARoles { Administrator,Publisher,Reviewer,Follower; }
+	enum GSMethod { Version, UserId, UserName, Email, RequiresProgress, Organisation, Roles; }
 	
-	//public enum GSMethod { Version, UserId, UserName, Email, RequiresProgress, Organisation, Role; }
-	
-	enum Organisation { 
+	public enum Organisation { 
 		LINZ("linz.govt.nz","LINZ"), 
 		e_Spatial("e-spatial.co.nz","e-Spatial"),
 		NZFS("fire.org.nz","NZFS"),
@@ -34,11 +30,11 @@ public class UserAIMS extends User {
 			this.db_name = db_name;
 		}
 		static Organisation translate(String org){
-		    switch (org) {
-		    case "LINZ": return LINZ;
-		    case "e-Spatial": return e_Spatial;
-		    case "NZFS": return NZFS;
-		    case "Statistics NZ": return Statistics_NZ;
+		    switch (org.toLowerCase().replace("-","").replace(" ","")) {
+		    case "linz": return LINZ;
+		    case "espatial": return e_Spatial;
+		    case "nzfs": return NZFS;
+		    case "statisticsnz": return Statistics_NZ;
 		    default: throw new IllegalArgumentException(String.valueOf(org));
 		    }
 		}
@@ -77,23 +73,20 @@ public class UserAIMS extends User {
 	public void setRequiresProgress(String requiresProgress) { this.requiresProgress = Boolean.valueOf(requiresProgress); }
 	public void setRequiresProgress(boolean requiresProgress) { this.requiresProgress = requiresProgress; }
 	public boolean getRequiresProgress() { return this.requiresProgress; }
-	public void setOrganisation(String  organisation) { this.organisation = Organisation.translate(organisation); }
+	public void setOrganisation(String organisation) { this.organisation = Organisation.translate(organisation); }
 	public String getOrganisation() { return organisation._name(); }
 	public void setEmail(String email) { this.email = email != null && email != "" ? email : constructEmail(); }
 	public String getEmail() { return this.email != null && this.email != "" ? this.email : constructEmail(); }
 	public void setRoles(EnumSet<AARoles> roles) { this.roles = roles;}
 	public EnumSet<AARoles> getRoles() { return roles; }
-	//because AIMS only uses one role type add conv methods
+	//because AIMS only uses one role type add these convenience methods
 	public void setRole(AARoles role) { this.roles = EnumSet.of(role);}
 	public void setRole(String role) { this.roles = EnumSet.of(AARoles.valueOf(role));}
 	public AARoles getRole() { return (AARoles) roles.toArray()[0]; }
 	public String getRoleStr() { return getRole().name(); }
-	@Override
-	public List<String> getSpringRolls() {
-		List<String> springrolls = new ArrayList<>();
-		for (AARoles role : roles) {springrolls.add(role.name());}
-		return springrolls;
-	}
+	
+	//public List<String> getGSMethod() {return Stream.of(GSMethod.values()).map(Enum::name).collect(Collectors.toList()); }
+	public List<String> getGSMethod() {return UserReader.getNames(GSMethod.class);}
 	
 	/**
 	 * The rules for merge are;
@@ -106,12 +99,14 @@ public class UserAIMS extends User {
 	 */
 	@Override
 	public void merge(User user) {
+		LOGGER.info("user AIMS merge");
 		super.merge(user);
 		//roll add extra to set
 		this.setRole(((UserAIMS)user).getRole());
 		//change to new org
 		this.setOrganisation(((UserAIMS)user).getOrganisation());
 		//change to new email
+		LOGGER.info("EMAIL "+this.getEmail()+"<-"+((UserAIMS)user).getEmail());
 		this.setEmail(((UserAIMS)user).getEmail());
 	}
 	

@@ -2,12 +2,15 @@ package nz.govt.linz.AdminBoundaries.UserAdmin;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import nz.govt.linz.AdminBoundaries.UserAdmin.UserAIMS.GSMethod;
+import nz.govt.linz.AdminBoundaries.UserAdmin.UserTomcat.GSMethod;
 
 /**
  * Absract class for user reading functions incl TC and PG
@@ -36,26 +39,34 @@ public abstract class UserReader {
 	 * @return
 	 */
 	public List<List<String>> transformUserList(List<? extends User> userlist){
-		int row_count = 0;
+		boolean first = true;
 		List<List<String>> new_userlist = new ArrayList<>();
+		List<String> top_row = new ArrayList<>();
 		for (User user : userlist) {
+			//LOGGER.info("transform U:"+user);
+			LOGGER.info("***    gsm "+user.getGSMethod().toString());
+			for (String s : user.getGSMethod()) {LOGGER.info("****** gsm "+s);}
 			List<String> new_row = new ArrayList<>();
 			Map<String,Method> getters = User.readMethods(user);
 			Iterable<String> giter = getters
 				.keySet()
 				.stream()
-				.filter(x -> isInEnum(x,GSMethod.class))::iterator;
+				.filter(x -> user.getGSMethod().contains(x))::iterator;
+				//.filter(x -> isInEnum(x,GSMethod.class))::iterator;
 			for (String key : giter) {
-				//if (isInEnum(key,GSMethod.class))
-				if (row_count == 0) { 
-					new_row.add(key); 
-				}
-				else { 
-					Object o = user.invokeMethod(getters.get(key));
-					new_row.add(String.valueOf(o));//useraims.getUserMethod(key)); 
-				}
+				//LOGGER.info("transform  K:"+key);
+				if (first) {
+					//add the header-row/column-names
+					top_row.add(key); 
+				} 
+				Object o = user.invokeMethod(getters.get(key));
+				//LOGGER.info("transform  O:"+String.valueOf(o));
+				new_row.add(String.valueOf(o)); 
 			}
-			row_count ++;
+			if (first) {
+				first = false;
+				new_userlist.add(top_row);
+			}
 			new_userlist.add(new_row);
 		}
 		return new_userlist;
@@ -74,7 +85,15 @@ public abstract class UserReader {
 		  return false;
 	}
 	
-	
+	public static String[] getNames2(Class<? extends Enum<?>> e) {
+		return Arrays.stream(e.getEnumConstants()).map(Enum::name).toArray(String[]::new);
+	}
+	public static List<String> getNames(Class<? extends Enum<?>> e) {
+		return Stream.of(e.getEnumConstants()).map(Enum::name).collect(Collectors.toList()); 
+	}
+//	public static List<String> getNames0(Class<? extends Enum<?>> e) {
+//		return Stream.of(e.getEnumConstants()).map(x -> ((GSMethod2) x).field()).collect(Collectors.toList()); 
+//	}
 	
 	/**
 	 * Returns a matching user_list entry matching by provided key/value pair
@@ -132,7 +151,7 @@ public abstract class UserReader {
 
 	/* user obj functions */
 	public void addUser(User user) {
-		if (user_list.contains(user)) {
+		if (findInUserList(user.getUserName())!=null) {
 			LOGGER.warning("Cannot add user "+user+". Already exists. Updating instead.");
 			editUser(user);
 		}
@@ -141,6 +160,7 @@ public abstract class UserReader {
 			saveUserList();
 		}
 	}
+	
 	public void delUser(User user) {
 		if (user_list.contains(user)) {
 			user_list.remove(user);
@@ -151,42 +171,28 @@ public abstract class UserReader {
 		}
 	}
 	
+	/**
+	 * Edit user(user) calls the common merge function  
+	 * @param user
+	 */
 	public void editUser(User user) {
-		User user_old = user_list.get(user_list.indexOf(user));
+		//User user_old = user_list.get(user_list.indexOf(user));
+		User user_old = findInUserList("UserName",user.getUserName());
+		LOGGER.info("Merge "+user_old+"<-"+user);
 		user_old.merge(user);
 		saveUserList();
 	}
 
-	/* user string functions */
-	
-	/**
-	 * Replaces the user/pass combo in the user_list and saves.
-	 * Only adds a replacement if the original exists
-	 * @param user Username
-	 * @param pass Password unencrypted
-	 */
-	public abstract void addUser(String username,String password, String roles);
-	
+	/* user string functions (only del has common args) */
+
 	/**
 	 * Removes the selected user from the user_list and saves
 	 * @param user Username key
 	 */
 	public void delUser(String username) {
-		user_list.remove(findInUserList(username));
-		saveUserList();
+		delUser(findInUserList(username));
 	}
 	
-	/**
-	 * Replaces the user/pass combo in the user_list and saves.
-	 * Only adds a replacement if the original exists
-	 * @param user Username
-	 * @param pass Password unencrypted
-	 */
-	public void editUser(String username,String password, String roles) {
-		User user = findInUserList(username);
-		if (user_list.remove(user)) {
-			addUser(user);
-		}
-	}
+
 }
 

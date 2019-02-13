@@ -83,7 +83,7 @@ public class DABFormatter {
 	public static String formatTable(String caption, List<List<String>> result) {
 		String table = "";
 	    table += "<table>";
-	    table += "<caption>"+caption+"</caption>";
+	    table += "<caption type=\"h2\">"+caption+"</caption>";
 	    table += "<thead><tr>";
 	    //LOGGER.info("Tsz:"+result.size());
 	    List<String> head = result.get(0);
@@ -106,7 +106,7 @@ public class DABFormatter {
 
 	    return table;
 	}
-	
+
 	/**
 	 * Reformats a list/list/string as an html table with the caption tname
 	 * @param fname
@@ -133,7 +133,7 @@ public class DABFormatter {
     				form += "<textarea name=\""+section+SEP+option+"\">"+opt_val.get(option)+"</textarea><br/>\n";
     			}
     			else {
-    				form += "<input name=\""+section+SEP+option+"\" value='"+opt_val.get(option)+"' type=\"text\"/><br/>\n";
+    				form += "<input name=\""+section+SEP+option+"\" value='"+opt_val.get(option)+"' class=\"sec\" type=\"text\"/><br/>\n";
     			}
     		}
     		form += "</section>\n";

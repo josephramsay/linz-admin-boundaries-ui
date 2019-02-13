@@ -82,51 +82,51 @@ public class DABFormatterUser extends DABFormatter {
 
 
 	private static String getUserDropDown(String menuref,List<User> userlist) {
-		String form = "<label class=\"sec\">Username</label>&nbsp;\n";
+		String form = "<div><label class=\"sec\">Username</label>&nbsp;\n";
 		form += "<select name=\""+menuref+"_user\" class=\"multiselect\">\n";
 		for (User user : userlist) {
 			form += "<option value=\""+user.getUserName()+"\">"+user.getUserName()+"</option>\n";
 		}
-		form += "</select>&nbsp;\n";
+		form += "</select></div>&nbsp;\n";
 
 		return form;
 	}
 
 	private static String getRoleDropDown(String menuref, List<String> rolelist, boolean multi) {//List<User> userlist) {
-		String form = "<label class=\"sec\">Role</label>&nbsp;\n";
+		String form = "<div><label class=\"sec\">Role</label>&nbsp;\n";
 		form += "<select name=\""+menuref+"_role\" class=\"multiselect\" "+(multi?"multiple":"")+">\n";
 		for (String role : rolelist) {//consolidateRoles(userlist)) {
 			form += "<option value=\""+role+"\">"+role+"</option>\n";
 		}
-		form += "</select>&nbsp;\n";
+		form += "</select></div>&nbsp;\n";
 		return form;
 	}
 	
 	private static String getPasswordEntry(String menuref) {
-		String form = "<label class=\"sec\">Password</label>&nbsp;\n";
-		form += "<input name=\""+menuref+"_pass\" value=\"\" type=\"text\"/><br/>\n";
+		String form = "<div><label class=\"sec\">Password</label>&nbsp;\n";
+		form += "<input name=\""+menuref+"_pass\" class=\"sec\" value=\"\" type=\"text\"/></div><br/>\n";
 		return form;
 	}
 	
 	private static String getOrganisationDropDown(String menuref,List<String> orglist) {
-		String form = "<label class=\"sec\">Organisation</label>&nbsp;\n";
+		String form = "<div><label class=\"sec\">Organisation</label>&nbsp;\n";
 		form += "<select name=\""+menuref+"_org\" class=\"multiselect\">\n";
 		for (String role : orglist) {
 			form += "<option value=\""+role+"\">"+role+"</option>\n";
 		}
-		form += "</select>&nbsp;\n";
+		form += "</select></div>&nbsp;\n";
 		return form;
 	}
 	
 	private static String getRequiresProgressCheckBox(String menuref) {
-		String form = "</br></br><label class=\"sec\">Requires&nbsp;Progress</label>&nbsp;\n";
-		form += "<input type=\"checkbox\" name=\""+menuref+"_rp\" class=\"sec\" value=\"reqprg\">\n";
+		String form = "</br>\n<div><label class=\"sec\">Requires&nbsp;Progress</label>&nbsp;\n";
+		form += "<input type=\"checkbox\" name=\""+menuref+"_rp\" class=\"sec\" value=\"reqprg\"></div>\n";
 		return form;
 	}
 	
 	private static String getEmailEntry(String menuref) {
-		String form = "<label class=\"sec\">Email</label>&nbsp;\n";
-		form += "<input name=\""+menuref+"_email\" class=\"sec\" value=\"\" type=\"text\"/>&nbsp;\n";
+		String form = "<div><label class=\"sec\">Email</label>&nbsp;\n";
+		form += "<input name=\""+menuref+"_email\" class=\"sec\" value=\"\" type=\"text\"/></div>&nbsp;\n";
 		return form;
 	}
 	

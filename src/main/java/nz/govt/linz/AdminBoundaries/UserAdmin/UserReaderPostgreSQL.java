@@ -131,7 +131,18 @@ public class UserReaderPostgreSQL extends UserReader {
 	@Override
 	public void saveUserList() {
 		for (User user : user_list) {
-			//IF user not in usr_list_clone AND role is allowed THEN grant
+			for (User user_clone : user_list_clone) {
+				//IF user_clone not in user_list AND role is allowed THEN revoke
+				if (!user_list.contains(user_clone)) {
+					for (PGRoles role : ((UserPostgreSQL)user_clone).getRoles()) {
+						LOGGER.info("revoke "+role);
+						String query =	String.format("revoke %s from %s", role.name(), user_clone.getUserName());
+						//System.out.println(query);
+						dab_conn.executeQuery(query);
+					}
+				}
+			}
+			//IF user not in user_list_clone AND role is allowed THEN grant
 			if (!user_list_clone.contains(user)){
 				for (PGRoles role : ((UserPostgreSQL)user).getRoles()) {
 					LOGGER.info("grant "+role);
@@ -141,17 +152,7 @@ public class UserReaderPostgreSQL extends UserReader {
 				}
 			}
 		}
-		for (User user_clone : user_list_clone) {
-			//IF user_clone not in user_list AND role is allowed THEN revoke
-			if (!user_list.contains(user_clone)) {
-				for (PGRoles role : ((UserPostgreSQL)user_clone).getRoles()) {
-					LOGGER.info("revoke "+role);
-					String query =	String.format("revoke %s from %s", role.name(), user_clone.getUserName());
-					//System.out.println(query);
-					dab_conn.executeQuery(query);
-				}
-			}
-		}
+
 
 		refresh();
 	}

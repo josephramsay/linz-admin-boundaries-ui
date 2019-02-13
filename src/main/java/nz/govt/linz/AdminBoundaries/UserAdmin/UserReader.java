@@ -9,8 +9,7 @@ import java.util.Objects;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import nz.govt.linz.AdminBoundaries.UserAdmin.UserTomcat.GSMethod;
+import java.util.EnumSet;
 
 /**
  * Absract class for user reading functions incl TC and PG
@@ -61,7 +60,7 @@ public abstract class UserReader {
 				} 
 				Object o = user.invokeMethod(getters.get(key));
 				//LOGGER.info("transform  O:"+String.valueOf(o));
-				new_row.add(String.valueOf(o)); 
+				new_row.add(trimB(o)); 
 			}
 			if (first) {
 				first = false;
@@ -70,6 +69,12 @@ public abstract class UserReader {
 			new_userlist.add(new_row);
 		}
 		return new_userlist;
+	}
+	
+	/** Simple function to trim leading/trailing [,] chars from enum.strings */
+	private static String trimB(Object o) {
+		if (o instanceof EnumSet) { return String.valueOf(o).replaceFirst("^(\\[)(.*)(\\])$","$2");	} 
+		else { return String.valueOf(o); }
 	}
 	
 	/**

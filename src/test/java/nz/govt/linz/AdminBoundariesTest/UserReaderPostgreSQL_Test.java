@@ -90,26 +90,49 @@ public class UserReaderPostgreSQL_Test {
 		assertEquals(dummyuser,reader.findInUserList(dummyuser).getUserName());
 	}
 	
+	@Test
+	public void test_23_editUserMultiRoleStr() {
+		String dummyuser = "testuser5";
+		String dummyroles = "aims_admin,aims_reader,aims_user";
+		((UserReaderPostgreSQL)reader).editUser(dummyuser,dummyroles);
+		List<User> user_list = reader.getUserList();
+		assertEquals(user_count+1,user_list.size());
+		assertEquals(EnumSet.of(PGRoles.aims_admin,PGRoles.aims_reader,PGRoles.aims_user),((UserPostgreSQL)reader.findInUserList(dummyuser)).getRoles());
+	}
 	
+	@Test
+	public void test_24_addUserMultiRoleStr() {
+		String dummyuser = "testuser6";
+		String dummyroles = "aims_admin,aims_reader,aims_user";
+		((UserReaderPostgreSQL)reader).addUser(dummyuser,dummyroles);
+		List<User> user_list = reader.getUserList();
+		assertEquals(user_count+2,user_list.size());
+		assertEquals(EnumSet.of(PGRoles.aims_admin,PGRoles.aims_reader,PGRoles.aims_user),((UserPostgreSQL)reader.findInUserList(dummyuser)).getRoles());
+	}
 	
 	@Test
 	public void test_30_deleteUser() {
 		reader.delUser("testuser5");
+		reader.delUser("testuser6");
 		List<User> user_list = reader.getUserList();
 		assertEquals(user_count,user_list.size());
 	}
 	
 	@Test
 	public void test_31_notExistsUser() {
-		String dummyuser = "testuser5";
-		assertFalse(reader.userExists(dummyuser));
+		String dummyuser1 = "testuser5";
+		String dummyuser2 = "testuser6";
+		assertFalse(reader.userExists(dummyuser1));
+		assertFalse(reader.userExists(dummyuser2));
 	}
+	
+	
 	
 	/**
 	 * Get table transform and count rows = users + header row
 	 */
 	@Test
-	public void test_40_transformer() {
+	public void test_90_transformer() {
 		List<User> user_list = reader.getUserList();
 		List<List<String>> table_data = reader.transformUserList(user_list);
 		System.out.println("DR40-"+table_data);

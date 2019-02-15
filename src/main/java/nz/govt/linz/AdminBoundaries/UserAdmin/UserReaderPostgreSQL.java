@@ -137,7 +137,6 @@ public class UserReaderPostgreSQL extends UserReader {
 					for (PGRoles role : ((UserPostgreSQL)user_clone).getRoles()) {
 						LOGGER.info("revoke "+role);
 						String query =	String.format("revoke %s from %s", role.name(), user_clone.getUserName());
-						//System.out.println(query);
 						dab_conn.executeQuery(query);
 					}
 				}
@@ -147,7 +146,6 @@ public class UserReaderPostgreSQL extends UserReader {
 				for (PGRoles role : ((UserPostgreSQL)user).getRoles()) {
 					LOGGER.info("grant "+role);
 					String query =	String.format("grant %s to %s", role.name(), user.getUserName());
-					//System.out.println(query);
 					dab_conn.executeQuery(query);
 				}
 			}

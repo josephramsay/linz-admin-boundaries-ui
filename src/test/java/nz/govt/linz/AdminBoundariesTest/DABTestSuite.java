@@ -12,7 +12,8 @@ import org.junit.runners.Suite;
 	UserReaderAIMS_Test.class,
 	IniReader_Test.class,
 	DABFormatter_Test.class,
-	DABContainerComp_Test.class
+	DABContainerComp_Test.class,
+	ProcessControl_Test.class
 })
 
 public class DABTestSuite {

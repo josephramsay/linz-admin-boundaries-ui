@@ -43,8 +43,8 @@ public abstract class UserReader {
 		List<String> top_row = new ArrayList<>();
 		for (User user : userlist) {
 			//LOGGER.info("transform U:"+user);
-			LOGGER.info("***    gsm "+user.getGSMethod().toString());
-			for (String s : user.getGSMethod()) {LOGGER.info("****** gsm "+s);}
+			//LOGGER.info("transform gGSM:"+user.getGSMethod().toString());
+			///for (String s : user.getGSMethod()) {LOGGER.info("transform user gGSM:"+s);}
 			List<String> new_row = new ArrayList<>();
 			Map<String,Method> getters = User.readMethods(user);
 			Iterable<String> giter = getters
@@ -166,6 +166,10 @@ public abstract class UserReader {
 		}
 	}
 	
+	/**
+	 * Shortcut to delete which finds existing user in list with highest ver 
+	 * @uname User name
+	 */
 	public void delUser(User user) {
 		if (user_list.contains(user)) {
 			user_list.remove(user);

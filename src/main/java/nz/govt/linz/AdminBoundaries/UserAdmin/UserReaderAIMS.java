@@ -48,7 +48,7 @@ public class UserReaderAIMS extends UserReader {
 	}
 	
 	private String aims_url;
-	private JsonObject aims_json_obj;
+	private JsonObject json_conn;
 	private List<User> user_list_clone;
 
 	public UserReaderAIMS(DABIniReader reader){
@@ -80,14 +80,17 @@ public class UserReaderAIMS extends UserReader {
 	 */
 	@Override
 	public void load() {
-		LOGGER.info("Fetching "+aims_url);
-		aims_json_obj = getJO(aims_url);
-		LOGGER.info("AJO "+aims_json_obj);
+		connect();
+		refresh();
+	}
+	
+	private void refresh() {
 		user_list = readUserList();
 		user_list_clone = cloneUserList();
 
 	}
-	private JsonObject getJO(String urlstr) {
+	
+	private JsonObject connect(String urlstr) {
 		try {
 			URL url = new URL(urlstr);
 			HttpURLConnection uc = (HttpURLConnection)url.openConnection();
@@ -105,6 +108,13 @@ public class UserReaderAIMS extends UserReader {
 		}
 		return null;
 	}
+	/**
+	 * Default connect. Must be refreshed after each operation
+	 */
+	private void connect() {
+		json_conn = connect(aims_url);
+	}
+	
 
 	
 	/**
@@ -121,18 +131,6 @@ public class UserReaderAIMS extends UserReader {
 		user.setOrganisation(organisation);
 		user.setRole(AARoles.valueOf(role));
 		addUser(user);
-		/*
-		if (!user_list.contains(user)) {
-			user_list.add(user);
-		}
-		else {
-			User orig = findInUserList(user.userName);
-			((UserAIMS)orig).merge(user);
-			user_list.remove(orig);
-			user_list.add(orig);
-		}
-		*/
-		//saveUserList();
 	}
 	
 	/**
@@ -142,18 +140,7 @@ public class UserReaderAIMS extends UserReader {
 	public void addUser(String username, String requiresProgress, String organisation, String role) {
 		addUser(username, null, requiresProgress, organisation, role);
 	}
-	
-	
-	/**
-	 * Shortcut to delete which finds existing user in list with highest ver 
-	 * @uname User name
-	 */
-//	public void delUser(String uname) {
-//		User user = findInUserList(uname);
-//		delUser(user);
-//		//user_list.remove(user);
-//		saveUserList();
-//	}
+
 	
 	public void editUser(String ver, String uid, String uname, String email, String reqprg, String org, String role) {
 		UserAIMS user = new UserAIMS();		
@@ -197,7 +184,6 @@ public class UserReaderAIMS extends UserReader {
 					LOGGER.warning("HTTP write failed with "+e);
 				}
 				int rc = uc.getResponseCode();
-				System.out.println("**RC** "+rc);
 				if (rc<200 || rc>299) {
 					LOGGER.warning("HTTP write failed with "+uc.getResponseMessage());
 					//throw new Exception(uc.getResponseMessage().toString());
@@ -269,7 +255,7 @@ public class UserReaderAIMS extends UserReader {
 		}
 		
 		if (Action.Add!=action) { plus = "/"+String.valueOf(((UserAIMS)user).getUserId()); }
-		System.out.println("JPayload - "+action.ppd+"-["+plus+"]-"+juser);
+		LOGGER.fine("jpayload "+action.ppd+"-["+plus+"]-"+juser);
 		return new ActionPayload(plus,action,juser);
 	}
 	private void setParams(HttpURLConnection uc,String ppd) {
@@ -303,24 +289,28 @@ public class UserReaderAIMS extends UserReader {
 	 */
 	public List<User> readUserList(){
 		List<User> user_list_new = new ArrayList<>();
-		JsonArray entities = aims_json_obj.getJsonArray("entities");
+		connect();
+		JsonArray entities = json_conn.getJsonArray("entities");
 		//get the entities hrefs to get userpages
 		//LOGGER.info("J ents "+entities.size()); //sometimes the wrong number of entities are returned
 		for (int i=0; i<entities.size(); i++) {
 			//LOGGER.info("J get "+i);
 			JsonObject jo1 = (JsonObject) entities.get(i);
 			String href = jo1.getString("href");
-			JsonObject userprops = getJO(href).getJsonObject("properties");
-			
-			UserAIMS user = new UserAIMS();
-			user.setVersion(userprops.getInt("version"));
-			user.setUserId(userprops.getInt("userId"));
-			user.setUserName(userprops.getString("userName"));
-			user.setEmail(userprops.containsKey("email")?userprops.getString("email"):null);
-			user.setRequiresProgress(userprops.getBoolean("requiresProgress"));
-			user.setOrganisation(userprops.getString("organisation"));
-			user.setRole(userprops.getString("role"));
-			user_list_new.add(user);
+			JsonObject c = connect(href);
+			//because sometimes the entities list hasn't caught up with the latest deletes
+			if (c!=null) {
+				JsonObject userprops = c.getJsonObject("properties");
+				UserAIMS user = new UserAIMS();
+				user.setVersion(userprops.getInt("version"));
+				user.setUserId(userprops.getInt("userId"));
+				user.setUserName(userprops.getString("userName"));
+				user.setEmail(userprops.containsKey("email")?userprops.getString("email"):null);
+				user.setRequiresProgress(userprops.getBoolean("requiresProgress"));
+				user.setOrganisation(userprops.getString("organisation"));
+				user.setRole(userprops.getString("role"));
+				user_list_new.add(user);
+			}
 			
 		}
 		return user_list_new;

@@ -407,7 +407,7 @@ footer ul {
 }
 */
 
-.multiselect {
+.multiselect, .multiselect2 {
 	width: 250px;
 	background-color: lightblue;
 }

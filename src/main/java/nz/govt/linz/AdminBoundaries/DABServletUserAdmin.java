@@ -12,15 +12,22 @@ package nz.govt.linz.AdminBoundaries;
  */
 
 import java.io.*;
+import java.net.Socket;
 import java.util.*;
 import java.util.logging.Logger;
 
+import javax.management.InstanceNotFoundException;
+import javax.management.MBeanException;
+import javax.management.MBeanServer;
+import javax.management.MBeanServerFactory;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+import javax.management.ReflectionException;
 import javax.servlet.*;
 import javax.servlet.http.*;
 
-import nz.govt.linz.AdminBoundaries.DABFormatterUser.TorP;
+import nz.govt.linz.AdminBoundaries.DABFormatterUser.TPA;
 import nz.govt.linz.AdminBoundaries.UserAdmin.User;
-import nz.govt.linz.AdminBoundaries.UserAdmin.UserReader;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserReaderAIMS;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserReaderPostgreSQL;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserReaderTomcat;
@@ -48,7 +55,18 @@ public class DABServletUserAdmin extends DABServlet {
 	public void init() throws ServletException {
 		super.init();
 		message = "User Editor for Admin Boundarys";
-		description = String.join("\n", "This config provides view/edit functionality for AIMS user administration.");
+		description = String.join("\n", 
+			"This page provides view/edit functionality for AIMS user administration. " 
+			+ "Users are linked by the primary identifier; 'username'. All identities "
+			+ "must be synchronised on this key for AIMS access.",
+			"The 'Tomcat' user list presents the contents of the tomcat-users.xml file "
+			+ "which tomcat uses to provide a secure login mechanism for access to the webserver. "
+			+"Passwords are encrypted after being entered and saved in their encrypted format. They cannot be decrypted",
+			"The 'PostgreSQL' dialog enables the granting/revocation of access to the AIMS database tables "
+			+ "using AIMS database group roles. Users cannot be added or deleted from the "
+			+ "database using his dialog.",
+			"The 'AIMS' dialog grants users AIMS specifc access via the API with permissions "
+			+"defined by AIMS specific categories; Follower/Reviewer/Administrator/Publisher.");
 
 		urtc = new UserReaderTomcat();
 		urpg = new UserReaderPostgreSQL();
@@ -90,7 +108,7 @@ public class DABServletUserAdmin extends DABServlet {
 		List<User> tomcat_userlist = urtc.readUserList();
 		List<User> postgres_userlist = urpg.readUserList();
 		List<User> aims_userlist = uraa.readUserList();
-
+		
 		String users_tc = DABFormatter.formatTable( "Tomcat Users",
 			urtc.transformUserList(tomcat_userlist));
 		String users_pg = DABFormatter.formatTable( "PostgreSQL Users",
@@ -99,11 +117,11 @@ public class DABServletUserAdmin extends DABServlet {
 			uraa.transformUserList(aims_userlist));
 
 		String userform_tc = DABFormatterUser.formatUserForm(
-			TorP.Tomcat,tomcat_userlist);
+			TPA.Tomcat,tomcat_userlist);
 		String userform_pg = DABFormatterUser.formatUserForm(
-			TorP.PostgreSQL,postgres_userlist);
+			TPA.PostgreSQL,postgres_userlist);
 		String userform_aa = DABFormatterUser.formatUserForm(
-			TorP.AIMS,aims_userlist);
+			TPA.AIMS,aims_userlist);
 
 		infomessage = dabf.getInfoMessage(info);
 		accdectable = dabf.getBackNav();
@@ -199,6 +217,9 @@ public class DABServletUserAdmin extends DABServlet {
 			LOGGER.info("Delete TC user "+user);
 			reader.delUser(user);
 		}
+		else if("restart".equals(action)) {
+			restartAIMS();
+		}
 		else {
 			LOGGER.warning("Cannot match [u:"+user+"/"+(exists?"E":"x")+",r:"+role+",p:"+pass+",a:"+action+"]");
 			return;
@@ -234,5 +255,28 @@ public class DABServletUserAdmin extends DABServlet {
 			LOGGER.warning("Cannot match [u:"+user+"/"+(exists?"E":"x")+",r:"+role+",a:"+action+"]");
 			return;
 		}
+	}
+	private void restartTomcat() {
+		try (Socket clientSocket = new Socket("localhost", 8005)){;
+		clientSocket.getOutputStream().write("RESTART".getBytes());
+		clientSocket.getOutputStream().close();
+		clientSocket.close();
+		}
+		catch (IOException ioe) {}
+	}
+	private void restartAIMS() {
+		String identifier = "Catalina:j2eeType=WebModule,name=//localhost/aims,J2EEApplication=none,J2EEServer=none";
+		MBeanServer mbs = MBeanServerFactory.findMBeanServer(null).get(0);
+		try {
+			ObjectName objectName = new ObjectName(identifier);
+			LOGGER.info("Attempting AIMS restart");
+			mbs.invoke(objectName, "reload", null, null);
+		}
+		catch (MalformedObjectNameException|ReflectionException|InstanceNotFoundException|MBeanException multi) {
+			LOGGER.warning("Cannot restart AIMS. "+multi);
+			//LOGGER.warning("Attempting Tomcat restart");
+			//restartTomcat();
+		}
+		
 	}
 }

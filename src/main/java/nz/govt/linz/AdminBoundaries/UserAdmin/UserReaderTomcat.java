@@ -6,7 +6,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -29,9 +28,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-import nz.govt.linz.AdminBoundaries.UserAdmin.UserAIMS.AARoles;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserTomcat.GSMethod;
-import nz.govt.linz.AdminBoundaries.UserAdmin.UserTomcat.TCRoles;
 
 public class UserReaderTomcat extends UserReader {
 	
@@ -74,7 +71,7 @@ public class UserReaderTomcat extends UserReader {
 	public void addUser(String username, String password, String roles) {
 		UserTomcat user = new UserTomcat();
 		user.setUserName(username);
-		user.setPassword(password);
+		user.setPassword(encrypt(password));
 		user.setRoles(roles);
 		//user_list.add(user);
 		//saveUserList();
@@ -84,7 +81,7 @@ public class UserReaderTomcat extends UserReader {
 	public void editUser(String uname, String password, String roles) {
 		UserTomcat user = new UserTomcat();		
 		user.setUserName(uname);
-		user.setPassword(uname);
+		user.setPassword(encrypt(uname));
 		user.setRoles(roles);
 		//user_list.add(user);
 		editUser(user);
@@ -137,10 +134,10 @@ public class UserReaderTomcat extends UserReader {
 			Node n = user_nl.item(0);
 			try {
 				root_element.removeChild(n);
-				System.out.println("removing "+n.getAttributes().item(2));
+				LOGGER.info("removing "+n.getAttributes().item(2));
 			}
 			catch (DOMException de) {
-				System.err.println("UserReader save Failure. "+de.toString());
+				LOGGER.warning("UserReader save Failure. "+de.toString());
 			}
 		}
 		//add back modified users
@@ -152,7 +149,7 @@ public class UserReaderTomcat extends UserReader {
 			root_element.appendChild(new_element);
 			user_doc.normalize();
 			//root_element.insertBefore(new_element, refChild)  appendChild(new_element);
-			System.out.println("appending "+user.getUserName());
+			LOGGER.info("appending "+user.getUserName());
 		}
 		//Tidy up by removing blank lines
 		int i=0;
@@ -181,7 +178,7 @@ public class UserReaderTomcat extends UserReader {
 				user.userSetterMethod(upr, n.getAttributes().getNamedItem(upr.toLowerCase()).getNodeValue());
 			}
 			new_user_list.add(user);
-			System.out.println("READ - "+user.getUserName());
+			LOGGER.info("Read user "+user.getUserName());
 		}
 		return new_user_list;
 	}
@@ -198,14 +195,8 @@ public class UserReaderTomcat extends UserReader {
 			Document user_doc = dbBuilder.parse(tomcat_file);
 			return user_doc;
 		} 
-		catch (ParserConfigurationException pce){
-			System.err.println("UserReader Failure. "+pce.toString());
-		}
-		catch (SAXException se){
-			System.err.println("UserReader Failure. "+se.toString());
-		}
-		catch (IOException ioe) {
-			System.err.println("UserReader Failure. "+ioe.toString());
+		catch (ParserConfigurationException|SAXException|IOException multi) {
+			System.err.println("UserReader Failure. "+multi.toString());
 		}
 		return null;
 	}
@@ -221,7 +212,6 @@ public class UserReaderTomcat extends UserReader {
 	public String encrypt(String plain) {
 		try {
 			MessageDigestCredentialHandler handler = new MessageDigestCredentialHandler();
-			System.out.println(handler);
 			handler.setAlgorithm(UserReaderTomcat.ALG);
 			handler.setIterations(UserReaderTomcat.ITER);
 			handler.setSaltLength(UserReaderTomcat.SALT);

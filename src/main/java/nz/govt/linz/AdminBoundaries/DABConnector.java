@@ -81,16 +81,15 @@ public class DABConnector {
 	 */
 	public List<List<String>> executeQuery(String query,boolean includehead) {
 		List<List<String>> result = null;
-		// System.out.println(String.format("### QRY ### %s", query));
 		try {
 			ResultSet rs = exeQuery(query);
 			if (rs != null) {
 				result = parseResultSet(rs,includehead);
-				LOGGER.fine("RES Size "+result.size());
+				LOGGER.fine("res size "+result.size());
 			}
 		} 
 		catch (SQLException sqle) {
-			LOGGER.warning("SQLError (q) " + sqle + "\n" + query);
+			LOGGER.warning("sql error (q) " + sqle + "\n" + query);
 			result = parseSQLException(sqle);
 		}
 		return result;
@@ -111,7 +110,7 @@ public class DABConnector {
 			Statement stmt = conn.createStatement();
 			if (stmt.execute(query)) {
 				result = stmt.getResultSet();
-				System.out.println("RES::"+result);
+				LOGGER.fine("query result "+result);
 			}
 		}
 		return result;
@@ -162,7 +161,7 @@ public class DABConnector {
 		List<List<String>> result = null;
 
 		// Error is written to general log and result is returned
-		System.out.println("SQL error " + sqle);
+		LOGGER.warning("sql error " + sqle);
 		// return the error to the user
 		result = new ArrayList<>();
 		List<String> line = new ArrayList<>();
@@ -179,7 +178,7 @@ public class DABConnector {
 	 * @return
 	 */
 	public String quoteSpace(String columns) {
-		LOGGER.fine("COLS. " + columns);
+		LOGGER.finer("cols " + columns);
 		StringBuilder res = new StringBuilder();
 		for (String col : columns.split(",")) {
 			if (col.trim().indexOf(" ") > 0) {
@@ -311,16 +310,6 @@ public class DABConnector {
 
 	public String toString() {
 		return "DABConnector::";// +connector;
-	}
-
-	/**
-	 * main method used for testing
-	 * 
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		DABConnector dabc = new DABConnector();
-		System.out.println(dabc.executeQuery("select 1"));
 	}
 
 }

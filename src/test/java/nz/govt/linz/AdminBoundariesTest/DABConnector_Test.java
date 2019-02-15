@@ -166,20 +166,6 @@ public class DABConnector_Test {
 	public void tearDown() throws Exception {
 	}	
 	
-//	@Test
-//	public void test_05_executeLocalhost() {
-//		PGSimpleDataSource datasource = new PGSimpleDataSource();
-//	
-//		datasource.setServerName("localhost");
-//		datasource.setDatabaseName("testdb" );
-//		datasource.setUser( "testuser0" );
-//		datasource.setPassword( "testpass0" );
-//		connector = new DABConnector(datasource);
-//		System.out.println(connector.executeQuery(query_2));
-//		assertEquals(connector.executeQuery(query_2),result_2);
-//	}
-	
-	
 	/**
 	 * Tests the string length of the generated test table
 	 */
@@ -245,6 +231,10 @@ public class DABConnector_Test {
 			assertEquals("",npe.getMessage());
 		}*/
 	}
+	
+	/**
+	 * Tests the quotespace function throws an error on null input
+	 */
 	@Test(expected=NullPointerException.class)
 	public void test_60_quotespace_err() {
 		connector.quoteSpace(null);

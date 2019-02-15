@@ -92,44 +92,4 @@ public class DABIniReader extends IniReader{
 		return colmap.get(name);
 	}
 
-	/**
-	 * main method just for testing
-	 * @param args
-	 * TODO delete this method
-	 */
-	public static void main(String[] args){
-		String p = "testconfig.ini";
-		try {
-			DABIniReader reader1 = new DABIniReader(p);
-			//Map<String, Map<String,String>> entries = reader1.getEntries();
-			for (String sec : reader1.getSections()){
-				for (String opt : reader1.getOptions(sec)){
-					String val = reader1.getEntry(sec, opt);
-					System.out.println(String.format("READ FROM >>> s=%s, o=%s, v=%s", sec,opt,val));
-
-					if ("output_srid".equals(opt)){
-						//increment val
-						reader1.setEntry(sec, opt, Integer.toString(Integer.valueOf(val)+1));
-					}
-				}
-			}
-			//reader.setEntries(entries);
-			reader1.dump();
-
-			DABIniReader reader2 = new DABIniReader(p);
-			//Map<String, Map<String,String>> entries2 = reader2.getEntries();
-			for (String sec : reader2.getSections()){
-				for (String opt : reader2.getOptions(sec)){
-					String val = reader2.getEntry(sec, opt);
-					System.out.println(String.format("WRITTEN TO >> s=%s, o=%s, v=%s", sec,opt,val));
-				}
-			}
-
-		} 
-		catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-	}
 }

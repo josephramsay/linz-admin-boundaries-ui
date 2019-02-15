@@ -30,7 +30,7 @@ public class UserAIMS extends User {
 			this.db_name = db_name;
 		}
 		static Organisation translate(String org){
-		    switch (org.toLowerCase().replace("-","").replace(" ","")) {
+		    switch (org.toLowerCase().replaceAll("[-_ ]","")) {
 		    case "linz": return LINZ;
 		    case "espatial": return e_Spatial;
 		    case "nzfs": return NZFS;

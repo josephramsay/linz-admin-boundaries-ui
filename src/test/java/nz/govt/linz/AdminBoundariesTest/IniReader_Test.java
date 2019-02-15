@@ -121,7 +121,12 @@ public class IniReader_Test {
 		assertTrue(readerItemComparison(reader1,reader4));
 	}
 	
-	
+	/**
+	 * Does a cmparison between 2 inireader objects by comparing element equality
+	 * @param r1 IniReader 1
+	 * @param r2I niReader 2
+	 * @return Equivalence
+	 */
 	public boolean readerItemComparison(IniReader r1,IniReader r2) {
 		for (String sec : r1.getSections()) {
 			for (String opt : r1.getOptions(sec)) {

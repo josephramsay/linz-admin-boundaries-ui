@@ -48,8 +48,8 @@ public class DABFormatter_Test {
 	private final static String TS_CP = "CAPTION_VALUE"; 
 	private final static String TS_D2 = "ROW2_COL3"; 
 	
-	private final static int form_len = 1448;
-	private final static int table_len = 272;
+	private final static int form_len = 1532;
+	private final static int table_len = 282;
 	
 	
 	@SuppressWarnings("serial")
@@ -99,8 +99,6 @@ public class DABFormatter_Test {
 	@Test
 	public void test_20_tableChange() {
 		String table = DABFormatter.formatTable(TS_CP,tablelist);
-		System.out.println(tablelist);
-		System.out.println(table);
 		assertEquals(table_len,table.length());
 	}
 	

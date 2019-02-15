@@ -65,7 +65,7 @@ public class DABServlet extends HttpServlet {
 		try {
 			hostname = InetAddress.getLocalHost().getHostName();
 		} catch (UnknownHostException uhe) {
-			System.out.println("Cannot get Server hostname. "+uhe);
+			LOGGER.warning("Cannot get Server hostname. "+uhe);
 			hostname = "___";
 		}
 		title = "DAB."+hostname.substring(0, 3);
@@ -90,7 +90,7 @@ public class DABServlet extends HttpServlet {
 	}
 	
 	/**
-	 * Replace parentheses with encoded angle brackets and adds breaks on found new line characters
+	 * Replace parentheses with encoded angle brackets and adds <br/> replacing found newline characters
 	 * @param raw
 	 * @return
 	 */
@@ -121,7 +121,7 @@ public class DABServlet extends HttpServlet {
 		while (params.hasMoreElements()) {
 			String[] parts = new String[2];
 			String pname = (String) params.nextElement();
-			LOGGER.info("Read param "+pname);
+			//LOGGER.info("Read param "+pname);
 			String pvals = smoosh(request.getParameterValues(pname),",");
 			if (pname.contains("_")) { parts = pname.split("_",2); }
 			else { parts[0] = pname; }
@@ -140,6 +140,12 @@ public class DABServlet extends HttpServlet {
 		return result;
 	}
 	
+	/**
+	 * Join a string array into a long string with specified delim
+	 * @param pvals
+	 * @param sep
+	 * @return
+	 */
 	private String smoosh(String[] pvals, String sep) {
 		StringBuilder csl = new StringBuilder("");
 		for(String language : pvals){
@@ -181,6 +187,9 @@ public class DABServlet extends HttpServlet {
 			"<script src=\"https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/js/select2.min.js\"></script>\n" +
 			"<script>$(document).ready(function() { \n" + 
 			"	$(\".multiselect\").select2({tags: true});\n" + 
+			"});</script>\n"+
+			"<script>$(document).ready(function() { \n" +
+			"	$(\".multiselect2\").select2({tags: true, minimumResultsForSearch: -1});\n" + 
 			"});</script>";
 		}
 	

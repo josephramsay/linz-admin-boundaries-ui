@@ -2,8 +2,6 @@ package nz.govt.linz.AdminBoundaries.UserAdmin;
 
 import java.util.EnumSet;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 
 public class UserTomcat extends User {
@@ -31,6 +29,7 @@ public class UserTomcat extends User {
 		setRoles(EnumSet.of(TCRoles.valueOf(roles)));
 	}
 
+	/* encryption is done in reader */
 	public void setPassword(String password) {this.password = password;}
 	public String getPassword() {return this.password;}
 	public void setRoleStr(String rolestr) {

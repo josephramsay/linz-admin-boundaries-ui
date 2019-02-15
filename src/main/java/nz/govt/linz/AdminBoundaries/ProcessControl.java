@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.logging.Logger;
 
 /**
  * Class to initiate and run system processes, n this case the included python script, download_admin_bdys.py
@@ -24,12 +25,24 @@ import java.io.InputStreamReader;
  */
 public class ProcessControl {
 	
+	private static final Logger LOGGER = Logger.getLogger( ProcessControl.class.getName() );
+	
 	//this is the path where the debian packager puts the py part of the app
 	private final static String DABP = "webapps/ab/WEB-INF/scripts/linz_admin_boundaries_uploader.py";
-	private final static String SHELL = "python";
+	private static final String DELIM = "<br/>\n";
+	private static Shell shell;
 	
-	private ProcessBuilder processbuilder;
-	private String processname;
+	private enum Shell { Python, Bash;
+		private static Shell inspect(String pn) {
+			switch (pn.substring(pn.length() - 2).toLowerCase()) {
+			case "py": return Python;
+			case "sh": return Bash;
+			default: return null;
+			}
+		}
+	}
+
+	private static String processname;
 	
 	/**
 	 * Null constructor using default config file location  
@@ -39,63 +52,71 @@ public class ProcessControl {
 	}
 	
 	/**
-	 * Constructor sets up config file path and tests accessibility
+	 * Constructor sets up config file path
 	 * @param procarg
 	 */
-	public ProcessControl(String procarg){
-		File catalina_base = new File( System.getProperty( "catalina.base" ) ).getAbsoluteFile();
-		File proc_file = new File(catalina_base, procarg);
-		if (proc_file.canRead()) {
-			processname = proc_file.toString();
-		}
-		else {
-			processname = DABP;
-		}
+	public ProcessControl(String child){
+		//File parent = new File( System.getProperty( "catalina.base" ) ).getAbsoluteFile();
+		this( new File(System.getProperty( "catalina.base" ), child) );
+
+	}
+	
+	/**
+	 * Constructor reads config file and tests accessibility
+	 * @param procfile
+	 */
+	public ProcessControl(File procfile){
+		if (procfile.canRead()) { processname = procfile.toString(); }
+		else { processname = DABP; }
+		shell = Shell.inspect(processname);
 		System.setSecurityManager(null);
 	}
 	
+	
+	public static ProcessBuilder getProcessBuilder(String arg) {
+		ProcessBuilder processbuilder = new ProcessBuilder(shell.name().toLowerCase(),processname,arg);
+		processbuilder.redirectErrorStream(true);
+		return processbuilder;
+	}
 	/**
 	 * Initialises ProcessBuilder returning output from requested script 
 	 * @param arg Argument to the aims_extract.sh script indicating transfer, process or reject
 	 * @return
 	 */
-	public String startProcessStage(String arg){ 
-		StringBuilder sb = new StringBuilder();
-		sb.append(arg+"<br/>\n");
-		processbuilder = new ProcessBuilder(SHELL,processname,arg);
-		processbuilder.redirectErrorStream(true);
+	public String runProcess(String arg){ 
+		LOGGER.finer("process out "+arg);
+		StringBuilder sb1 = new StringBuilder();
+		sb1.append(arg+DELIM);
+		sb1.append(readProcessOutput(getProcessBuilder(arg),DELIM));
+		return sb1.toString();
+	}
+	
+	public String readProcessOutput(ProcessBuilder pb, String delimiter) {
+		StringBuffer sb2 = new StringBuffer();			
+		String line;
 		try {
-			Process process = processbuilder.start();
+			Process process = pb.start();
 			final InputStream is = process.getInputStream();
-			BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-			String line;
-			while (process.isAlive()){
-				while ((line = reader.readLine()) != null) {
-					sb.append(line+"<br/>\n");
-				}
+			BufferedReader reader = new BufferedReader(new InputStreamReader(is));		
+			do {
+				while ((line = reader.readLine()) != null) { sb2.append(line+delimiter); }
+			} 
+			while (process.isAlive());
+			LOGGER.finer("process out "+sb2.toString());
+			if (sb2.length()==0){
+				sb2.append("No return value. Process exit_code="+process.exitValue()+delimiter);
 			}
-			if (sb.length()==0){
-				sb.append("No return value. Process exit_code="+process.exitValue()+"<br/>\n");
-			}
-		} 
-		catch (IOException ioe) {
-			// TODO Auto-generated catch block
-			sb.append("ProcessBuilder IO Failure. "+ioe.toString()+"<br/>\n");
-		} 
-		return sb.toString();
+		}
+		catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+		}
+		return sb2.toString();
+		
 	}
 	
 	public String toString(){
-		return "ProcessControl::" + processbuilder;
-	}
-	
-	
-	public static void main(String[] args){
-		ProcessControl pc = new ProcessControl("/home/<user>/git/AdminBoundaries/scripts/download_admin_bdys.sh");
-		System.out.println( pc.startProcessStage("load") );
-		System.out.println( pc.startProcessStage("map") );
-		System.out.println( pc.startProcessStage("transfer") );
-
+		return "ProcessControl::" + processname;
 	}
 	
 }

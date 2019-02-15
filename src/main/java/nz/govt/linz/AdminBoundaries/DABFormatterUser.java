@@ -23,24 +23,24 @@ public class DABFormatterUser extends DABFormatter {
 		super();
 	}
 	
-	public enum TorP {
+	public enum TPA {
 		Tomcat("tc","Add / Delete Tomcat User",
 			"Add or remove users from the tomcat-users.xml file in the AIMS config. "
 			+ "Note: Plaintext passwords are encrypted and cannot be recovered once saved",
-			UserReader.getNames(TCRoles.class),true,true,false,false,false),
+			UserReader.getNames(TCRoles.class),true,true,false,false,false,true),
 		PostgreSQL("pg","Add / Delete PostgreSQL User",
 			"Add/Remove AIMS access roles for existing users only. "
 			+ "Note: This dialog cannot add or remove database users",
-			UserReader.getNames(PGRoles.class),true,false, false,false,false),
+			UserReader.getNames(PGRoles.class),true,false, false,false,false,false),
 		AIMS("aa","Add / Delete AIMS User",
 			"AIMS internal user administration. "
 			+ "Note: Unless entered email addresses are constructed from username@&lt;org.domain&gt;",
-			UserReader.getNames(AARoles.class),false,false,true,true,true);
+			UserReader.getNames(AARoles.class),false,false,true,true,true,false);
 		private final String menuref,title,details;
 		private List<String> roles;
-		private final boolean multi,pwbox, embox, orgdd, rpcb;
-		TorP(String menuref,String title, String details, List<String> roles,
-				boolean multi, boolean pwbox, boolean embox, boolean orgdd, boolean rpcb
+		private final boolean multi,pwbox, embox, orgdd, rpcb, restart;
+		TPA(String menuref,String title, String details, List<String> roles,
+				boolean multi, boolean pwbox, boolean embox, boolean orgdd, boolean rpcb, boolean restart
 				){
 			this.menuref = menuref;
 			this.title   = title;
@@ -50,6 +50,7 @@ public class DABFormatterUser extends DABFormatter {
 			this.embox   = embox;
 			this.orgdd   = orgdd;
 			this.rpcb    = rpcb;
+			this.restart = restart;
 			this.details = details;
 		}
 	}; 
@@ -61,21 +62,22 @@ public class DABFormatterUser extends DABFormatter {
 	 * @param config
 	 * @return
 	 */	
-	public static String formatUserForm(TorP torp, List<User> userlist) {
+	public static String formatUserForm(TPA tpa, List<User> userlist) {
 		String form = "";
 		form += "<article><form method=\"post\">\n";
-		form += "<legend>"+torp.title+"</legend>\n";
-		form += getUserDropDown(torp.menuref,userlist);
-		form += getRoleDropDown(torp.menuref,torp.roles,torp.multi);
-		if (torp.pwbox) {form += getPasswordEntry(torp.menuref);};
-		if (torp.embox) {form += getEmailEntry(torp.menuref);};
-		if (torp.orgdd) {form += getOrganisationDropDown(torp.menuref,UserReader.getNames(Organisation.class));};
-		if (torp.rpcb)  {form += getRequiresProgressCheckBox(torp.menuref);};
-    	form += "<section><input type=\"submit\" name=\""+torp.menuref+"_act\" value=\"save\"/></section>";
-    	form += "<section><input type=\"submit\" name=\""+torp.menuref+"_act\" value=\"delete\"/></section>";
+		form += "<legend>"+tpa.title+"</legend>\n";
+		form += getUserDropDown(tpa.menuref,userlist);
+		form += getRoleDropDown(tpa.menuref,tpa.roles,tpa.multi);
+		if (tpa.pwbox)   {form += getPasswordEntry(tpa.menuref);};
+		if (tpa.embox)   {form += getEmailEntry(tpa.menuref);};
+		if (tpa.orgdd)   {form += getOrganisationDropDown(tpa.menuref,UserReader.getNames(Organisation.class));};
+		if (tpa.rpcb)    {form += getRequiresProgressCheckBox(tpa.menuref);};
+    	form += "<section><input type=\"submit\" name=\""+tpa.menuref+"_act\" value=\"save\"/></section>";
+    	form += "<section><input type=\"submit\" name=\""+tpa.menuref+"_act\" value=\"delete\"/></section>";
+    	if (tpa.restart) {form += getRestartButton(tpa.menuref);};
 	    form += "</form><br/>\n";
-	    form += "<details>\n<summary>"+torp.title+" Summary</summary>\n";
-	    form += "<p>"+torp.details+"</p>\n</details>\n";
+	    form += "<details>\n<summary>"+tpa.title+" Summary</summary>\n";
+	    form += "<p>"+tpa.details+"</p>\n</details>\n";
 	    form += "</article>\n";
 	    return form;
 	}
@@ -94,7 +96,7 @@ public class DABFormatterUser extends DABFormatter {
 
 	private static String getRoleDropDown(String menuref, List<String> rolelist, boolean multi) {//List<User> userlist) {
 		String form = "<div><label class=\"sec\">Role</label>&nbsp;\n";
-		form += "<select name=\""+menuref+"_role\" class=\"multiselect\" "+(multi?"multiple":"")+">\n";
+		form += "<select name=\""+menuref+"_role\" class=\"multiselect2\" "+(multi?"multiple":"")+">\n";
 		for (String role : rolelist) {//consolidateRoles(userlist)) {
 			form += "<option value=\""+role+"\">"+role+"</option>\n";
 		}
@@ -110,7 +112,7 @@ public class DABFormatterUser extends DABFormatter {
 	
 	private static String getOrganisationDropDown(String menuref,List<String> orglist) {
 		String form = "<div><label class=\"sec\">Organisation</label>&nbsp;\n";
-		form += "<select name=\""+menuref+"_org\" class=\"multiselect\">\n";
+		form += "<select name=\""+menuref+"_org\" class=\"multiselect2\">\n";
 		for (String role : orglist) {
 			form += "<option value=\""+role+"\">"+role+"</option>\n";
 		}
@@ -128,6 +130,10 @@ public class DABFormatterUser extends DABFormatter {
 		String form = "<div><label class=\"sec\">Email</label>&nbsp;\n";
 		form += "<input name=\""+menuref+"_email\" class=\"sec\" value=\"\" type=\"text\"/></div>&nbsp;\n";
 		return form;
+	}
+	
+	private static String getRestartButton(String menuref) {
+		return "<section><input type=\"submit\" name=\""+menuref+"_act\" value=\"restart\"/></section>";
 	}
 	
 }

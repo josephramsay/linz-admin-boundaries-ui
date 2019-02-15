@@ -209,17 +209,4 @@ public class DABFormatter {
 		return "DABFormatter";
 	}
 	
-	@SuppressWarnings("serial")
-	public static void main(String[] args){
-		Map<String,Map<String,String>> ftest = new LinkedHashMap<>();
-		//Use test instead
-		ftest.put("SECTION1",new HashMap<String,String>(){{put("OPTION1", "value aaa");put("OPTION2", "value bbb");}});
-		ftest.put("temp",new HashMap<String,String>(){{put("OPTION3", "value ccc");put("OPTION4", "value ddd");}});
-		ftest.put("SECTION2",new HashMap<String,String>(){{put("OPTION5", "value eee");put("OPTION6", "value fff");}});
-		ftest.put("SECTION_CM",new HashMap<String,String>(){{put("colmap", "value ggg");put("OPTION8", "value hhh");}});
-		ftest.put("SECTION3",new HashMap<String,String>(){{put("OPTION9", "value iii");put("OPTION0", "value jjj");}});
-		System.out.println(DABFormatter.formatForm("TEST", ftest));
-
-	}
-	
 }

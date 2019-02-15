@@ -55,6 +55,7 @@ public class DABContainerComp_Test {
 	private static String CP = "testconfig.ini";
 	private static String prefix = "temp_";
 	private static IniReader ir;
+	private static DABIniReader reader;
 	
 	@SuppressWarnings("serial")
 	@BeforeClass
@@ -77,12 +78,14 @@ public class DABContainerComp_Test {
 
 	@Before
 	public void setUp() throws Exception {
-		DABIniReader reader = new DABIniReader(CP);
+		reader = new DABIniReader(CP);
 		container = new DABContainerComp(reader);		
 	}
 
 	@After
 	public void tearDown() throws Exception {
+		reader = null;
+		container = null;
 	}	
 	
 	/**

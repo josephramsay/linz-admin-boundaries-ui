@@ -19,7 +19,7 @@ import org.junit.runners.MethodSorters;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class UserReaderTomcat_Test {
 	
-	private static int user_count = 5;
+	private static int user_count;
 	
 	private static final String samplefile = "src/test/resources/tomcat-users.sample.xml";
 	//private static final String samplefile = "/home/jramsay/git/linz-admin-boundaries-ui/src/main/resources/tomcat-users.sample.xml";
@@ -39,6 +39,7 @@ public class UserReaderTomcat_Test {
 	public void setUp() throws Exception {
 		System.out.println("--- test ---");
 		reader = new UserReaderTomcat(samplefile);
+		user_count = reader.getUserList().size();
 	}
 
 	@After
@@ -48,8 +49,6 @@ public class UserReaderTomcat_Test {
 		
 	@Test
 	public void test_10_checkUserList() {
-		List<User> user_list = reader.getUserList();
-		assertEquals(user_count,user_list.size());
 		assertEquals("user1pass",((UserTomcat)reader.findInUserList("user1")).getPassword());
 		assertEquals("user2pass",((UserTomcat)reader.findInUserList("user2")).getPassword());
 	}
@@ -59,12 +58,11 @@ public class UserReaderTomcat_Test {
 		String dummyuser = "dummyuser";
 		String dummypass = "dummypass";
 		String dummyrole = "AIMS";
-		System.out.println("DR1-"+reader);
+		//System.out.println("DR1-"+reader);
 		UserTomcat user = new UserTomcat(dummyuser,dummypass,dummyrole);
 		reader.addUser(user);
-		System.out.println("DR2-"+reader);
-		List<User> user_list = reader.getUserList();
-		assertEquals(user_count+1,user_list.size());
+		//System.out.println("DR2-"+reader);
+		assertEquals(user_count+1,reader.getUserList().size());
 		assertEquals(dummypass,((UserTomcat)reader.findInUserList(dummyuser)).getPassword());
 		//assertEquals(reader.encrypt(dummypass),((UserTomcat)reader.findInUserList(dummyuser)).getPassword());
 	}
@@ -72,15 +70,13 @@ public class UserReaderTomcat_Test {
 	@Test
 	public void test_30_deleteUser() {
 		reader.delUser("dummyuser");
-		List<User> user_list = reader.getUserList();
-		assertEquals(user_count,user_list.size());
+		assertEquals(user_count-1,reader.getUserList().size());
 	}
 	
 	@Test
 	public void test_40_transformer() {
-		List<User> user_list = reader.getUserList();
-		List<List<String>> table_data = reader.transformUserList(user_list);
-		System.out.println("DR40-"+table_data);
+		List<List<String>> table_data = reader.transformUserList(reader.getUserList());
+		//System.out.println("DR40-"+table_data);
 		assertEquals(user_count+1,table_data.size());
 	}
 

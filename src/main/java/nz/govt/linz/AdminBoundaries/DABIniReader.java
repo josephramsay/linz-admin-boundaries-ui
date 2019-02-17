@@ -15,7 +15,8 @@ import java.util.regex.Pattern;
  */
 public class DABIniReader extends IniReader{
 
-	//private static final Logger LOGGER = Logger.getLogger( DABIniReader.class.getName() );
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = Logger.getLogger( DABIniReader.class.getName() );
 	
 	private Pattern file_p = Pattern.compile( "\\\"(\\w+)\\\"\\s*:\\s*\\{\\s*\\\"table\\\"" );
 	private Pattern table_p = Pattern.compile( "\\\"table\\\"\\s*:\\s*\\\"(\\w+)\\\"" );
@@ -41,7 +42,8 @@ public class DABIniReader extends IniReader{
 	 * fetching src/dst/primary/type for use in TableInfo constructor
 	 * @return
 	 */
-	private void parse2(String raw){
+	@SuppressWarnings("unused")
+	private void parse_alt(String raw){
 		for (String segment : raw.split("},")) {
 			Matcher file_m = file_p.matcher( segment );
 			Matcher table_m = table_p.matcher( segment );

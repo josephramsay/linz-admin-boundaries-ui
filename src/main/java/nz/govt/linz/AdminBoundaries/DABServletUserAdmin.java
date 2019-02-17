@@ -256,14 +256,24 @@ public class DABServletUserAdmin extends DABServlet {
 			return;
 		}
 	}
+	
+	/**
+	 * Restart the tomcat instance. UNTESTED
+	 */
 	private void restartTomcat() {
 		try (Socket clientSocket = new Socket("localhost", 8005)){;
 		clientSocket.getOutputStream().write("RESTART".getBytes());
 		clientSocket.getOutputStream().close();
 		clientSocket.close();
 		}
-		catch (IOException ioe) {}
+		catch (IOException ioe) {
+			LOGGER.warning("Cannot restart Tomcat. "+ioe);
+		}
 	}
+	
+	/**
+	 * Restart AIMS webapp
+	 */
 	private void restartAIMS() {
 		String identifier = "Catalina:j2eeType=WebModule,name=//localhost/aims,J2EEApplication=none,J2EEServer=none";
 		MBeanServer mbs = MBeanServerFactory.findMBeanServer(null).get(0);
@@ -274,8 +284,8 @@ public class DABServletUserAdmin extends DABServlet {
 		}
 		catch (MalformedObjectNameException|ReflectionException|InstanceNotFoundException|MBeanException multi) {
 			LOGGER.warning("Cannot restart AIMS. "+multi);
-			//LOGGER.warning("Attempting Tomcat restart");
-			//restartTomcat();
+			LOGGER.warning("Attempting Tomcat restart");
+			restartTomcat();
 		}
 		
 	}

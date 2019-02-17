@@ -3,7 +3,6 @@ package nz.govt.linz.AdminBoundaries;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**

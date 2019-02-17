@@ -1,6 +1,5 @@
 package nz.govt.linz.AdminBoundaries;
 
-import java.util.Arrays;
 import java.util.List;
 import nz.govt.linz.AdminBoundaries.UserAdmin.User;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserReader;

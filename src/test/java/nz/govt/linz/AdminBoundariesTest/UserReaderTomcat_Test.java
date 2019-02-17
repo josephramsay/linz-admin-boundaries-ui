@@ -1,6 +1,5 @@
 package nz.govt.linz.AdminBoundariesTest;
 
-import nz.govt.linz.AdminBoundaries.UserAdmin.User;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserReader;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserReaderTomcat;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserTomcat;

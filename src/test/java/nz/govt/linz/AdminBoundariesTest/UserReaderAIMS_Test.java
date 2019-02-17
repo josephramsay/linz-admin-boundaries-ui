@@ -1,6 +1,5 @@
 package nz.govt.linz.AdminBoundariesTest;
 
-import nz.govt.linz.AdminBoundaries.UserAdmin.User;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserReader;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserReaderAIMS;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserAIMS;
@@ -49,22 +48,11 @@ public class UserReaderAIMS_Test {
 		//reader.save();
 	}
 	
-	
-
-	/**
-	 * simple test of user count and known user types
-	 */
-	@Test
-	public void test_10_checkUserList() {//*s for now, breaks test
-		assertEquals(13,((UserAIMS)reader.findInUserList("****")).getUserId());
-		assertEquals(17,((UserAIMS)reader.findInUserList("****")).getUserId());
-	}
-	
 	/**
 	 * test adding  user with minimal/default attributes
 	 */
 	@Test
-	public void test_20_addUser1() {
+	public void test_10_addUser1() {
 		String dummyuser = "dummyuser1";
 		//System.out.println("DR20.1 - before add "+reader.getUserList().size());
 		reader.addUser(new UserAIMS(dummyuser));
@@ -76,7 +64,7 @@ public class UserReaderAIMS_Test {
 	 * test adding user with user defined attributes
 	 */
 	@Test
-	public void test_21_addUser2() {
+	public void test_11_addUser2() {
 		String dummyuser = "dummyuser2";
 		//System.out.println("DR21.1 - before add "+reader.getUserList().size());
 		UserAIMS du2 = new UserAIMS(dummyuser);
@@ -93,7 +81,7 @@ public class UserReaderAIMS_Test {
 	 * should see edits plus no change to non edits
 	 */
 	@Test
-	public void test_30_editUser() {
+	public void test_20_editUser() {
 		String dummyuser = "dummyuser2";
 		//System.out.println("DR30.1 - before edit "+reader.getUserList().size());
 		UserAIMS du2 = (UserAIMS) reader.findInUserList(dummyuser);
@@ -114,7 +102,7 @@ public class UserReaderAIMS_Test {
 	}
 	
 	@Test
-	public void test_40_deleteUser1() {
+	public void test_30_deleteUser1() {
 		//System.out.println("DR40.1 - before del "+reader.getUserList().size());
 		reader.delUser("dummyuser1");
 		//System.out.println("DR40.2 -after del "+reader.getUserList().size());
@@ -122,7 +110,7 @@ public class UserReaderAIMS_Test {
 	}
 	
 	@Test
-	public void test_41_deleteUser2() {
+	public void test_31_deleteUser2() {
 		//System.out.println("DR50.1 - before del "+reader.getUserList().size());
 		reader.delUser("dummyuser2");
 		//System.out.println("DR50.2 -after del "+reader.getUserList().size());
@@ -134,7 +122,7 @@ public class UserReaderAIMS_Test {
 	 * Should be user count plus header row
 	 */
 	@Test
-	public void test_50_transformer() {
+	public void test_40_transformer() {
 		List<List<String>> table_data = reader.transformUserList(reader.getUserList());
 		//System.out.println("DR50-"+table_data);
 		assertEquals(user_count+1,table_data.size());

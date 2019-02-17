@@ -28,6 +28,7 @@ import java.util.LinkedHashMap;
  */
 public class DABFormatter {
 	
+	@SuppressWarnings("unused")
 	private static final Logger LOGGER = Logger.getLogger(DABFormatter.class.getName());
 	
 	/** Main function button text array*/

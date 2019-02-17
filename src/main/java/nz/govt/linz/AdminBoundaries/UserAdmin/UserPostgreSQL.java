@@ -24,6 +24,13 @@ public class UserPostgreSQL extends User {
 		setPassword(other.getPassword());
 		setRoles(other.getRoles());
 	}
+	public UserPostgreSQL(String username,String password, String _roles){ 
+		super(username);
+		setPassword(password);
+		roles = EnumSet.noneOf(PGRoles.class);
+		setRoles(_roles);
+	}
+	
 	public void setPassword(String password) {this.password = password;}
 	public String getPassword() {return this.password;}
 	public void setRoles(EnumSet<PGRoles> roles) { this.roles = roles; }

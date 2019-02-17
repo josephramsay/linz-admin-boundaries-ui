@@ -3,8 +3,6 @@ package nz.govt.linz.AdminBoundaries.UserAdmin;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class UserAIMS extends User {
 	
@@ -62,6 +60,15 @@ public class UserAIMS extends User {
 		setOrganisation(other.getOrganisation());
 		setRoles(other.getRoles());
 		setEmail(other.getEmail());
+	}
+	
+	public UserAIMS(String username, String email, String organisation, String role, String requiresprogress){ 
+		this();
+		setUserName(username);
+		setRequiresProgress(requiresprogress);
+		setOrganisation(organisation);
+		setRole(role);
+		setEmail(email);
 	}
 	
 	public void setVersion(String version) { this.version = Integer.parseInt(version); }

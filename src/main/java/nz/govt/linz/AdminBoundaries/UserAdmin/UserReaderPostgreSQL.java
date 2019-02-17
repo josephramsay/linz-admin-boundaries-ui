@@ -8,7 +8,6 @@ import javax.sql.DataSource;
 
 import nz.govt.linz.AdminBoundaries.DABConnector;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserPostgreSQL.PGRoles;
-import nz.govt.linz.AdminBoundaries.UserAdmin.UserTomcat.TCRoles;
 
 public class UserReaderPostgreSQL extends UserReader {
 	

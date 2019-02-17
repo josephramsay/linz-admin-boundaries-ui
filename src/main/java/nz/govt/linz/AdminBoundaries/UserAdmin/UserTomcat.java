@@ -23,10 +23,12 @@ public class UserTomcat extends User {
 		setPassword(other.getPassword());
 		setRoles(other.getRoles());
 	}
-	public UserTomcat(String username,String password, String roles){ 
+
+	public UserTomcat(String username,String password, String _roles){ 
 		super(username);
 		setPassword(password);
-		setRoles(EnumSet.of(TCRoles.valueOf(roles)));
+		roles = EnumSet.noneOf(TCRoles.class);
+		setRoles(_roles);
 	}
 
 	/* encryption is done in reader */

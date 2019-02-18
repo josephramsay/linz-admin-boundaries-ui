@@ -21,7 +21,6 @@ public class UserReaderTomcat_Test {
 	private static int user_count;
 	
 	private static final String samplefile = "src/test/resources/tomcat-users.sample.xml";
-	//private static final String samplefile = "/home/jramsay/git/linz-admin-boundaries-ui/src/main/resources/tomcat-users.sample.xml";
 	
 	/** reader obj */
 	private UserReader reader;

@@ -1,12 +1,13 @@
 package nz.govt.linz.AdminBoundaries;
 
 import java.util.List;
+import java.util.Arrays;
 import nz.govt.linz.AdminBoundaries.UserAdmin.User;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserReader;
+import nz.govt.linz.AdminBoundaries.UserAdmin.UserReaderAIMS;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserAIMS.AARoles;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserPostgreSQL.PGRoles;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserTomcat.TCRoles;
-import nz.govt.linz.AdminBoundaries.UserAdmin.UserAIMS.Organisation;
 
 
 /**
@@ -26,24 +27,31 @@ public class DABFormatterUser extends DABFormatter {
 		Tomcat("tc","Add / Delete Tomcat User",
 			"Add or remove users from the tomcat-users.xml file in the AIMS config. "
 			+ "Note: Plaintext passwords are encrypted and cannot be recovered once saved",
-			UserReader.getNames(TCRoles.class),true,true,false,false,false,true),
+			UserReader.getNames(TCRoles.class),
+			Arrays.asList("LINZ"),
+			true,true,false,false,false,true),
 		PostgreSQL("pg","Add / Delete PostgreSQL User",
 			"Add/Remove AIMS access roles for existing users only. "
 			+ "Note: This dialog cannot add or remove database users",
-			UserReader.getNames(PGRoles.class),true,false, false,false,false,false),
+			UserReader.getNames(PGRoles.class),
+			Arrays.asList("LINZ"),
+			true,false, false,false,false,false),
 		AIMS("aa","Add / Delete AIMS User",
 			"AIMS internal user administration. "
 			+ "Note: Unless entered email addresses are constructed from username@&lt;org.domain&gt;",
-			UserReader.getNames(AARoles.class),false,false,true,true,true,false);
+			UserReader.getNames(AARoles.class),
+			UserReaderAIMS.getOrgNames(),
+			false,false,true,true,true,false);
 		private final String menuref,title,details;
-		private List<String> roles;
+		private List<String> roles,orgs;
 		private final boolean multi,pwbox, embox, orgdd, rpcb, restart;
-		TPA(String menuref,String title, String details, List<String> roles,
+		TPA(String menuref,String title, String details, List<String> roles,List<String> orgs,
 				boolean multi, boolean pwbox, boolean embox, boolean orgdd, boolean rpcb, boolean restart
 				){
 			this.menuref = menuref;
 			this.title   = title;
 			this.roles   = roles;
+			this.orgs    = orgs;
 			this.multi   = multi;
 			this.pwbox   = pwbox;
 			this.embox   = embox;
@@ -69,7 +77,7 @@ public class DABFormatterUser extends DABFormatter {
 		form += getRoleDropDown(tpa.menuref,tpa.roles,tpa.multi);
 		if (tpa.pwbox)   {form += getPasswordEntry(tpa.menuref);};
 		if (tpa.embox)   {form += getEmailEntry(tpa.menuref);};
-		if (tpa.orgdd)   {form += getOrganisationDropDown(tpa.menuref,UserReader.getNames(Organisation.class));};
+		if (tpa.orgdd)   {form += getOrganisationDropDown(tpa.menuref,tpa.orgs);};
 		if (tpa.rpcb)    {form += getRequiresProgressCheckBox(tpa.menuref);};
     	form += "<section><input type=\"submit\" name=\""+tpa.menuref+"_act\" value=\"save\"/></section>";
     	form += "<section><input type=\"submit\" name=\""+tpa.menuref+"_act\" value=\"delete\"/></section>";

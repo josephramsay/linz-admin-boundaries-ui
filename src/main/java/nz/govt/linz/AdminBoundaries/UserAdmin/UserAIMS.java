@@ -36,7 +36,7 @@ public class UserAIMS extends User {
 		    default: throw new IllegalArgumentException(String.valueOf(org));
 		    }
 		}
-		private String _name() { return db_name; }
+		String _name() { return db_name; }
 	}
 	
 	public UserAIMS(String userName) {

@@ -9,8 +9,12 @@ import java.net.PasswordAuthentication;
 import java.net.ProtocolException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
@@ -64,6 +68,13 @@ public class UserReaderAIMS extends UserReader {
 		aims_url =  _aims_url;
 		setDefAuth(u,p);
 		load();
+	}
+	
+	
+	public static List<String> getOrgNames(){		
+		return Stream.of(UserAIMS.Organisation.values())
+			.map(x->x._name())
+			.collect(Collectors.toList());
 	}
 	
 	private void setDefAuth(String u, String p) {

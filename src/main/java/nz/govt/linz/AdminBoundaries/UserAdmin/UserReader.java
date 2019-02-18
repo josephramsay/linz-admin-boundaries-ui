@@ -93,12 +93,10 @@ public abstract class UserReader {
 	public static String[] getNames2(Class<? extends Enum<?>> e) {
 		return Arrays.stream(e.getEnumConstants()).map(Enum::name).toArray(String[]::new);
 	}
+	
 	public static List<String> getNames(Class<? extends Enum<?>> e) {
 		return Stream.of(e.getEnumConstants()).map(Enum::name).collect(Collectors.toList()); 
-	}
-//	public static List<String> getNames0(Class<? extends Enum<?>> e) {
-//		return Stream.of(e.getEnumConstants()).map(x -> ((GSMethod2) x).field()).collect(Collectors.toList()); 
-//	}
+	}	
 	
 	/**
 	 * Returns a matching user_list entry matching by provided key/value pair

@@ -35,7 +35,6 @@ public class UserReaderTomcat_Test {
 
 	@Before
 	public void setUp() throws Exception {
-		System.out.println("--- test ---");
 		reader = new UserReaderTomcat(samplefile);
 		user_count = reader.getUserList().size();
 	}

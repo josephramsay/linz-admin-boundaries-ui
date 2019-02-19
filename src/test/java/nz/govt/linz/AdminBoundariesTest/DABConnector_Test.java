@@ -208,7 +208,7 @@ public class DABConnector_Test {
 	@Test
 	public void test_40_execute_sqlexception() {
 		List<List<String>> result = connector.executeQuery(query_e);
-		System.out.println(result);
+		//System.out.println(result);
 		assertEquals(result.get(0).get(0),colvalue_e[0]);
 		assertEquals(result.get(0).get(1),colvalue_e[1]);
 

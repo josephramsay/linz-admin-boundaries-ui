@@ -58,14 +58,12 @@ public class IniReader_Test {
 
 	@Before
 	public void setUp() throws Exception {
-		System.out.println("setup");
 		reader1 = new IniReader("r1"+test_path);
 		reader1.dump(restore);
 	}
 
 	@After
 	public void tearDown() throws Exception {
-		System.out.println("teardown");
 	}
 
 	/**

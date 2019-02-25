@@ -106,7 +106,7 @@ public abstract class UserReader {
 	 */
 	private User findInUserList(String key, String value){
 		for (User user : user_list){
-			if (Objects.equals(user.userGetterMethod(key),value)) {
+			if (Objects.equals(user.readUserAttribute(key),value)) {
 				return user;
 			}
 		}
@@ -154,7 +154,7 @@ public abstract class UserReader {
 
 	/* user obj functions */
 	public void addUser(User user) {
-		if (findInUserList(user.getUserName())!=null) {
+		if (findInUserList(user.getUserName()) != null) {
 			LOGGER.warning("Cannot add user "+user+". Already exists. Updating instead.");
 			editUser(user);
 		}

@@ -10,7 +10,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 /**
- * Wrapper class for user map
+ * Base user class representing an AIMS user in any of the tomcat/postgres/aims types.
+ * The only common attribute across the three classes is username but this must be sync'd
+ * for the successful use of AIMS
  * @author jramsay
  *
  */
@@ -35,6 +37,10 @@ public abstract class User implements Comparator<User> {
 	public User() {
 		this("");
 	}
+	/**
+	 * Copy constructor (base)
+	 * @param user
+	 */
 	public User(User user) {
 		//setUserName(user.getUserName());
 		this(user.getUserName());
@@ -44,6 +50,7 @@ public abstract class User implements Comparator<User> {
 	public void setUserName(String  userName) { this.userName = userName; }
 	public String getUserName() { return this.userName; }
 	
+	/** Abstract for the GSmethod which returns field names */
 	public abstract List<String> getGSMethod();
 	//public List<String> getGSMethod() {return Stream.of(GSMethod.values().toString()).collect(Collectors.toList()); }
 	
@@ -57,16 +64,16 @@ public abstract class User implements Comparator<User> {
 	}
 
 	/**
-	 * Basic equals override tests usernames only
+	 * Basic equals override tests username but calls the respective compareTo function s only
 	 */
 	@Override 
 	public boolean equals(Object obj) {
-		if (obj == null) { return false; }
-		if (!User.class.isAssignableFrom(obj.getClass())) { return false; }
-	
-		if ((this.userName == null) ? (((User) obj).userName != null) : this.compareTo((User) obj) != 0 ) { return false; }
-		
-		return true;
+		return ( obj != null )
+			&& ( User.class.isAssignableFrom(obj.getClass()) )
+			&& ( this.userName.equals(((User)obj).getUserName()) );
+		/* Because this uses the subclass compareTo we get a full attribute 
+		   equals() which is probably not what we want */
+			//&& ( this.compareTo((User)obj) == 0 );
 	}
 	
 	/** Merge user_new into user_old by replacing where changed */
@@ -76,6 +83,9 @@ public abstract class User implements Comparator<User> {
 		this.setUserName(((UserAIMS)user).getUserName());
 	}
 	
+	/**
+	 * Basic hashcode generator using username
+	 */
 	@Override
     public int hashCode() {
         int hash = 3;
@@ -83,7 +93,11 @@ public abstract class User implements Comparator<User> {
         return hash;
     }
 	
-	
+	/**
+	 * Shortcut for method.invoke
+	 * @param method
+	 * @return
+	 */
 	Object invokeMethod(Method method) {
 		try {
 			return method.invoke(this);
@@ -139,21 +153,21 @@ public abstract class User implements Comparator<User> {
 	}
 	
 	/**
-	 * Call the getter for this field ref
+	 * Call the getter for the named field
 	 * @param gsname
 	 * @return
 	 */
-	public Object userGetterMethod(String gsname){
+	public Object readUserAttribute(String gsname){
 		return callMethod(gsname, GSOp.get, null);
 	}
 	
 	/**
-	 * Call the setter for this field ref using a string arg
-	 * @param gsname
-	 * @param param
+	 * Call the setter for the named field using a string arg
+	 * @param gsname Attribute name
+	 * @param param String value of the attribute
 	 * @return
 	 */
-	public Object userSetterMethod(String gsname, String param){
+	public Object writeUserAttribute(String gsname, String param){
 		return callMethod(gsname, GSOp.set, param);
 	}
 	
@@ -163,23 +177,25 @@ public abstract class User implements Comparator<User> {
 	 * @param user
 	 * @return Map of getters/setters against their respective names
 	 */
-	private static Map<String,Method> userAccessorMethods(User user,String prefix) {
+	private static Map<String,Method> userAccessorMethods(User user,GSOp gsop) {
 		Map<String,Method> glist = new HashMap<>();
-		Class<? extends User> objClass = user.getClass();
 
-		Method[] methods = objClass.getMethods();
-		for (Method method : methods) {
-			if (prefix.equals(method.getName().substring(0,3))) {
+		for (Method method : user.getClass().getMethods()) {
+			if (gsop.name().equals(method.getName().substring(0,3))) {
 				glist.put(method.getName().substring(3),method);
 			}
 		}
 		return glist;
 	}
+	
+	/** Shortcut for the getter methods */
 	public static Map<String,Method> readMethods(User user) {
-		return userAccessorMethods(user,"get");
+		return userAccessorMethods(user,GSOp.get);
 	}
+	
+	/** Shortcut for the setter methods */
 	public static Map<String,Method> writeMethods(User user) {
-		return userAccessorMethods(user,"set");
+		return userAccessorMethods(user,GSOp.set);
 	}
 	
 	/**

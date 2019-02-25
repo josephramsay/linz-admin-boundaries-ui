@@ -9,7 +9,6 @@ import java.net.PasswordAuthentication;
 import java.net.ProtocolException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -234,10 +233,11 @@ public class UserReaderAIMS extends UserReader {
 	}
 	
 	private ActionPayload buildPayload(User user, Action action) {
-		String plus = "";
+		String plus = "/"+String.valueOf(((UserAIMS)user).getUserId());
 		JsonObject juser = null;
 		switch(action) {
 		case Add: 
+			plus = "";
 			juser = Json.createObjectBuilder()
 				.add("userName",user.getUserName())
 				.add("email",((UserAIMS)user).getEmail())
@@ -246,13 +246,13 @@ public class UserReaderAIMS extends UserReader {
 				.add("role",((UserAIMS)user).getRole().name())
 				.build();
 			break;
-		case Delete: 
+		case Delete:
 			juser = Json.createObjectBuilder()
 				.add("version",((UserAIMS)user).getVersion())
 				.add("userId",((UserAIMS)user).getUserId())
 				.build();
 			break;
-		case Update: 
+		case Update:
 			juser = Json.createObjectBuilder()
 				.add("version",((UserAIMS)user).getVersion())
 				.add("userId",((UserAIMS)user).getUserId())
@@ -264,8 +264,6 @@ public class UserReaderAIMS extends UserReader {
 				.build();
 			break;
 		}
-		
-		if (Action.Add!=action) { plus = "/"+String.valueOf(((UserAIMS)user).getUserId()); }
 		LOGGER.fine("jpayload "+action.ppd+"-["+plus+"]-"+juser);
 		return new ActionPayload(plus,action,juser);
 	}

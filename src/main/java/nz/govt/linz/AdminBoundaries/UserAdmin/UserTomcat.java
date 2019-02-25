@@ -67,7 +67,27 @@ public class UserTomcat extends User {
 	//public List<String> getGSMethod() {return Stream.of(GSMethod.values()).map(Enum::name).collect(Collectors.toList()); }
 	public List<String> getGSMethod() {return UserReader.getNames(GSMethod.class);}
 	
+	/**
+	 * Compare function for two UserTC instances
+	 */
+	@Override
+	public int compare(User user1, User user2) {
+		int comp = super.compare(user1, user2);
+		comp += user1 instanceof UserTomcat ? 0 : 1e10;
+		comp += user2 instanceof UserTomcat ? 0 : 2e10;
+		if ( comp != 0 ) return comp;
+		comp += ((UserTomcat)user1).getRoles().equals( ((UserTomcat)user2).getRoles()) ? 0:1;
+		return comp;
+	}
 	
+	
+	@Override
+	public boolean equals(Object obj) {
+		return super.equals(obj)
+			&& ( UserTomcat.class.isAssignableFrom(obj.getClass() ) );
+			//&& ( this.userName.equals( ((UserTomcat)obj).userName) ); 
+			//&& ( this.getRoles().equals( ((UserTomcat)obj).getRoles() ) );
+	}
 	/**
 	 * default string rep
 	 */

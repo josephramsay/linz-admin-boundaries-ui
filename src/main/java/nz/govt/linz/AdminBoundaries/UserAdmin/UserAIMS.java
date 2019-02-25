@@ -117,15 +117,23 @@ public class UserAIMS extends User {
 		this.setEmail(((UserAIMS)user).getEmail());
 	}
 	
+	/**
+	 * If no email is provided create on from the org and the username
+	 * @return someone@somewhere
+	 */
 	private String constructEmail() {
 		return (this.userName != "" && this.organisation.domain != "") ? this.userName+"+CONS@"+this.organisation.domain : ""; 
 	}
+	
+	/**
+	 * Compare function for two user instances
+	 */
 	@Override
 	public int compare(User user1, User user2) {
 		int comp = super.compare(user1, user2);
 		comp += user1 instanceof UserAIMS ? 0 : 1e10;
 		comp += user2 instanceof UserAIMS ? 0 : 2e10;
-		if (comp!=0) return comp;
+		if ( comp != 0 ) return comp;
 		comp += ((UserAIMS)user1).version - ((UserAIMS)user2).version;
 		comp += ((UserAIMS)user1).userId - ((UserAIMS)user2).userId;
 		comp += ((UserAIMS)user1).userName.compareTo(((UserAIMS)user2).userName);
@@ -135,29 +143,31 @@ public class UserAIMS extends User {
 		return comp;
 	}
 	
+	/**
+	 * Single arg compare with self
+	 * @param user
+	 * @return
+	 */
 	public int compareTo(UserAIMS user) {
 		return compare(this,user);
 	}	
 	
 	/**
-	 * Minimal compare intended for list.contains(obj) context 
+	 * Minimal equals function. Doesnt test the object fully but provides the
+	 * necessary comparison for User update comparisons. That is, if equal here
+	 * update the user, if not add a new user.
+	 * Makes sure obj is the right type then just checks the username
 	 */
 	@Override 
 	public boolean equals(Object obj) {
-		if (obj == null) { return false; }
-		if (!User.class.isAssignableFrom(obj.getClass())) { return false; }
-		//if (super.compareTo((User)obj) != 0 ) { return false; }
-		//Minimal check of username 
-		if (!this.userName.equals( ((UserAIMS)obj).userName )) { 
-			LOGGER.finest("NOT EQUAL :: "+this.userName+"/"+((UserAIMS)obj).userName);
-			return false; 
-		}
-		//Comprehensive equals() using compareTo() to compare each object field
-		//if (this.compareTo((UserAIMS) obj) != 0 ) { return false; }
-		LOGGER.finest("EQUAL :: "+this.userName+"/"+((UserAIMS)obj).userName);
-		return true;
+		return super.equals(obj)
+			&& ( UserAIMS.class.isAssignableFrom(obj.getClass()) );
+		//	&& ( this.userName.equals( ((UserAIMS)obj).userName) );
 	}	
 	
+	/**
+	 * Hash on all attributes
+	 */
 	@Override
 	public int hashCode() {
 		int hash = 3;
@@ -172,7 +182,7 @@ public class UserAIMS extends User {
 	}
 	
 	/**
-	 * Decides whether we need to update a user entry based on he user id being the same 
+	 * Decides whether we need to update a user entry based on the user id being the same 
 	 * but any of the other fields (ignoring version) having differences
 	 * @return
 	 */

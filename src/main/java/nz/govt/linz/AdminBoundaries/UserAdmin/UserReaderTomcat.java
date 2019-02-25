@@ -175,7 +175,7 @@ public class UserReaderTomcat extends UserReader {
 			Node n = user_nl.item(i);
 			User user = new UserTomcat();
 			for (String upr : UserReader.getNames(GSMethod.class)) {
-				user.userSetterMethod(upr, n.getAttributes().getNamedItem(upr.toLowerCase()).getNodeValue());
+				user.writeUserAttribute(upr, n.getAttributes().getNamedItem(upr.toLowerCase()).getNodeValue());
 			}
 			new_user_list.add(user);
 			LOGGER.info("Read user "+user.getUserName());

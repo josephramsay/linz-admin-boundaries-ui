@@ -61,22 +61,46 @@ public class UserPostgreSQL extends User {
 		//role add extra to set
 		LOGGER.info("add roles: "+((UserPostgreSQL)user).getRoles());
 		this.setRoles(((UserPostgreSQL)user).getRoles());
-		//cant change password in PG because all we're doing re AIMS is adding/deleting fro AIMS groups
+		//can't change password in PG because all we're doing re AIMS is adding/deleting from AIMS groups
 		//this.setPassword(((UserPostgreSQL)user).getPassword());
 	}
 	
-	
+	/**
+	 * Compare function for two UserPG instances
+	 */
+	@Override
+	public int compare(User user1, User user2) {
+		int comp = super.compare(user1, user2);
+		comp += user1 instanceof UserPostgreSQL ? 0 : 1e10;
+		comp += user2 instanceof UserPostgreSQL ? 0 : 2e10;
+		if ( comp != 0 ) return comp;
+		comp += ((UserPostgreSQL)user1).getRoles().equals( ((UserPostgreSQL)user2).getRoles()) ? 0:1;
+		return comp;
+	}
 	
 	@Override
 	public boolean equals(Object obj) {
-		if (!super.equals(obj)) { return false; }
-		final UserPostgreSQL that = (UserPostgreSQL) obj;
-		
-		if ( this.getRoles() != that.getRoles() ) { return false; }
-		
-		return true;
+		return super.equals(obj)
+			&& ( UserPostgreSQL.class.isAssignableFrom(obj.getClass() ) );
+			//&& ( this.userName.equals( ((UserPostgreSQL)obj).userName) ) 
+			//&& ( this.getRoles().equals( ((UserPostgreSQL)obj).getRoles() ) );
 	}
 	
+	
+	/**
+	 * Decides whether we need to update a user entry based on the user id being the same 
+	 * but any of the other fields (ignoring version) having differences
+	 * @return
+	 */
+	public boolean hasChanged(UserPostgreSQL other) {
+		if (this.userName.equals(other.userName) && 
+			!this.getRoles().equals(other.getRoles())
+			) {
+			return true;
+		}
+		return false;
+		
+	}
 	
 	/**
 	 * default string rep

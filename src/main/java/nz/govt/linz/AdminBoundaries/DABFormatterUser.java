@@ -29,24 +29,25 @@ public class DABFormatterUser extends DABFormatter {
 			+ "Note: Plaintext passwords are encrypted and cannot be recovered once saved",
 			UserReader.getNames(TCRoles.class),
 			Arrays.asList("LINZ"),
-			true,true,false,false,false,true),
+			true,true,false,false,false,true,true),
 		PostgreSQL("pg","Add / Delete PostgreSQL User",
 			"Add/Remove AIMS access roles for existing users only. "
 			+ "Note: This dialog cannot add or remove database users",
 			UserReader.getNames(PGRoles.class),
 			Arrays.asList("LINZ"),
-			true,false, false,false,false,false),
+			true,false, false,false,false,false,false),
 		AIMS("aa","Add / Delete AIMS User",
 			"AIMS internal user administration. "
 			+ "Note: Unless entered email addresses are constructed from username@&lt;org.domain&gt;",
 			UserReader.getNames(AARoles.class),
 			UserReaderAIMS.getOrgNames(),
-			false,false,true,true,true,false);
+			false,false,true,true,true,false,false);
 		private final String menuref,title,details;
 		private List<String> roles,orgs;
-		private final boolean multi,pwbox, embox, orgdd, rpcb, restart;
+		private final boolean multi, pwbox, embox, orgdd, rpcb, r_tc, r_aa;
 		TPA(String menuref,String title, String details, List<String> roles,List<String> orgs,
-				boolean multi, boolean pwbox, boolean embox, boolean orgdd, boolean rpcb, boolean restart
+				boolean multi, boolean pwbox, boolean embox, boolean orgdd, 
+				boolean rpcb, boolean r_tc, boolean r_aa
 				){
 			this.menuref = menuref;
 			this.title   = title;
@@ -57,11 +58,14 @@ public class DABFormatterUser extends DABFormatter {
 			this.embox   = embox;
 			this.orgdd   = orgdd;
 			this.rpcb    = rpcb;
-			this.restart = restart;
+			this.r_tc    = r_tc;
+			this.r_aa    = r_aa;
 			this.details = details;
 		}
 	}; 
-
+	
+	private static final String WARN1 = "CAUTION! This restarts Tomcat. All Users will be disconnected!";
+	private static final String WARN2 = "CAUTION! This restarts the DAB Application. Unsaved data will be lost.";
 	
 	/**
 	 * Reformats a list/list/string as an html table with the caption tname
@@ -81,7 +85,8 @@ public class DABFormatterUser extends DABFormatter {
 		if (tpa.rpcb)    {form += getRequiresProgressCheckBox(tpa.menuref);};
     	form += "<section><input type=\"submit\" name=\""+tpa.menuref+"_act\" value=\"save\"/></section>";
     	form += "<section><input type=\"submit\" name=\""+tpa.menuref+"_act\" value=\"delete\"/></section>";
-    	if (tpa.restart) {form += getRestartButton(tpa.menuref);};
+    	if (tpa.r_aa) {form += getRestartButton(tpa.menuref,"restart aa",WARN2);};
+    	if (tpa.r_tc) {form += getRestartButton(tpa.menuref,"restart tc",WARN1);};
 	    form += "</form><br/>\n";
 	    form += "<details>\n<summary>"+tpa.title+" Summary</summary>\n";
 	    form += "<p>"+tpa.details+"</p>\n</details>\n";
@@ -139,8 +144,8 @@ public class DABFormatterUser extends DABFormatter {
 		return form;
 	}
 	
-	private static String getRestartButton(String menuref) {
-		return "<section><input type=\"submit\" name=\""+menuref+"_act\" value=\"restart\"/></section>";
+	private static String getRestartButton(String menuref,String val,String tt) {
+		return "<section><input title=\""+tt+"\"type=\"submit\" name=\""+menuref+"_act\" value=\""+val+"\"/></section>";
 	}
 	
 }

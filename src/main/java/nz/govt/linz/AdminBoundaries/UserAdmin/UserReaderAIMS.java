@@ -276,9 +276,8 @@ public class UserReaderAIMS extends UserReader {
 			uc.setDoOutput(true);
 			uc.setDoInput(true);
 			uc.setRequestMethod(ppd);
-		} catch (ProtocolException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		} catch (ProtocolException pe) {
+			LOGGER.warning("Error setting AIMS connection parameters. "+pe);
 		}
 		
 	}

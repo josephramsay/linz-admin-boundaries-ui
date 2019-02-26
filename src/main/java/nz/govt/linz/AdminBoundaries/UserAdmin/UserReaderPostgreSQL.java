@@ -7,7 +7,6 @@ import java.util.logging.Logger;
 import javax.sql.DataSource;
 
 import nz.govt.linz.AdminBoundaries.DABConnector;
-import nz.govt.linz.AdminBoundaries.UserAdmin.User.Action;
 import nz.govt.linz.AdminBoundaries.UserAdmin.UserPostgreSQL.PGRoles;
 
 public class UserReaderPostgreSQL extends UserReader {
@@ -28,7 +27,7 @@ public class UserReaderPostgreSQL extends UserReader {
 
 	/**
 	 * Constructor sets up config file path and tests accessibility
-	 * @param procarg
+	 * @param _datasource DS object to set then call load/Connector(ds)
 	 */
 	public UserReaderPostgreSQL(DataSource _datasource){
 		datasource = _datasource;
@@ -101,7 +100,7 @@ public class UserReaderPostgreSQL extends UserReader {
 			"and usename not like 'aims%'" +
 			"group by usename,passwd";
 		List<User> new_user_list = new ArrayList<>();
-		LOGGER.info("Connection "+dab_conn);
+		//LOGGER.info("Connection "+dab_conn);
 		connect();
 		for (List<String> row : dab_conn.executeQuery(user_query,false)) {
 			UserPostgreSQL user = new UserPostgreSQL();

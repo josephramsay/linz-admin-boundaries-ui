@@ -178,7 +178,7 @@ public class UserReaderTomcat extends UserReader {
 				user.writeUserAttribute(upr, n.getAttributes().getNamedItem(upr.toLowerCase()).getNodeValue());
 			}
 			new_user_list.add(user);
-			LOGGER.info("Read user "+user.getUserName());
+			//LOGGER.info("Read user "+user.getUserName());
 		}
 		return new_user_list;
 	}

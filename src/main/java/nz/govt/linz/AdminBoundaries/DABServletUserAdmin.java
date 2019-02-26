@@ -14,6 +14,7 @@ package nz.govt.linz.AdminBoundaries;
 import java.io.*;
 import java.net.Socket;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import javax.management.InstanceNotFoundException;
@@ -92,7 +93,8 @@ public class DABServletUserAdmin extends DABServlet {
 
 		Date created = new Date(session.getCreationTime());
 		Date accessed = new Date(session.getLastAccessedTime());
-		String user = (String) request.getAttribute("currentSessionUser");
+		String user = request.getRemoteUser().toString();
+		//String user = request.getUserPrincipal().toString();
 		
 		Map<String, Map<String,String>> params = readParameters(request);
 
@@ -217,8 +219,11 @@ public class DABServletUserAdmin extends DABServlet {
 			LOGGER.info("Delete TC user "+user);
 			reader.delUser(user);
 		}
-		else if("restart".equals(action)) {
+		else if("restart aa".equals(action)) {
 			restartAIMS();
+		}
+		else if("restart tc".equals(action)) {
+			restartTomcat();
 		}
 		else {
 			LOGGER.warning("Cannot match [u:"+user+"/"+(exists?"E":"x")+",r:"+role+",p:"+pass+",a:"+action+"]");
@@ -258,9 +263,10 @@ public class DABServletUserAdmin extends DABServlet {
 	}
 	
 	/**
-	 * Restart the tomcat instance. UNTESTED
+	 * Brutal restart for the whole tomcat instance.
 	 */
 	private void restartTomcat() {
+		/*
 		try (Socket clientSocket = new Socket("localhost", 8005)){;
 		clientSocket.getOutputStream().write("RESTART".getBytes());
 		clientSocket.getOutputStream().close();
@@ -269,6 +275,16 @@ public class DABServletUserAdmin extends DABServlet {
 		catch (IOException ioe) {
 			LOGGER.warning("Cannot restart Tomcat. "+ioe);
 		}
+		*/
+		try {
+			Runtime.getRuntime().exec("/opt/tomcat8/bin/restart.sh");
+			TimeUnit.SECONDS.sleep(5);
+		} catch (IOException ioe) {
+			LOGGER.warning("Cannot restart Tomcat. "+ioe);
+		} catch (InterruptedException ie) {
+			LOGGER.warning("Interrupted sleep on Tomcat restart. "+ie);
+		}
+		
 	}
 	
 	/**

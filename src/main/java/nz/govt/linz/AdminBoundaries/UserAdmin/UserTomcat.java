@@ -8,7 +8,7 @@ public class UserTomcat extends User {
 	public String password;
 	public EnumSet<TCRoles> roles;
 	
-	public enum TCRoles { AIMS, manager_gui, manager_script, manager_jmx, manager_status, admin_gui, admin_script; 
+	public enum TCRoles { AIMS, DAB, manager_gui, manager_script, manager_jmx, manager_status, admin_gui, admin_script; 
 		public String _name() {return name().replace("_","-"); }
 		}
 	
@@ -16,7 +16,8 @@ public class UserTomcat extends User {
 	
 	public UserTomcat(){ 
 		setPassword("");
-		setRoles(EnumSet.of(TCRoles.AIMS));
+		//setRoles(EnumSet.of(TCRoles.AIMS));
+		setRoles(EnumSet.noneOf(TCRoles.class));
 	}
 	public UserTomcat(UserTomcat other){ 
 		super(other);
@@ -50,8 +51,9 @@ public class UserTomcat extends User {
 	@Override
 	public void merge(User user) {
 		//super.merge(user);
-		//role add extra to set
-		this.mergeRoles(((UserTomcat)user).getRoles());
+		//role add extra to set (actually not what we want otherwise how do we delete roles)
+		//this.mergeRoles(((UserTomcat)user).getRoles());
+		this.setRoles(((UserTomcat)user).getRoles());
 		//change to new password
 		this.setPassword(((UserTomcat)user).getPassword());
 	}

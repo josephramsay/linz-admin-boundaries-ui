@@ -1,0 +1,66 @@
+1. Parallel Resource
+1.1 Add new resource in context.xml
+ <Resource name="jdbc/linz/dab"
+	...
+    driverClassName="org.postgresql.Driver"
+    url="<jdbc-url>"
+    validationQuery="SELECT 1"
+    defaultAutoCommit="true"
+    />
+1.2 Point connector at new resource 
+datasource = (DataSource) new InitialContext().lookup("java:comp/env/jdbc/linz/dab");
+
+2. Role Restriction
+2.1 Create new role in tomcat-users.xml
+<role description="Role granting access to Downloader for Admin Boundaries" rolename="DAB"/>
+
+2.2 Assigned selected users to DAB role
+<user password="<enc-pass>" roles="DAB[,other,roles]" username="<admin-user>"/>
+
+2.3 Set DAB web.xml security-role and auth-constraint
+<web-app ...>
+    <security-role>
+        <role-name>DAB</role-name>
+    </security-role>
+    <security-constraint>
+        <auth-constraint>
+            <role-name>DAB</role-name>
+        </auth-constraint>
+    </security-constraint>
+    
+3. HTTPS
+3.0 Create keystore with self signed key
+keytool -genkey -alias <keystore-alias> -keyalg RSA -keystore [path/to/keystore]
+
+3.1 Uncomment 8443 connector in server.xml
+<Connector port="8443" protocol="org.apache.coyote.http11.Http11NioProtocol"
+	maxThreads="150" SSLEnabled="true" scheme="https" secure="true"
+	clientAuth="false" sslProtocol="TLS" 
+	keystoreFile="[path/to/keystore]" keystorePass="<keystore-pass>"/>
+	
+3.2 Set DAB web.xml to enforce https
+<web-app ...>
+	<security-constraint>
+        <user-data-constraint>
+            <transport-guarantee>CONFIDENTIAL</transport-guarantee>
+        </user-data-constraint>
+    </security-constraint>
+	
+	
+3.3 Create firewall rule allowing 8443 (as root)
+ufw allow from any to any port 8443 proto tcp
+
+3.4 Clients accept self-signed cert
+
+4. Build tomcat restart functionality
+4.1 Write a simple restart function in tomcat/bin
+#!/bin/sh
+/opt/tomcat8/bin/shutdown.sh
+sleep 5
+/opt/tomcat8/bin/startup.sh -security
+
+> chmod 755 restart.sh
+> chown tomcat8:tomcat8 restart.sh
+
+4.2 Execute the restart from the DAB user webapp
+Runtime.getRuntime().exec("/opt/tomcat8/bin/restart.sh");

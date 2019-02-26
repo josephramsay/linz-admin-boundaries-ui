@@ -145,7 +145,7 @@ public class DABFormatterUser extends DABFormatter {
 	}
 	
 	private static String getRestartButton(String menuref,String val,String tt) {
-		return "<section><input title=\""+tt+"\"type=\"submit\" name=\""+menuref+"_act\" value=\""+val+"\"/></section>";
+		return "<section><input class=\"crit\" title=\""+tt+"\"type=\"submit\" name=\""+menuref+"_act\" value=\""+val+"\"/></section>";
 	}
 	
 }

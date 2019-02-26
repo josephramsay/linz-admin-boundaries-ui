@@ -136,6 +136,11 @@ input[type=submit]:hover {
     background-color: lightseagreen;
 }
 
+input[type=submit].crit:hover {
+    color: white;
+    background-color: lightcoral;
+}
+
 input[type=text]{
     font-size: 16px;
     font-family: Helvetica, Arial, sans-serif;
@@ -382,7 +387,7 @@ footer {
     position: fixed;
     left: 0;
     bottom: 0;
-    height: 75px;
+    height: 90px;
     width: 100%;
     margin:100px auto 0;
     padding: 25px 0px auto 0px;
@@ -393,19 +398,6 @@ footer {
 footer ul {
     padding-top: 10px;
 }
-/*
-.editableBox {
-    width: 75px;
-    height: 30px;
-}
-
-.timeTextBox {
-    width: 54px;
-    margin-left: -78px;
-    height: 25px;
-    border: none;
-}
-*/
 
 .multiselect, .multiselect2 {
 	width: 250px;

@@ -36,9 +36,9 @@ install_dir="/usr/local/share/$project"
 
 war_list="ab.war"
 #exculde filled ini
-script_list="download_admin_bdys.py download_admin_bdys.sh"
+script_list="linz_admin_boundaries_uploader.py linz_admin_boundaries_uploader.sh"
 #files in this list will be coped from a matching .template file (TODO)
-conf_replace="download_admin_bdys.ini"
+conf_replace="linz_admin_boundaries_uploader.ini"
 
 #---------------------------------------------------------------------
 
@@ -143,8 +143,8 @@ EOF
 	cat << EOF > $deb_dir/install 
 data/$proj_abv.desktop usr/share/applications
 data/$proj_abv.png usr/share/pixmaps
-scripts/download_admin_bdys.sh $ins_dir
-scripts/download_admin_bdys.py $ins_dir
+scripts/linz_admin_boundaries_uploader.sh $ins_dir
+scripts/linz_admin_boundaries_uploader.py $ins_dir
 scripts/$conf_replace $ins_dir
 libs/$war_list ${cbase#"/"}
 EOF
@@ -180,7 +180,7 @@ Comment=Trigger download and import of $project
 Type=Application
 Keywords=$proj_abv
 StartupNotify=true
-Exec=$install_dir/download_admin_bdys.py
+Exec=$install_dir/linz_admin_boundaries_uploader.py
 Path=$install_dir/
 Terminal=false
 Icon=$dat_dir/$proj_abv.png

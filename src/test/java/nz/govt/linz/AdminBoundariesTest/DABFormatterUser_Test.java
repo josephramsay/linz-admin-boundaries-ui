@@ -35,7 +35,7 @@ import org.junit.runners.MethodSorters;
 public class DABFormatterUser_Test {
 
 	
-	private final static int tc_form_len = 1328;//1295;
+	private final static int tc_form_len = 1579;//1328;//1295;
 	private final static int pg_form_len = 881;
 	private final static int aa_form_len = 1453;
 	

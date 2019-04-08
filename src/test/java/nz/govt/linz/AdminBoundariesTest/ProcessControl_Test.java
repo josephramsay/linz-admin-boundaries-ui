@@ -52,7 +52,7 @@ public class ProcessControl_Test {
 	 */
 	@Test
 	public void test_10_shstub() {	
-		File testfile = new File("test/download_admin_bdys_stub.sh");
+		File testfile = new File("test/linz_admin_boundaries_uploader_stub.sh");
 		controller  = new ProcessControl(testfile);	
 		assertEquals("LOAD",controller.readProcessOutput(ProcessControl.getProcessBuilder("load"),""));
 		assertEquals("MAP",controller.readProcessOutput(ProcessControl.getProcessBuilder("map"),""));
@@ -61,7 +61,7 @@ public class ProcessControl_Test {
 	
 	@Test
 	public void test_20_pystub() {	
-		File testfile = new File("test/download_admin_bdys_stub.py");
+		File testfile = new File("test/linz_admin_boundaries_uploader_stub.py");
 		controller  = new ProcessControl(testfile);
 		assertEquals("LOAD",controller.readProcessOutput(ProcessControl.getProcessBuilder("load"),""));
 		assertEquals("MAP",controller.readProcessOutput(ProcessControl.getProcessBuilder("map"),""));

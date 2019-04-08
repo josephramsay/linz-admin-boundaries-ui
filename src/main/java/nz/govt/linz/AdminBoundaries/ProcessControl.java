@@ -19,7 +19,7 @@ import java.io.InputStreamReader;
 import java.util.logging.Logger;
 
 /**
- * Class to initiate and run system processes, n this case the included python script, download_admin_bdys.py
+ * Class to initiate and run system processes, n this case the included python script, linz_admin_boundaries_uploader.py
  * @author jramsay
  *
  */

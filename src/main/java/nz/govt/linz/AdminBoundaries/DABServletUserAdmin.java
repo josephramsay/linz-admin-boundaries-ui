@@ -12,7 +12,6 @@ package nz.govt.linz.AdminBoundaries;
  */
 
 import java.io.*;
-import java.net.Socket;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;

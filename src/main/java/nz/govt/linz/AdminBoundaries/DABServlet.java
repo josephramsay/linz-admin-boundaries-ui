@@ -40,7 +40,6 @@ public class DABServlet extends HttpServlet {
 	
 	public String docType = "<!DOCTYPE html public \"-//w3c//dtd html 4.0 transitional//en\">\n";
 	
-	//private final static String CONF_PATH = "WEB-INF/scripts/download_admin_bdys.ini";
 	private final static String CONF_NAME = "linz_admin_boundaries_uploader.ini";
 	private final static String CONF_PATH = "WEB-INF/scripts/conf/";
 	

@@ -2,7 +2,7 @@
 '''
 v.0.0.1
 
-download_admin_bdys_test.py
+linz_admin_boundaries_uploader_test.py
 
 Copyright 2011 Crown copyright (c)
 Land Information New Zealand and the New Zealand Government.
@@ -11,7 +11,7 @@ All rights reserved
 This program is released under the terms of the new BSD license. See the 
 LICENSE file for more information.
 
-Tests classes in download_admin_bdys.py
+Tests classes in linz_admin_boundaries_uploader.py
 
 Created on 09/11/2016
 
@@ -28,12 +28,12 @@ import os
 
 sys.path.append('../scripts')
 
-from download_admin_bdys import ColumnMapper
-from download_admin_bdys import ConfReader
-from download_admin_bdys import Version
-from download_admin_bdys import setRetryDepth
+from linz_admin_boundaries_uploader import ColumnMapper
+from linz_admin_boundaries_uploader import ConfReader
+from linz_admin_boundaries_uploader import Version
+from linz_admin_boundaries_uploader import setRetryDepth
 
-#from download_admin_bdys_mock import DABM
+#from linz_admin_boundaries_uploader_mock import DABM
 
 #testlog = Logger.setup('test')
 

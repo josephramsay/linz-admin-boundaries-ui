@@ -227,7 +227,7 @@ public class DABConnector {
 		if (table == null) {
 			return DABContainerComp.DEF_TABLE;
 		} else {
-			String query = String.format("SELECT COUNT(*) count FROM %s.%s", schema, table);
+			String query = String.format("SELECT COUNT(*) FROM %s.%s", schema, table);
 			return DABFormatter.formatTable(table, executeQuery(query));
 		}
 	}

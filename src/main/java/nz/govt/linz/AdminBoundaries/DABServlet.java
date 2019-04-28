@@ -67,6 +67,7 @@ public class DABServlet extends HttpServlet {
 			hostname = "___";
 		}
 		title = "DAB."+hostname.substring(0, 3);
+		LOGGER.info("Init"+title);
 		message = "Admin Boundaries application";
 		description = "This application performs the download and import of admin boundary data needed for AIMS";
 		

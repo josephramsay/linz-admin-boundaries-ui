@@ -11,10 +11,10 @@
 # These can be over-ridden with command line, e.g.: -PtestUser=aims_api_sa -PtestPassword=Password1
 
 ## Tomcat
-remoteProtocol=
-remoteHost=
-remoteUser=
-remotePass=
+remoteProtocol= <gradle connaction protocol eg http>
+remoteHost= <remote hostname or IP>
+remoteUser= <remote user as defined in tomcat-users.xml>
+remotePass= <matching remote user password as defined in tomcat-users.xml>
 
 ## GRADLE
 

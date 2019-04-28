@@ -135,7 +135,7 @@ public class UserReaderPostgreSQL extends UserReader {
 			if (!user_list.contains(user_clone)) {
 				for (PGRoles role : ((UserPostgreSQL)user_clone).getRoles()) {
 					LOGGER.info("DEL revoke "+role.name()+" to "+user_clone.getUserName());
-					String query =	String.format("revoke %s from %s", role.name(), user_clone.getUserName());
+					String query =	String.format("revoke %s from \"%s\"", role.name(), user_clone.getUserName());
 					dab_conn.executeQuery(query);
 				}
 			}
@@ -145,7 +145,7 @@ public class UserReaderPostgreSQL extends UserReader {
 			if (!user_list_clone.contains(user)){
 				for (PGRoles role : ((UserPostgreSQL)user).getRoles()) {
 					LOGGER.info("ADD grant "+role.name()+" to "+user.getUserName());
-					String query =	String.format("grant %s to %s", role.name(), user.getUserName());
+					String query =	String.format("grant %s to \"%s\"", role.name(), user.getUserName());
 					dab_conn.executeQuery(query);
 				}
 			}
@@ -155,12 +155,12 @@ public class UserReaderPostgreSQL extends UserReader {
 				if (((UserPostgreSQL)user).hasChanged((UserPostgreSQL)user_clone)) {
 					for (PGRoles role : ((UserPostgreSQL)user_clone).getRoles()) {
 						LOGGER.info("CH1 revoke "+role.name()+" from "+user_clone.getUserName());
-						String query =	String.format("revoke %s from %s", role.name(), user_clone.getUserName());
+						String query =	String.format("revoke %s from \"%s\"", role.name(), user_clone.getUserName());
 						dab_conn.executeQuery(query);
 					}
 					for (PGRoles role : ((UserPostgreSQL)user).getRoles()) {
 						LOGGER.info("CH2 grant "+role.name()+" to "+user.getUserName());
-						String query =	String.format("grant %s to %s", role.name(), user.getUserName());
+						String query =	String.format("grant %s to \"%s\"", role.name(), user.getUserName());
 						dab_conn.executeQuery(query);
 					}
 				}

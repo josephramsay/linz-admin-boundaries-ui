@@ -28,13 +28,19 @@ public class DABIniReader extends IniReader{
 	/** The descriptions array is the a map of sections and some descriptive text 
 	 * Its hardcoded here (for now) since it doesnt belong in the config file */
 	protected static Map<String, String[]> descriptions = new HashMap<>();
-	private static String[] getDescription(String key) {
-		return descriptions.get(key);
-	}
+
+	/** 
+	 * Get field descriptions for config form
+	 * @return
+	 */
 	public static Map<String, String[]> getDescriptions() {
 		return descriptions;
 	}
-	private void setDescriptions() {
+	
+	/**
+	 * Sets the field descriptions for the config form
+	 */
+	private static void setDescriptions() {
 		descriptions.put("database", new String[] {
 			"host - the database host name (can be omitted)",
 			"name - the Database name (linz_db)",

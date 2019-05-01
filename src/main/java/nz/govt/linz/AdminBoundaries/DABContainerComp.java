@@ -128,6 +128,9 @@ public class DABContainerComp {
 		LOGGER.fine("Fetching Config "+config.toString());
 		return config;
 	}
+	protected Map<String, String[]> getConfigDescriptions(){
+		return DABIniReader.getDescriptions();
+	}
 	
 	/**
 	 * Wrapper to set entries array and trigger file write

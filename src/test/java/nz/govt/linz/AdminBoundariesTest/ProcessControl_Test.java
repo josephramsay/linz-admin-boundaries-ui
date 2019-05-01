@@ -54,18 +54,18 @@ public class ProcessControl_Test {
 	public void test_10_shstub() {	
 		File testfile = new File("test/linz_admin_boundaries_uploader_stub.sh");
 		controller  = new ProcessControl(testfile);	
-		assertEquals("LOAD",controller.readProcessOutput(ProcessControl.getProcessBuilder("load"),""));
-		assertEquals("MAP",controller.readProcessOutput(ProcessControl.getProcessBuilder("map"),""));
-		assertEquals("TRANSFER",controller.readProcessOutput(ProcessControl.getProcessBuilder("transfer"),""));
+		assertEquals("LOAD",controller.readProcessOutput(ProcessControl.getProcessBuilder(new String[] {"load"}),""));
+		assertEquals("MAP",controller.readProcessOutput(ProcessControl.getProcessBuilder(new String[] {"map"}),""));
+		assertEquals("TRANSFER",controller.readProcessOutput(ProcessControl.getProcessBuilder(new String[] {"transfer"}),""));
 	}	
 	
 	@Test
 	public void test_20_pystub() {	
 		File testfile = new File("test/linz_admin_boundaries_uploader_stub.py");
 		controller  = new ProcessControl(testfile);
-		assertEquals("LOAD",controller.readProcessOutput(ProcessControl.getProcessBuilder("load"),""));
-		assertEquals("MAP",controller.readProcessOutput(ProcessControl.getProcessBuilder("map"),""));
-		assertEquals("TRANSFER",controller.readProcessOutput(ProcessControl.getProcessBuilder("transfer"),""));
+		assertEquals("LOAD",controller.readProcessOutput(ProcessControl.getProcessBuilder(new String[] {"load"}),""));
+		assertEquals("MAP",controller.readProcessOutput(ProcessControl.getProcessBuilder(new String[] {"map"}),""));
+		assertEquals("TRANSFER",controller.readProcessOutput(ProcessControl.getProcessBuilder(new String[] {"transfer"}),""));
 	}
 	
 	

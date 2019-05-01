@@ -96,6 +96,7 @@ public class DABServletSummary extends DABServlet {
 	public String readProcessOutput(String action){
 		//read admin_bdys diffs
 		ProcessControl pc = new ProcessControl();
+		pc.addProcessArgs(CLARGS);
 		return pc.runProcess(action);
 	}
 	

@@ -48,6 +48,7 @@ public class DABServlet extends HttpServlet {
     private final static String ABIs_def = "admin_bdys_import";	
     protected static String ABs;
     protected static String ABIs;
+    protected static String[] CLARGS;
     
 	/** Formatter class for converting data-maps to html strings */
 	protected DABFormatter dabf;
@@ -85,6 +86,7 @@ public class DABServlet extends HttpServlet {
 		
 		ABs = (String) reader.get("database", "originschema", ABs_def);
 		ABIs = (String) reader.get("database", "schema", ABIs_def);
+		CLARGS = ((String) reader.get("user", "clargs", "")).split(",");
 
 	}
 	

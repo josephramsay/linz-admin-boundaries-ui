@@ -64,3 +64,16 @@ sleep 5
 
 4.2 Execute the restart from the DAB user webapp
 Runtime.getRuntime().exec("/opt/tomcat8/bin/restart.sh");
+
+5, Install py4j
+5.1 scp a source copy of py4j to one of the geoservers
+5.2 As root unzip and run python(3) setup.py install. 
+If this installs an egg! unpack using pip with the command 
+> pip(3) install .
+in the source dir
+5.3 Set permissions for the py4j files 
+> chmod 775 /usr/local/lib/python2.7/dist-packages/py4j/*
+> chmod 775 /usr/local/lib/python2.7/dist-packages/py4j/tests/*
+> chmod 775 /usr/local/lib/python3.4/dist-packages/py4j/tests/*
+> chmod 775 /usr/local/lib/python3.4/dist-packages/py4j/*
+

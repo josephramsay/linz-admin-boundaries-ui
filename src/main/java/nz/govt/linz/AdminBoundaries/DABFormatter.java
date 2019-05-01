@@ -114,7 +114,7 @@ public class DABFormatter {
 	 * @param config
 	 * @return
 	 */	
-	public static String formatForm(String fname, Map<String, Map<String, String>> config) {
+	public static String formatForm(String fname, Map<String, Map<String, String>> config, Map<String, String[]> descriptions) {
 		String SEP = "_";
 		String form = "";
 	    form += "<article><form method=\"post\">\n";
@@ -124,12 +124,15 @@ public class DABFormatter {
     		if ("temp".equals(section)) continue;//HACK
     		Map<String, String> opt_val = config.get(section);
     		form += "<label class=\"sec\">"+section+"</label>";
+			if (descriptions != null) {
+				form += "<details><summary>"+section+" field description</summary>";
+				form += "<p>"+String.join("<br/>\n",descriptions.get(section))+"</p></details>";
+			}
     		form += "<section class=\"form\">\n";
     		for (String option : opt_val.keySet()) {
     			//itype = "text";
     			//if ("colmap".equals(option)) itype = "textarea";
     			form += "<label for=\""+section+SEP+option+"\">"+section+"  "+option+"</label>\n";
-    			
     			if ("colmap".equals(option) || "functions".equals(option)) {
     				form += "<textarea name=\""+section+SEP+option+"\">"+opt_val.get(option)+"</textarea><br/>\n";
     			}
@@ -139,11 +142,14 @@ public class DABFormatter {
     		}
     		form += "</section>\n";
 	    }
+    	if (descriptions != null) {
+    		form += "<details><summary>Notes</summary>";
+			form += "<p>"+String.join("<br/>\n",descriptions.get("colmap"))+"</p></details>";
+		}
     	form += "<section><input type=\"submit\" value=\"save\"/></section>";
 	    form += "</form>\n</article>\n";
 	    return form;
 	}
-	
 	
 	
 	/**

@@ -39,6 +39,7 @@ import org.junit.runners.MethodSorters;
 public class DABFormatter_Test {
 	
 	private static Map<String,Map<String,String>> formmap;
+	private static Map<String,String[]> descmap;
 	private static List<List<String>> tablelist;
 	
 	private final static String FS_CM = "COLMAP_VALUE"; 
@@ -67,6 +68,13 @@ public class DABFormatter_Test {
 		tablelist.add(new ArrayList<String>(){{add("ROW1_COL1");add("ROW1_COL2");add("ROW1_COL3");}});
 		tablelist.add(new ArrayList<String>(){{add("ROW2_COL1");add("ROW2_COL2");add(TS_D2);}});
 		tablelist.add(new ArrayList<String>(){{add("ROW3_COL1");add("ROW3_COL2");add("ROW3_COL3");}});
+		
+		descmap = new LinkedHashMap<>();
+		descmap.put("SECTION_1",  new String[]{"1first", "1second", "1third"});
+		descmap.put("temp",       new String[]{"2first", "2second", "2third"});
+		descmap.put("SECTION_2",  new String[]{"3first", "3second", "3third"});
+		descmap.put("SECTION_CM", new String[]{"4first", "4second", "4third"});
+		descmap.put("SECTION_3",  new String[]{"5first", "5second", "5third"});
 	}
 
 	@AfterClass
@@ -89,7 +97,7 @@ public class DABFormatter_Test {
 	 */
 	@Test
 	public void test_10_formChange() {
-		String form = DABFormatter.formatForm(FS_LG,formmap);
+		String form = DABFormatter.formatForm(FS_LG,formmap,descmap);
 		assertEquals(form_len,form.length());
 	}
 	
@@ -107,7 +115,7 @@ public class DABFormatter_Test {
 	 */
 	@Test
 	public void test_30_formValues(){
-		String form = DABFormatter.formatForm(FS_LG,formmap);
+		String form = DABFormatter.formatForm(FS_LG,formmap,descmap);
 		Document formdoc = Jsoup.parseBodyFragment(form);
 		assertEquals(FS_LG,formdoc.select("legend").first().text());
 		assertEquals(FS_CM,formdoc.select("textarea").first().text());

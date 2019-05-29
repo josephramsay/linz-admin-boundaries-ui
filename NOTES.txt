@@ -47,7 +47,7 @@ keytool -genkey -alias <keystore-alias> -keyalg RSA -keystore [path/to/keystore]
     </security-constraint>
 	
 	
-3.3 Create firewall rule allowing 8443 (as root)
+3.3 Create firewall rule allowing 8443 (as root) on the webserver
 ufw allow from any to any port 8443 proto tcp
 
 3.4 Clients accept self-signed cert
@@ -77,3 +77,13 @@ in the source dir
 > chmod 775 /usr/local/lib/python3.4/dist-packages/py4j/tests/*
 > chmod 775 /usr/local/lib/python3.4/dist-packages/py4j/*
 
+
+NOTES (problems seen in the past and their fixes)
+a. [UserAdmin won't load] Make sure the role set in the config has sufficient privileges to access the API and that TC has been restarted so this role, if new, is active
+b. "Restart AA" will restart the DAB application. Use this is changes are not showing up or the application appears to have hung
+c. "Restart TC" restarts Tomcat. For simple user changes this shouldn't cause any problems. Doing a restart with a new WAR is however not advised unless the WAR has been fully tested. Restarting by this method can sometimes cause tomcat to hang with a "org.apache.jasper.servlet.TldScanner.scanJars" error. If this is the case restart tomcat again manually.
+d. [No TA bdys to import] TA boundaries are located on an internal file server and accessed through a CIFS mount /mnt/gisdata. The most common reason for TA bdys data to be unavaiable is the loss of this mount point. To fix this first attempt to remount and then check if the fileserver is available. 
+e. [New user cant login] Ensure when restarting tomcat that either the restart.sh script is called or the -security option is appended to the startup.sh call. This enables the SecurityManager which authenticates added users
+
+
+ 

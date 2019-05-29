@@ -54,7 +54,7 @@ public class DABServletUserAdmin extends DABServlet {
 	 */
 	public void init() throws ServletException {
 		super.init();
-		message = "User Editor for Admin Boundarys";
+		message = "AIMS User Administration";
 		description = String.join("\n", 
 			"This page provides view/edit functionality for AIMS user administration. " 
 			+ "Users are linked by the primary identifier; 'username'. All identities "

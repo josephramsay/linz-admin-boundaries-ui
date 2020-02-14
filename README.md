@@ -1,6 +1,6 @@
 # AdminBoundaries
 
-Replacement application for download_admin_bdys.py.
+Replacement application for linz_admin_boundaries_uploader.py.
 
 Can be deployed as a standalone dpkg with minimal GUI, a crontask or run as a Java webapp.
 
@@ -9,24 +9,24 @@ accept or reject import data.
 
 ## Install
 
-git clone https://github.com/josephramsay/AdminBoundaries.git
+git clone https://github.com/linz/AdminBoundaries
 
 #### WebApp install. 
  Copy gradle.properties.template to gradle.properties and edit with desired config.
  Run gradle deploy.
     
 #### Debian install. 
- Run, adminboundaries.deb.build.sh. this will create a debian package download_admin_bdys.deb in your git directory
- Run, dpkg -i download_admin_bdys.deb
+ Run, adminboundaries.deb.build.sh. this will create a debian package linz_admin_boundaries_uploader.deb in your git directory
+ Run, dpkg -i linz_admin_boundaries_uploader.deb
     
 #### Basic install.
- Copy the two files download_admin_bdys.py and download_admin_bdys.ini to your preferred location.
+ Copy the two files linz_admin_boundaries_uploader.py and linz_admin_boundaries_uploader.ini to your preferred location.
  Edit the ini file with desired parameters
- Add cronjob if required, python download_admin_bdys [opts]
+ Add cronjob if required, python linz_admin_boundaries_uploader [opts]
  
 ## Usage
 
-python download_admin_bdys.py [opts]
+python linz_admin_boundaries_uploader.py [opts]
 opts:
     load. Read configured files into import tables
     transfer. Transfer import tables to final schema 

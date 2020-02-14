@@ -31,6 +31,11 @@ table {
     text-align: left;
 }
 
+caption {
+	font-size: 20px;
+	font-weight: bold;
+}
+
 th, td {
     padding: 10px 10px;
 }
@@ -129,6 +134,21 @@ input[type=submit] {
 input[type=submit]:hover {
     color: white;
     background-color: lightseagreen;
+}
+
+input[type=submit].crit:hover {
+    color: white;
+    background-color: lightcoral;
+}
+
+input[type=text]{
+    font-size: 16px;
+    font-family: Helvetica, Arial, sans-serif;
+}
+
+div {
+	display: inline-block;
+	padding: 8px 6px;
 }
 
 h1 {
@@ -322,8 +342,6 @@ section.form input {
     float: left;
     margin: 5px 10px 10px 10px;
     padding: 0px;
-    color: black;
-    background-color: white;
 }
 
 section.form textarea {
@@ -331,8 +349,7 @@ section.form textarea {
     margin: 5px 10px 10px 10px;
     min-width: 99%;
     min-height: 70px;
-    color: black;
-    background-color: white;
+    font-size: large;
 }
 
 section.detail {
@@ -370,7 +387,7 @@ footer {
     position: fixed;
     left: 0;
     bottom: 0;
-    height: 75px;
+    height: 90px;
     width: 100%;
     margin:100px auto 0;
     padding: 25px 0px auto 0px;
@@ -381,3 +398,9 @@ footer {
 footer ul {
     padding-top: 10px;
 }
+
+.multiselect, .multiselect2 {
+	width: 250px;
+	background-color: lightblue;
+}
+

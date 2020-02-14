@@ -3,7 +3,6 @@ package nz.govt.linz.AdminBoundaries;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
@@ -41,7 +40,6 @@ public class DABServlet extends HttpServlet {
 	
 	public String docType = "<!DOCTYPE html public \"-//w3c//dtd html 4.0 transitional//en\">\n";
 	
-	//private final static String CONF_PATH = "WEB-INF/scripts/download_admin_bdys.ini";
 	private final static String CONF_NAME = "linz_admin_boundaries_uploader.ini";
 	private final static String CONF_PATH = "WEB-INF/scripts/conf/";
 	
@@ -50,6 +48,7 @@ public class DABServlet extends HttpServlet {
     private final static String ABIs_def = "admin_bdys_import";	
     protected static String ABs;
     protected static String ABIs;
+    protected static String[] CLARGS;
     
 	/** Formatter class for converting data-maps to html strings */
 	protected DABFormatter dabf;
@@ -65,10 +64,11 @@ public class DABServlet extends HttpServlet {
 		try {
 			hostname = InetAddress.getLocalHost().getHostName();
 		} catch (UnknownHostException uhe) {
-			System.out.println("Cannot get Server hostname. "+uhe);
+			LOGGER.warning("Cannot get Server hostname. "+uhe);
 			hostname = "___";
 		}
 		title = "DAB."+hostname.substring(0, 3);
+		LOGGER.info("Init"+title);
 		message = "Admin Boundaries application";
 		description = "This application performs the download and import of admin boundary data needed for AIMS";
 		
@@ -84,13 +84,14 @@ public class DABServlet extends HttpServlet {
 		}
 		ccomp = new DABContainerComp(reader);
 		
-		ABs = reader.get("database", "originschema", ABs_def);
-		ABIs = reader.get("database", "schema", ABIs_def);
+		ABs = (String) reader.get("database", "originschema", ABs_def);
+		ABIs = (String) reader.get("database", "schema", ABIs_def);
+		CLARGS = ((String) reader.get("user", "clargs", "")).split(",");
 
 	}
 	
 	/**
-	 * Replace parentheses with encoded angle brackets and adds breaks on found new line characters
+	 * Replace parentheses with encoded angle brackets and adds <br/> replacing found newline characters
 	 * @param raw
 	 * @return
 	 */
@@ -115,6 +116,45 @@ public class DABServlet extends HttpServlet {
 		return sb.toString();
 	}
 	
+	protected Map<String, Map<String,String>> readParameters(HttpServletRequest request){
+		Map<String, Map<String,String>> result = new LinkedHashMap<>();
+		Enumeration<?> params = request.getParameterNames(); 
+		while (params.hasMoreElements()) {
+			String[] parts = new String[2];
+			String pname = (String) params.nextElement();
+			//LOGGER.info("Read param "+pname);
+			String pvals = smoosh(request.getParameterValues(pname),",");
+			if (pname.contains("_")) { parts = pname.split("_",2); }
+			else { parts[0] = pname; }
+			if (result.containsKey(parts[0])) {
+				result.get(parts[0]).put(parts[1], pvals);
+			}
+			else {
+				//result.put(parts[0],Map.of(parts[1],pvals));//J9+
+				String p1 = parts[1];
+				result.put(parts[0], new LinkedHashMap<String,String>(){
+					private static final long serialVersionUID = 1051L;
+					{put(p1,pvals);}
+				});
+			}
+		}
+		return result;
+	}
+	
+	/**
+	 * Join a string array into a long string with specified delim
+	 * @param pvals
+	 * @param sep
+	 * @return
+	 */
+	private String smoosh(String[] pvals, String sep) {
+		StringBuilder csl = new StringBuilder("");
+		for(String language : pvals){
+			csl.append(language).append(sep);
+		}
+		return csl.substring(0, csl.length() - sep.length());
+	}
+	
 	/**
 	 * Returns loading screen animation script text
 	 * @return
@@ -134,12 +174,29 @@ public class DABServlet extends HttpServlet {
 	}
 	
 	protected String getFavIcon(){return "<link rel=\"icon\" type=\"image/png\" href=\"/ab/linz.dab.png\"/>";}
-	protected String getScript(){return "<script src=\"https://code.jquery.com/jquery-3.1.1.js\" type=\"text/javascript\"></script>";}
+	protected String getScript(){return "<script src=\"https://code.jquery.com/jquery-3.3.1.js\" type=\"text/javascript\"></script>";}
 	protected String getLoaderDiv(){return "<div id=\"loader\"></div>";}
 	protected String getLoadScript(){return "<script>$(window).load(function(){$(\"#loader\").fadeOut(\"slow\");});</script>";}
+	protected String getEditDropDownScript(){
+		return "<script>$(document).ready(function(){" +
+			"$(\".editableBox\").change(function(){" +
+			"	$(\".timeTextBox\").val($(\".editableBox option:selected\").html());" +
+			"});});</script>"; 
+		}
+	protected String getMultiDropDownScript(){
+		return "<link href=\"https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/css/select2.min.css\" rel=\"stylesheet\" />\n" + 
+			"<script src=\"https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/js/select2.min.js\"></script>\n" +
+			"<script>$(document).ready(function() { \n" + 
+			"	$(\".multiselect\").select2({tags: true});\n" + 
+			"});</script>\n"+
+			"<script>$(document).ready(function() { \n" +
+			"	$(\".multiselect2\").select2({tags: true, minimumResultsForSearch: -1});\n" + 
+			"});</script>";
+		}
 	
 	protected String getSpinner() {return "<script>spin.js</script>";}
-	protected String activateSpinner() {return "import {Spinner} from 'spin.js';\n" + 
+	protected String activateSpinner() {
+		return "import {Spinner} from 'spin.js';\n" + 
 			"\n" + 
 			"var opts = {\n" + 
 			"  lines: 13, // The number of lines to draw\n" + 
@@ -166,7 +223,7 @@ public class DABServlet extends HttpServlet {
 			"\n" + 
 			"var target = document.getElementById('spintarget');\n" + 
 			"var spinner = new Spinner(opts).spin(target);";
-	}
+		}
 	
 	/**
 	 * Returns common header text
@@ -180,8 +237,8 @@ public class DABServlet extends HttpServlet {
 				,"<title>",title,"</title>"
 				,getScript()
 				,getLoadScript()
+				,getMultiDropDownScript()
 				,getFavIcon()
-				,getSpinner()
 				,"</head>");
 	}
 	
@@ -233,6 +290,7 @@ public class DABServlet extends HttpServlet {
 				,"<li>User : ",user,"</li>"
 		    	,"</ul></section>\n<section class=\"r_foot\">\n"
 				,"<a href=\"sum\" class=\""+BNAV+"\">S</a>\n"
+				,"<a href=\"usr\" class=\""+BNAV+"\">U</a>\n"
 				,"<a href=\"cfg\" class=\""+BNAV+"\">C</a>\n"
 				,"</section>\n</footer>"
 		    	,"<!-- </div> -->"

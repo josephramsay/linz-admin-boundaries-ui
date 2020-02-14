@@ -1,0 +1,89 @@
+1. Parallel Resource
+1.1 Add new resource in context.xml
+ <Resource name="jdbc/linz/dab"
+	...
+    driverClassName="org.postgresql.Driver"
+    url="<jdbc-url>"
+    validationQuery="SELECT 1"
+    defaultAutoCommit="true"
+    />
+1.2 Point connector at new resource 
+datasource = (DataSource) new InitialContext().lookup("java:comp/env/jdbc/linz/dab");
+
+2. Role Restriction
+2.1 Create new role in tomcat-users.xml
+<role description="Role granting access to Downloader for Admin Boundaries" rolename="DAB"/>
+
+2.2 Assigned selected users to DAB role
+<user password="<enc-pass>" roles="DAB[,other,roles]" username="<admin-user>"/>
+
+2.3 Set DAB web.xml security-role and auth-constraint
+<web-app ...>
+    <security-role>
+        <role-name>DAB</role-name>
+    </security-role>
+    <security-constraint>
+        <auth-constraint>
+            <role-name>DAB</role-name>
+        </auth-constraint>
+    </security-constraint>
+    
+3. HTTPS
+3.0 Create keystore with self signed key
+keytool -genkey -alias <keystore-alias> -keyalg RSA -keystore [path/to/keystore]
+
+3.1 Uncomment 8443 connector in server.xml
+<Connector port="8443" protocol="org.apache.coyote.http11.Http11NioProtocol"
+	maxThreads="150" SSLEnabled="true" scheme="https" secure="true"
+	clientAuth="false" sslProtocol="TLS" 
+	keystoreFile="[path/to/keystore]" keystorePass="<keystore-pass>"/>
+	
+3.2 Set DAB web.xml to enforce https
+<web-app ...>
+	<security-constraint>
+        <user-data-constraint>
+            <transport-guarantee>CONFIDENTIAL</transport-guarantee>
+        </user-data-constraint>
+    </security-constraint>
+	
+	
+3.3 Create firewall rule allowing 8443 (as root) on the webserver
+ufw allow from any to any port 8443 proto tcp
+
+3.4 Clients accept self-signed cert
+
+4. Build tomcat restart functionality
+4.1 Write a simple restart function in tomcat/bin
+#!/bin/sh
+/opt/tomcat8/bin/shutdown.sh
+sleep 5
+/opt/tomcat8/bin/startup.sh -security
+
+> chmod 755 restart.sh
+> chown tomcat8:tomcat8 restart.sh
+
+4.2 Execute the restart from the DAB user webapp
+Runtime.getRuntime().exec("/opt/tomcat8/bin/restart.sh");
+
+5, Install py4j
+5.1 scp a source copy of py4j to one of the geoservers
+5.2 As root unzip and run python(3) setup.py install. 
+If this installs an egg! unpack using pip with the command 
+> pip(3) install .
+in the source dir
+5.3 Set permissions for the py4j files 
+> chmod 775 /usr/local/lib/python2.7/dist-packages/py4j/*
+> chmod 775 /usr/local/lib/python2.7/dist-packages/py4j/tests/*
+> chmod 775 /usr/local/lib/python3.4/dist-packages/py4j/tests/*
+> chmod 775 /usr/local/lib/python3.4/dist-packages/py4j/*
+
+
+NOTES (problems seen in the past and their fixes)
+a. [UserAdmin won't load] Make sure the role set in the config has sufficient privileges to access the API and that TC has been restarted so this role, if new, is active
+b. "Restart AA" will restart the DAB application. Use this is changes are not showing up or the application appears to have hung
+c. "Restart TC" restarts Tomcat. For simple user changes this shouldn't cause any problems. Doing a restart with a new WAR is however not advised unless the WAR has been fully tested. Restarting by this method can sometimes cause tomcat to hang with a "org.apache.jasper.servlet.TldScanner.scanJars" error. If this is the case restart tomcat again manually.
+d. [No TA bdys to import] TA boundaries are located on an internal file server and accessed through a CIFS mount /mnt/gisdata. The most common reason for TA bdys data to be unavaiable is the loss of this mount point. To fix this first attempt to remount and then check if the fileserver is available. 
+e. [New user cant login] Ensure when restarting tomcat that either the restart.sh script is called or the -security option is appended to the startup.sh call. This enables the SecurityManager which authenticates added users
+
+
+ 

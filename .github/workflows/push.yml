@@ -19,7 +19,8 @@ jobs:
       - name: Build with Gradle
         run: |
           mv gradle.ga.properties gradle.properties
-          cat build.gradle | sed 's/nz.govt.linz/org.apache.tomcat/' > build.gradle
+          cat build.gradle | sed 's/nz.govt.linz:cat/org.apache.tomcat:cat/' > build.gradle
+          cat build.gradle
           gradle war 
       
 

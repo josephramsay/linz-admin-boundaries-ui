@@ -143,6 +143,7 @@ repositories {
 }
 
 dependencies {
+	//NB nz.govt.linz are local ivy repo workarounds. Replace as needed
 	//compile files("~/git/aims/build/libs/aims-dev.war")
     //classpath "org.postgresql:postgresql:$postgresqlApiVersion"
     providedCompile "javax.servlet:servlet-api:$servletApiVersion"

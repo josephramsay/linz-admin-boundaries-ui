@@ -19,8 +19,6 @@ jobs:
       - name: Build with Gradle
         run: |
           mv gradle.ga.properties gradle.properties
-          mv build.ga.gradle build.gradle
-          cat build.gradle
           gradle war 
       
 

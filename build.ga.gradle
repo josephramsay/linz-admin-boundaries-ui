@@ -147,7 +147,7 @@ dependencies {
 	//compile files("~/git/aims/build/libs/aims-dev.war")
     //classpath "org.postgresql:postgresql:$postgresqlApiVersion"
     providedCompile "javax.servlet:servlet-api:$servletApiVersion"
-    providedCompile "org.apache.tomcat:catalina:$catalinaVersion" 
+    providedCompile "org.apache.tomcat:tomcat-catalina:$catalinaVersion" 
     providedCompile "org.apache.tomcat:tomcat-util:$tomcatVersion"
     providedCompile "postgresql:postgresql:$postgresqlJDBCVersion"
     providedRuntime "net.postgis:postgis-jdbc:$postGISApiVersion"

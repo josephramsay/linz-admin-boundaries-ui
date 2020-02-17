@@ -10,20 +10,26 @@ jobs:
 
     container: node:10.19-jessie
 
-
     services:
-
       postgres:
         image: postgres      
         ports:
         - 5432:5432
         
-      tomcat:
-        image: tomcat 
-        
+    env:
+      BUILD: db
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgrespass
+      
     steps: 
       - name: Checkout
         uses: actions/checkout@v1
+        
+      - name: Install
+        run: |
+          sudo apt-get install -y postgresql
           
       - name: Build
         run: |
@@ -31,17 +37,9 @@ jobs:
           psql -d postgres createdb dab
           psql -d dab createuser dab
           psql -d dab -c 'create table test (i int, d varchar);'
-          psql -d dab -c 'insert into test values (100, "abc");'    
-        env:
-          POSTGRES_HOST: postgres
-          POSTGRES_PORT: 5432
-          
-      - name: Check PG
+          psql -d dab -c 'insert into test values (100, \'abc\');'
+      
+      - name: CheckPG
         run: psql -d dab -c 'select * from test;' 
-          
-      - name: Deploy
-        run: |
-          mv gradle.ga.properties gradle.properties
-          gradle deploy
    
    

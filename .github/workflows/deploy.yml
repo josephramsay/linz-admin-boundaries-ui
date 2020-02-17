@@ -13,8 +13,6 @@ jobs:
     services:
       postgres:
         image: postgres      
-        ports:
-        - 5432:5432
         
     env:
       BUILD: db
@@ -27,9 +25,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v1
         
-      - name: Install
-        run: |
-          sudo apt-get install -y postgresql
+      #- name: Install
+      #  run: |
+      #    apt-get install -y postgresql
           
       - name: Build
         run: |

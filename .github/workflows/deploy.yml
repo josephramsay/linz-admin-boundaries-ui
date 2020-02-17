@@ -30,13 +30,18 @@ jobs:
       #    apt-get install -y postgresql
           
       - name: Build
+        run: docker run --rm --name pgab -d -p 5432:5432
+        env: 
+          POSTGRES_PASSWORD: docker
+          
+          
+      - name: SetupPG
         run: |
-          psql -d postgres -c 'select 1;'
-          psql -d postgres createdb dab
-          psql -d dab createuser dab
-          psql -d dab -c 'create table test (i int, d varchar);'
-          psql -d dab -c 'insert into test values (100, \'abc\');'
-      
+          psql -d postgres -U postgres createdb dab
+          psql -d postgres -U postgres createuser dab
+          psql -d dab -U dab -c 'create table test (i int, d varchar);'
+          psql -d dab -U dab -c 'insert into test values (100, \'abc\');'
+          
       - name: CheckPG
         run: psql -d dab -c 'select * from test;' 
    

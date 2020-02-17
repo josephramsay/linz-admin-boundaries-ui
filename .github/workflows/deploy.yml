@@ -12,7 +12,13 @@ jobs:
 
     services:
       postgres:
-        image: postgres      
+        image: postgres  
+        ports: 
+          - 5432:5432
+      tomcat:
+        image: tomcat
+        ports:
+          - 8080:8080    
         
     env:
       BUILD: db
@@ -22,8 +28,8 @@ jobs:
       PGPASSWORD: postgrespass
       
     steps: 
-      - name: Checkout
-        uses: actions/checkout@v1
+      #- name: Checkout
+      #  uses: actions/checkout@v1
         
       #- name: Install
       #  run: |

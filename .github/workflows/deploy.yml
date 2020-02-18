@@ -28,6 +28,10 @@ jobs:
       PGPASSWORD: postgrespass
       
     steps: 
+    
+      - name: Pull Repo
+        uses: actions/checkout@v1
+      
       - name: Run Docker Compose Up
         run: |
           docker-compose up -d

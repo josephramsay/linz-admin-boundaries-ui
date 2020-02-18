@@ -34,7 +34,7 @@ jobs:
         
       - name: Install Required Python Modules
         run: |
-          docker-compose exec -T pg-box sh -c "echo 'PG BOX'"
+          docker-compose exec -T pg-test sh -c "echo 'PG BOX'"
         
       #- name: Checkout
       #  uses: actions/checkout@v1

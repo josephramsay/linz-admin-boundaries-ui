@@ -1,0 +1,14 @@
+version: "2"
+
+services:
+  pg-test:
+    image: postgres:latest
+    ports:
+      - "5432"
+    environment:
+      POSTGRES_DB: github_ci_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+  tc-test:
+    image: tomcat:latest

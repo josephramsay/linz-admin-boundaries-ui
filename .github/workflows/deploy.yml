@@ -36,7 +36,7 @@ jobs:
         run: |
           docker-compose up -d
         
-      - name: Install Required Python Modules
+      - name: Run Docker Compose test
         run: |
           docker-compose exec -T pg-test sh -c "echo 'PG BOX'"
         
@@ -55,16 +55,12 @@ jobs:
           
       - name: SetupDatabase
         run: |
-          docker -v
-          docker exec -it pg-test /bin/sh
-          docker exec -it pg-test echo 'echoing'
-          docker exec -it pg-test psql -d postgres -U postgres createdb dab
-          docker exec -it pg-test psql -d postgres -U postgres createdb dab
-          docker exec -it pg-test psql -d postgres -U postgres createuser dab
-          docker exec -it pg-test psql -d dab -U dab -c 'create table test (i int, d varchar);'
-          docker exec -it pg-test psql -d dab -U dab -c 'insert into test values (100, \'abc\');'
+          docker-compose exec -T pg-test sh -c "psql -d postgres -U postgres createdb dab"
+          docker-compose exec -T pg-test sh -c "psql -d postgres -U postgres createuser dab"
+          docker-compose exec -T pg-test sh -c "psql -d dab -U dab -c 'create table test (i int, d varchar);'"
+          docker-compose exec -T pg-test sh -c "psql -d dab -U dab -c 'insert into test values (100, \'abc\');'"
           
       - name: CheckPG
-        run: docker exec -it pg-test psql -d dab -c 'select * from test;' 
+        run: docker-compose exec -T pg-test sh -c "psql -d dab -c 'select * from test;'" 
    
    

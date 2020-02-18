@@ -56,15 +56,15 @@ jobs:
       - name: SetupDatabase
         run: |
           docker -v
-          docker exec -it postgres /bin/sh
-          docker exec -it postgres echo 'echoing'
-          docker exec -it postgres psql -d postgres -U postgres createdb dab
-          docker exec -it postgres psql -d postgres -U postgres createdb dab
-          docker exec -it postgres psql -d postgres -U postgres createuser dab
-          docker exec -it postgres psql -d dab -U dab -c 'create table test (i int, d varchar);'
-          docker exec -it postgres psql -d dab -U dab -c 'insert into test values (100, \'abc\');'
+          docker exec -it pg-test /bin/sh
+          docker exec -it pg-test echo 'echoing'
+          docker exec -it pg-test psql -d postgres -U postgres createdb dab
+          docker exec -it pg-test psql -d postgres -U postgres createdb dab
+          docker exec -it pg-test psql -d postgres -U postgres createuser dab
+          docker exec -it pg-test psql -d dab -U dab -c 'create table test (i int, d varchar);'
+          docker exec -it pg-test psql -d dab -U dab -c 'insert into test values (100, \'abc\');'
           
       - name: CheckPG
-        run: psql -d dab -c 'select * from test;' 
+        run: docker exec -it pg-test psql -d dab -c 'select * from test;' 
    
    

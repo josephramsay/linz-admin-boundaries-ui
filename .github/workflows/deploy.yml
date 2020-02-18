@@ -55,8 +55,8 @@ jobs:
           
       - name: SetupDatabase
         run: |
-          docker-compose exec -T pg-test sh -c "createdb dab"
-          docker-compose exec -T pg-test sh -c "createuser dab"
+          docker-compose exec -T pg-test sh -c "createdb -U postgres dab"
+          docker-compose exec -T pg-test sh -c "createuser -U postgres dab"
           docker-compose exec -T pg-test sh -c "psql -d dab -U dab -c 'create table test (i int, d varchar);'"
           docker-compose exec -T pg-test sh -c "psql -d dab -U dab -c 'insert into test values (100, \'abc\');'"
           

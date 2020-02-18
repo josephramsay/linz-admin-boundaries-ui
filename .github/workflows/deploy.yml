@@ -39,10 +39,10 @@ jobs:
         
       - name: Run Docker Compose test
         run: |
-          docker-compose exec -T tc-test sh -c "echo 'TC BOX'"
           docker-compose exec -T pg-test sh -c "echo 'PG BOX'"
+          docker-compose exec -T tc-test sh -c "echo 'TC BOX'"
           docker-compose exec -T pg-test sh -c "psql -d dab -c 'select * from test;'" 
-        
+          docker-compose exec -T tc-test sh -c "$CATALINA_HOME/bin/version.sh"
       #- name: Checkout
       #  uses: actions/checkout@v1
         

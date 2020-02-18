@@ -8,17 +8,17 @@ jobs:
   
     runs-on: ubuntu-latest
 
-    container: ubuntu:latest
+    #container: ubuntu:latest
     
-    services:
-      postgres:
-        image: postgres  
-        ports: 
-          - 5432:5432
-      tomcat:
-        image: tomcat
-        ports:
-          - 8080:8080    
+    #services:
+    #  postgres:
+    #    image: postgres  
+    #    ports: 
+    #      - 5432:5432
+    #  tomcat:
+    #    image: tomcat
+    #    ports:
+    #      - 8080:8080    
         
     env:
       BUILD: db
@@ -28,6 +28,14 @@ jobs:
       PGPASSWORD: postgrespass
       
     steps: 
+      - name: Run Docker Compose Up
+        run: |
+          docker-compose up -d
+        
+      - name: Install Required Python Modules
+        run: |
+          docker-compose exec -T pg-box sh -c "echo 'PG BOX'"
+        
       #- name: Checkout
       #  uses: actions/checkout@v1
         

@@ -54,14 +54,14 @@ jobs:
       #    POSTGRES_PASSWORD: docker
           
           
-      - name: SetupDatabase
-        run: |
-          docker-compose exec -T pg-test sh -c "createdb -U postgres dab"
-          #docker-compose exec -T pg-test sh -c "createuser -U postgres dab"
-          #docker-compose exec -T pg-test sh -c "psql -d dab -U dab -c 'create table test (i int, d varchar);'"
-          #docker-compose exec -T pg-test sh -c "psql -d dab -U dab -c 'insert into test values (100, \'abc\');'"
+      #- name: SetupDatabase
+      #  run: |
+      #    docker-compose exec -T pg-test sh -c "createdb -U postgres dab"
+      #    docker-compose exec -T pg-test sh -c "createuser -U postgres dab"
+      #    docker-compose exec -T pg-test sh -c "psql -d dab -U dab -c 'create table test (i int, d varchar);'"
+      #    docker-compose exec -T pg-test sh -c "psql -d dab -U dab -c 'insert into test values (100, \'abc\');'"
           
-      - name: CheckPG
+      - name: Check Database Init
         run: docker-compose exec -T pg-test sh -c "psql -d dab -c 'select * from test;'" 
    
    

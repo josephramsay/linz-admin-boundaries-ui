@@ -6,7 +6,7 @@ services:
     ports:
       - "5432"
     environment:
-      POSTGRES_DB: github_ci_test
+      POSTGRES_DB: dab
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
 

@@ -43,6 +43,7 @@ jobs:
           
       - name: SetupDatabase
         run: |
+          docker ps
           docker exec -it postgres /bin/sh
           docker exec -it postgres echo 'echoing'
           docker exec -it postgres psql -d postgres -U postgres createdb dab

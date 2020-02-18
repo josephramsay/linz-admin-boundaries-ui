@@ -8,8 +8,8 @@ jobs:
   
     runs-on: ubuntu-latest
 
-    container: alpine
-
+    container: ubuntu-latest
+    
     services:
       postgres:
         image: postgres  

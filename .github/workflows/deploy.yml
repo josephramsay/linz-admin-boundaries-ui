@@ -8,7 +8,7 @@ jobs:
   
     runs-on: ubuntu-latest
 
-    container: node:10.19-jessie
+    container: alpine
 
     services:
       postgres:
@@ -43,7 +43,7 @@ jobs:
           
       - name: SetupDatabase
         run: |
-          docker ps
+          docker -v
           docker exec -it postgres /bin/sh
           docker exec -it postgres echo 'echoing'
           docker exec -it postgres psql -d postgres -U postgres createdb dab

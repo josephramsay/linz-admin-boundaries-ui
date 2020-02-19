@@ -36,15 +36,19 @@ jobs:
 
   deployment:
   
-      - name: Setup Build
-        run: |
-          sed -i 's/%%REMOTEHOST/${{jobs.container.tc-test.image}}' gradle.ga.properties
-          sed -i 's/%%REMOTEUSER/{TOMCAT_USER}' gradle.ga.properties
-          sed -i 's/%%REMOTEPASS/{TOMCAT_PASS}' gradle.ga.properties
-          mv gradle.ga.properties gradle.properties
-          cat gradle.properties
+    runs-on: ubuntu-latest
+    
+    steps:
+    
+       - name: Setup Build
+         run: |
+           sed -i 's/%%REMOTEHOST/${{jobs.container.tc-test.image}}' gradle.ga.properties
+           sed -i 's/%%REMOTEUSER/{TOMCAT_USER}' gradle.ga.properties
+           sed -i 's/%%REMOTEPASS/{TOMCAT_PASS}' gradle.ga.properties
+           mv gradle.ga.properties gradle.properties
+           cat gradle.properties
 
           
-      - name: Deploy
-          gradle deploy
+       - name: Deploy
+         run: gradle deploy
    

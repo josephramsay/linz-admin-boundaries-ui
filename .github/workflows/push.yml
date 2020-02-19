@@ -37,9 +37,9 @@ jobs:
     
       - name: Setup Build
         run: |
-          sed -i 's/%%REMOTEHOST/localhost' gradle.ga.properties
-          sed -i 's/%%REMOTEUSER/{TOMCAT_USER}' gradle.ga.properties
-          sed -i 's/%%REMOTEPASS/{TOMCAT_PASS}' gradle.ga.properties
+          sed -i 's/%%REMOTEHOST/localhost/' gradle.ga.properties
+          sed -i 's/%%REMOTEUSER/{TOMCAT_USER}/' gradle.ga.properties
+          sed -i 's/%%REMOTEPASS/{TOMCAT_PASS}/' gradle.ga.properties
           mv gradle.ga.properties gradle.properties
           cat gradle.properties
 

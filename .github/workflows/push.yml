@@ -9,6 +9,7 @@ jobs:
     runs-on: ubuntu-latest
         
     env:
+    
       BUILD: db
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
@@ -38,11 +39,25 @@ jobs:
   
     runs-on: ubuntu-latest
     
+    env:
+    
+      BUILD: db
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASS: postgrespass
+      POSTGRES_DATABASE: dab
+      TOMCAT_USER: admin
+      TOMCAT_PASS: password
+      
     steps:
+    
+       - name: Pull Repo
+         uses: actions/checkout@v1
     
        - name: Setup Build
          run: |
-           sed -i 's/%%REMOTEHOST/${{jobs.container.tc-test.image}}' gradle.ga.properties
+           sed -i 's/%%REMOTEHOST/localhost' gradle.ga.properties
            sed -i 's/%%REMOTEUSER/{TOMCAT_USER}' gradle.ga.properties
            sed -i 's/%%REMOTEPASS/{TOMCAT_PASS}' gradle.ga.properties
            mv gradle.ga.properties gradle.properties

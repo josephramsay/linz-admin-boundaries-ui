@@ -1,24 +1,12 @@
 package nz.govt.linz.AdminBoundariesTest;
 
-/**
- * AdminBoundaries Test
- *
- * Copyright 2014 Crown copyright (c)
- * Land Information New Zealand and the New Zealand Government.
- * All rights reserved
- *
- * This program is released under the terms of the new BSD license. See the
- * LICENSE file for more information.
- */
+import nz.govt.linz.AdminBoundaries.UserAdmin.UserReader;
+import nz.govt.linz.AdminBoundaries.UserAdmin.UserReaderTomcat;
+import nz.govt.linz.AdminBoundaries.UserAdmin.UserTomcat;
 
-//import UserReader;
-import nz.govt.linz.AdminBoundaries.UserReader;
-import nz.govt.linz.AdminBoundaries.UserReaderTomcat;
 import static org.junit.Assert.*;
 
 import java.util.List;
-import java.util.Map;
-
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -30,15 +18,12 @@ import org.junit.runners.MethodSorters;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class UserReaderTomcat_Test {
 	
+	private static int user_count;
+	
 	private static final String samplefile = "src/test/resources/tomcat-users.sample.xml";
-	//private static final String samplefile = "/home/jramsay/git/linz-admin-boundaries-ui/src/main/resources/tomcat-users.sample.xml";
 	
 	/** reader obj */
 	private UserReader reader;
-
-	
-	private static boolean overwrite_flag;
-	private static Map<String,Map<String,String>> restore;
 	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {	
@@ -50,8 +35,8 @@ public class UserReaderTomcat_Test {
 
 	@Before
 	public void setUp() throws Exception {
-		System.out.println("--- test ---");
 		reader = new UserReaderTomcat(samplefile);
+		user_count = reader.getUserList().size();
 	}
 
 	@After
@@ -61,29 +46,36 @@ public class UserReaderTomcat_Test {
 		
 	@Test
 	public void test_10_checkUserList() {
-		List<Map<String,String>> user_list = reader.getUserList();
-		assertEquals(5,user_list.size());
-		assertEquals("user1pass",reader.findInUserList("user1").get("password"));
-		assertEquals("user2pass",reader.findInUserList("user2").get("password"));
+		assertEquals("user1pass",((UserTomcat)reader.findInUserList("user1")).getPassword());
+		assertEquals("user2pass",((UserTomcat)reader.findInUserList("user2")).getPassword());
 	}
 	
 	@Test
 	public void test_20_addUser() {
 		String dummyuser = "dummyuser";
 		String dummypass = "dummypass";
-		String dummyrole = "dummyrole";
-		reader.addUser(dummyuser,dummypass,dummyrole);
-		List<Map<String,String>> user_list = reader.getUserList();
-		assertEquals(6,user_list.size());
-		assertEquals(reader.encrypt(dummypass),reader.findInUserList(dummyuser).get("password"));
+		String dummyrole = "AIMS";
+		//System.out.println("DR1-"+reader);
+		UserTomcat user = new UserTomcat(dummyuser,dummypass,dummyrole);
+		reader.addUser(user);
+		//System.out.println("DR2-"+reader);
+		assertEquals(user_count+1,reader.getUserList().size());
+		assertEquals(dummypass,((UserTomcat)reader.findInUserList(dummyuser)).getPassword());
+		//assertEquals(reader.encrypt(dummypass),((UserTomcat)reader.findInUserList(dummyuser)).getPassword());
 	}
 	
 	@Test
 	public void test_30_deleteUser() {
 		reader.delUser("dummyuser");
-		List<Map<String,String>> user_list = reader.getUserList();
-		assertEquals(5,user_list.size());
-	}	
+		assertEquals(user_count-1,reader.getUserList().size());
+	}
+	
+	@Test
+	public void test_40_transformer() {
+		List<List<String>> table_data = reader.transformUserList(reader.getUserList());
+		//System.out.println("DR40-"+table_data);
+		assertEquals(user_count+1,table_data.size());
+	}
 
 
 }

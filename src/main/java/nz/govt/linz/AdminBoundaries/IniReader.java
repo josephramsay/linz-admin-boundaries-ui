@@ -13,9 +13,12 @@ package nz.govt.linz.AdminBoundaries;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -52,6 +55,18 @@ public class IniReader {
 		LOGGER.finest("setpath "+p);
 		setPath(p);
 	}
+	
+	/**
+	 * Instance method used for testing
+	 * @param p
+	 * @throws IOException
+	 */
+	public static IniReader getInstance(Map<String,Map<String,String>> e) {
+		LOGGER.finest("unsaved instance");
+		IniReader ir = new IniReader("");
+		ir.setEntries(e);
+		return ir;
+	}
 
 	/**
 	 * Sets ini path
@@ -59,6 +74,13 @@ public class IniReader {
 	 */
 	public void setPath(String p){
 		path = p;
+	}
+	/**
+	 * returns the ini file path
+	 * @return
+	 */
+	public String getPath() {
+		return path;
 	}
 
 	/**
@@ -105,9 +127,19 @@ public class IniReader {
 			}
 		}
 		catch (IOException ioe) {
-			LOGGER.warning("Error reading config file, "+path+". "+ioe);
+			LOGGER.severe("Error reading config file, "+path+". "+ioe);
 		}
 		LOGGER.fine("e="+entries);
+	}
+	
+	/**
+	 * Sets path and reads the named ini file populating entries array
+	 * @param p
+	 * @throws IOException
+	 */
+	public void load(String p) {
+		setPath(p);
+		load();
 	}
 
 	/** Entries array getter. Returns the entries array in full */
@@ -124,6 +156,7 @@ public class IniReader {
 	
 	/** Sets and individual value in the entries array */
 	public void setEntry(String sec,String opt, String val){
+		if (!entries.containsKey(sec)) {entries.put(sec,new HashMap<String,String>());}
 		entries.get(sec).put(opt, val);
 	}
 
@@ -142,7 +175,6 @@ public class IniReader {
 		return entries.get(sec).keySet();
 	}
 
-	//------------------------------------------------
 
 	/**
 	 * Writes entries array back to its original file (NB comments and some formatting are lost)
@@ -163,7 +195,27 @@ public class IniReader {
 			} 
 		}
 	}
+	
+	/**
+	 * Convenience dump overwriting entries before save
+	 * @param entriesarg
+	 * @throws IOException
+	 */
+	public void dump(Map<String,Map<String,String>> entriesarg) throws IOException {
+		setEntries(entriesarg);
+		dump();
+	}
 
+	/**
+	 * flushes the contents of the config file
+	 * @throws IOException 
+	 * @throws FileNotFoundException 
+	 */
+	public void flush() throws IOException {
+		//(new PrintWriter(getPath())).close();//empties file only
+		Files.deleteIfExists(Paths.get(getPath()));
+	}
+	
 	/**
 	 * Set entries Section, Option, Value
 	 * @param section
@@ -187,7 +239,8 @@ public class IniReader {
 	 */	
 	public String get( String section, String option ) {
 		return getEntry(section,option);
-	}	
+	}
+	
 	/**
 	 * Alias for getentry (NB originally returned entries array itself...)
 	 * @param section
@@ -195,41 +248,9 @@ public class IniReader {
 	 * @param defaultvalue
 	 * @return
 	 */	
-	public String get( String section, String option, String defaultvalue ) {
-		String value = getEntry(section,option);
-		return value.equals(null) || value.isEmpty() ? defaultvalue : value;
+	public Object get( String section, String option, Object defaultvalue ) {
+		Object value = getEntry(section,option);
+		return value.equals(null) || value.toString().equals("") ? defaultvalue : value;
 	}
 
-	//TODO. Needed?
-	public String getString( String section, String option, String defaultvalue ) {
-		Map< String, String > opt_val = entries.get( section );
-		if( opt_val == null ) {
-			return defaultvalue;
-		}
-		return opt_val.get( option );
-	}
-
-	public int getInt( String section, String option, int defaultvalue ) {
-		Map< String, String > opt_val = entries.get( section );
-		if( opt_val == null ) {
-			return defaultvalue;
-		}
-		return Integer.parseInt( opt_val.get( option ) );
-	}
-
-	public float getFloat( String section, String option, float defaultvalue ) {
-		Map< String, String > opt_val = entries.get( section );
-		if( opt_val == null ) {
-			return defaultvalue;
-		}
-		return Float.parseFloat( opt_val.get( option ) );
-	}
-
-	public double getDouble( String section, String option, double defaultvalue ) {
-		Map< String, String > opt_val = entries.get( section );
-		if( opt_val == null ) {
-			return defaultvalue;
-		}
-		return Double.parseDouble( opt_val.get( option ) );
-	}
 }

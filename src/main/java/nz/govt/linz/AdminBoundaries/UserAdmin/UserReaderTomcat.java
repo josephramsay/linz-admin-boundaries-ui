@@ -1,4 +1,4 @@
-package nz.govt.linz.AdminBoundaries;
+package nz.govt.linz.AdminBoundaries.UserAdmin;
 
 import java.io.File;
 import java.io.IOException;
@@ -6,10 +6,9 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.logging.Logger;
+
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -29,11 +28,14 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import nz.govt.linz.AdminBoundaries.UserAdmin.UserTomcat.GSMethod;
+
 public class UserReaderTomcat extends UserReader {
 	
-	private static final String USRP = "conf/tomcat-users.xml";
+	private static final Logger LOGGER = Logger.getLogger( UserReaderTomcat.class.getName() );
+
+	private static final String USRP = "/conf/tomcat-users.xml";
 	private static final String catalina_base_path = System.getProperty( "catalina.base" );
-	private static final String test_base_path = "..";
 	//private static final File catalina_base = new File( catalina_base_path ).getAbsoluteFile();
 	
 	public static final String ALG = "SHA-256";
@@ -60,6 +62,31 @@ public class UserReaderTomcat extends UserReader {
 		load();
 	}
 
+	
+	/**
+	 * Adds a user entry to the user_list and saves the result
+	 * @param user Username
+	 * @param pass Password unencrypted
+	 */
+	public void addUser(String username, String password, String roles) {
+		UserTomcat user = new UserTomcat();
+		user.setUserName(username);
+		user.setPassword(encrypt(password));
+		user.setRoles(roles);
+		//user_list.add(user);
+		//saveUserList();
+		addUser(user);
+	}
+	
+	public void editUser(String uname, String password, String roles) {
+		UserTomcat user = new UserTomcat();		
+		user.setUserName(uname);
+		user.setPassword(encrypt(uname));
+		user.setRoles(roles);
+		//user_list.add(user);
+		editUser(user);
+	}
+	
 	/**
 	 * Load the tomcat-users file into local doc object and read a map of the user entries
 	 * @param tomcat_file File object for tomcat-users.xml
@@ -94,11 +121,6 @@ public class UserReaderTomcat extends UserReader {
 	}
 
 
-
-
-	
-
-
 	/**
 	 * Rewrites the user_doc by deleting all existing users and replacing them with the users saved in the user_list
 	 */
@@ -112,22 +134,22 @@ public class UserReaderTomcat extends UserReader {
 			Node n = user_nl.item(0);
 			try {
 				root_element.removeChild(n);
-				System.out.println("removing "+n.getAttributes().item(2));
+				LOGGER.info("removing "+n.getAttributes().item(2));
 			}
 			catch (DOMException de) {
-				System.err.println("UserReader save Failure. "+de.toString());
+				LOGGER.warning("UserReader save Failure. "+de.toString());
 			}
 		}
 		//add back modified users
-		for (Map<String, String> entry : user_list) {
+		for (User user : user_list) {
 			Element new_element = user_doc.createElement("user");
-			new_element.setAttribute("username",entry.get("username"));
-			new_element.setAttribute("password",entry.get("password"));
-			new_element.setAttribute("roles",entry.get("roles"));
+			new_element.setAttribute("username",user.getUserName());
+			new_element.setAttribute("password",((UserTomcat)user).getPassword());
+			new_element.setAttribute("roles",((UserTomcat)user).getRoleStr());
 			root_element.appendChild(new_element);
 			user_doc.normalize();
 			//root_element.insertBefore(new_element, refChild)  appendChild(new_element);
-			System.out.println("appending "+entry.get("username"));
+			LOGGER.info("appending "+user.getUserName());
 		}
 		//Tidy up by removing blank lines
 		int i=0;
@@ -146,17 +168,17 @@ public class UserReaderTomcat extends UserReader {
 	 * @return HashMap of user/password pairs
 	 */
 	@Override
-	public List<Map<String,String>> readUserList(){
-		List<Map<String,String>> new_user_list = new ArrayList<>();
+	public List<User> readUserList(){
+		List<User> new_user_list = new ArrayList<>();
 		NodeList user_nl = user_doc.getDocumentElement().getElementsByTagName("user");
 		for (int i = 0; i < user_nl.getLength(); i++) {
 			Node n = user_nl.item(i);
-			Map<String,String> user_entry = new HashMap<>();
-			for (String upr : Arrays.asList("username","password","roles")) {
-				user_entry.put(upr, n.getAttributes().getNamedItem(upr).getNodeValue());
+			User user = new UserTomcat();
+			for (String upr : UserReader.getNames(GSMethod.class)) {
+				user.writeUserAttribute(upr, n.getAttributes().getNamedItem(upr.toLowerCase()).getNodeValue());
 			}
-			new_user_list.add(user_entry);
-			System.out.println("READ - "+user_entry.get("username"));
+			new_user_list.add(user);
+			//LOGGER.info("Read user "+user.getUserName());
 		}
 		return new_user_list;
 	}
@@ -173,14 +195,8 @@ public class UserReaderTomcat extends UserReader {
 			Document user_doc = dbBuilder.parse(tomcat_file);
 			return user_doc;
 		} 
-		catch (ParserConfigurationException pce){
-			System.err.println("UserReader Failure. "+pce.toString());
-		}
-		catch (SAXException se){
-			System.err.println("UserReader Failure. "+se.toString());
-		}
-		catch (IOException ioe) {
-			System.err.println("UserReader Failure. "+ioe.toString());
+		catch (ParserConfigurationException|SAXException|IOException multi) {
+			System.err.println("UserReader Failure. "+multi.toString());
 		}
 		return null;
 	}
@@ -200,17 +216,27 @@ public class UserReaderTomcat extends UserReader {
 			handler.setIterations(UserReaderTomcat.ITER);
 			handler.setSaltLength(UserReaderTomcat.SALT);
 			handler.setEncoding(UserReaderTomcat.ENC.name());
-			return handler.mutate(plain); 
+			return handler.mutate(plain);
 		} catch (NoSuchAlgorithmException nsae) {
 			nsae.printStackTrace();
 		}
 		return plain;
 	}
+	
+	@Override
+	public List<User> cloneUserList() {
+		List<User> new_user_list = new ArrayList<>();
+		for (User user : user_list) {
+			new_user_list.add(new UserTomcat((UserTomcat)user));
+		}
+		return new_user_list;
+	}
+	
 	/** Simple tostring */
 	public String toString(){
 		String users = "";
-		for (Map<String,String> ul : user_list) {
-			users += ul.get("username")+",";
+		for (User user : user_list) {
+			users += user.getUserName()+",";
 		}
 		return "UserReader::"+tomcat_filename+"\n"+users;
 	}

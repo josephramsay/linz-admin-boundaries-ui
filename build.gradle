@@ -19,7 +19,7 @@ LICENSE file for more information.
 
     dependencies {
         classpath "org.postgresql:postgresql:9.4-1206-jdbc42"
-        classpath 'com.bmuschko:gradle-cargo-plugin:2.2.3'
+        classpath 'com.bmuschko:gradle-cargo-plugin:2.5'
         //pygradle
         //classpath "gradle.plugin.com.linkedin.pygradle:pygradle-plugin:0.3.24"
         //debpackage
@@ -38,12 +38,19 @@ plugins {
 }
 
 ext {
+    postgresqlJDBCVersion = '9.1-901.jdbc4'
     postgresqlApiVersion = '9.4-1206-jdbc42'
     postGISApiVersion = '2.2.0'
     servletApiVersion = '3.+'
+    catalinaVersion = '9.0.14'
+    tomcatVersion = '9.0.14'
+    javaxJSONAPIVersion = '1.1.4'
+    javaxJSONVersion = '1.1.4'
     junitVersion = '4.12'
     jmockVersion = '2.9.0'
     jsoupVersion = '1.11.3'
+    py4jVersion =  '0.10.8.1'
+    //seleniumVersion '3.141.59'
     cargoVersion = '2.4'
 }
 //latest unavailable 
@@ -57,16 +64,16 @@ apply plugin: 'com.bmuschko.cargo'
 //apply plugin: "com.linkedin.python"
 //apply plugin: "nebula.deb"
 
-version = '0.1'
+version = '0.2'
 sourceCompatibility = '1.8'
 
 def webContext = 'ab'
 def warDir = 'build/libs/'
 def warName = 'ab.war'
 def packName = 'AdminBoundaryDownloader'
-def packVersion = '0.1'
+def packVersion = '0.2'
 
-//packages up everything in src/main/webapp
+//packages the uploader component linz-admin-boundaries-uploader into src/main/webapp
 
 task copyscripts(type: Copy) {
      //dependsOn test
@@ -82,10 +89,10 @@ task copyscripts(type: Copy) {
 
 war {
     dependsOn copyscripts
+    //exclude 'src/test/java/nz/govt/linz/AdminBoundariesUITest/**'
     manifest {
         attributes 'Implementation-Title': 'LINZ Admin Boundaries Downloader',
             'Implementation-Version': version
-
     }
     archiveName = warName
 }
@@ -98,9 +105,10 @@ task cargosetup {
 	    port = 8080
 	
 	    deployable {
-	        file = file(warDir+warName)
+	        file = file("./"+warDir+warName)
 	        context = webContext
 	    }
+	    print "> warfile ${warDir}${warName}\n"
 	    
 	    remote {
 	       protocol = "${remoteProtocol}"
@@ -131,25 +139,37 @@ repositories {
     mavenCentral()
     pyGradlePyPi()
     ivy { url "../../ivy/repository" }
-    //flatDir name:"local", dirs:"~/ivy/repository"
+    //flatDir name: "local", dirs: "~/ivy/repository"
+    //flatDir name: "local", dirs: "~/git/aims/build/libs"
 }
 
 dependencies {
+	//NB nz.govt.linz are local ivy repo workarounds. Replace as needed
+	//compile files("~/git/aims/build/libs/aims-dev.war")
     //classpath "org.postgresql:postgresql:$postgresqlApiVersion"
     providedCompile "javax.servlet:servlet-api:$servletApiVersion"
-    providedRuntime "org.postgresql:postgresql:$postgresqlApiVersion"
+    //providedCompile "nz.govt.linz:catalina:$catalinaVersion" 
+    providedCompile "org.apache.tomcat:tomcat-catalina:$catalinaVersion" 
+    providedCompile "org.apache.tomcat:tomcat-util:$tomcatVersion"
+    providedCompile "postgresql:postgresql:$postgresqlJDBCVersion"
     providedRuntime "net.postgis:postgis-jdbc:$postGISApiVersion"
+    providedRuntime "org.postgresql:postgresql:$postgresqlApiVersion"
+    compile "net.sf.py4j:py4j:$py4jVersion"
+    compile "javax.json:javax.json-api:$javaxJSONAPIVersion"
+    compile "org.glassfish:javax.json:$javaxJSONVersion"
     testCompile "junit:junit:$junitVersion" 
     testCompile "org.jmock:jmock:$jmockVersion" 
     testCompile "org.jsoup:jsoup:$jsoupVersion"
+    //testCompile "org.seleniumhq.selenium:selenium-java:$seleniumVersion"
     /*
     python "pypi:pexpect:4.2.1"
     python "pypi:psycopg2:2.6.2"
-    python "pypi:GDAL:2.1.0"
+    python "pypi:GDAL:2.4.0"
     */
     test "nz.govt.linz:psycopg2:2.6.2"
     test "nz.govt.linz:pexpect:4.2.1"
-    test "nz.govt.linz:gdal:2.1.0"
+    test "nz.govt.linz:pygdal:2.2.1.3"
+    //test "org.gdal:gdal:2.4.0"
     test "nz.govt.linz:ptyprocess:0.5.1"
 }
 

@@ -96,7 +96,8 @@ public class DABServletSummary extends DABServlet {
 	public String readProcessOutput(String action){
 		//read admin_bdys diffs
 		ProcessControl pc = new ProcessControl();
-		return pc.startProcessStage(action);
+		pc.addProcessArgs(CLARGS);
+		return pc.runProcess(action);
 	}
 	
 	/**
@@ -124,8 +125,8 @@ public class DABServletSummary extends DABServlet {
         String compare = request.getParameter("compare");
         String action = request.getParameter("action");
         
-        /* If compare action requested for table generate a diff table.
-         * If action requested start processcontrol and return result.
+        /* If compare action requested for table Then generate a diff table.
+         * If action requested Then start processcontrol and return result.
          * Otherwise return the standard summary table
          */
         

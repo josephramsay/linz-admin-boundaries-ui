@@ -3,4 +3,4 @@
 bdir=`pwd`
 adir=/opt/tomcat8/webapps/ab/WEB-INF/scripts
 
-python $adir/download_admin_bdys.py load detect
+python $adir/linz_admin_boundaries_uploader_test.py

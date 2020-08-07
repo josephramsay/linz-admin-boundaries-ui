@@ -1,0 +1,16 @@
+version: "2"
+
+services:
+  pg-test:
+    image: postgres:latest
+    ports:
+      - "5432"
+    volumes:
+      - ./create_fixtures.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      POSTGRES_DB: dab
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+  tc-test:
+    image: tomcat:latest

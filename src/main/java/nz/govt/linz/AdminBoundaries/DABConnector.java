@@ -58,7 +58,7 @@ public class DABConnector {
 	 */
 	private void initDataSource() {
 		try {
-			datasource = (DataSource) new InitialContext().lookup("java:comp/env/jdbc/linz/aims");
+			datasource = (DataSource) new InitialContext().lookup("java:comp/env/jdbc/linz/dab");
 		} catch (NamingException ne) {
 			LOGGER.warning("Cannot locate datasource. " + ne);
 		}
@@ -70,7 +70,8 @@ public class DABConnector {
 	 * @param datasource_m
 	 */
 	public DABConnector(DataSource datasource_m) {
-		datasource = datasource_m;
+		if ( datasource_m == null ){ initDataSource(); }
+		else { datasource = datasource_m; }
 	}
 
 	/**
@@ -80,16 +81,15 @@ public class DABConnector {
 	 */
 	public List<List<String>> executeQuery(String query,boolean includehead) {
 		List<List<String>> result = null;
-		// System.out.println(String.format("### QRY ### %s", query));
 		try {
 			ResultSet rs = exeQuery(query);
 			if (rs != null) {
 				result = parseResultSet(rs,includehead);
-				LOGGER.fine("RES Size "+result.size());
+				LOGGER.fine("res size "+result.size());
 			}
 		} 
 		catch (SQLException sqle) {
-			LOGGER.warning("SQLError (q) " + sqle + "\n" + query);
+			LOGGER.warning("sql error (q) " + sqle + "\n" + query);
 			result = parseSQLException(sqle);
 		}
 		return result;
@@ -110,6 +110,7 @@ public class DABConnector {
 			Statement stmt = conn.createStatement();
 			if (stmt.execute(query)) {
 				result = stmt.getResultSet();
+				LOGGER.fine("query result "+result);
 			}
 		}
 		return result;
@@ -160,7 +161,7 @@ public class DABConnector {
 		List<List<String>> result = null;
 
 		// Error is written to general log and result is returned
-		System.out.println("SQL error " + sqle);
+		LOGGER.warning("sql error " + sqle);
 		// return the error to the user
 		result = new ArrayList<>();
 		List<String> line = new ArrayList<>();
@@ -177,7 +178,7 @@ public class DABConnector {
 	 * @return
 	 */
 	public String quoteSpace(String columns) {
-		LOGGER.fine("COLS. " + columns);
+		LOGGER.finer("cols " + columns);
 		StringBuilder res = new StringBuilder();
 		for (String col : columns.split(",")) {
 			if (col.trim().indexOf(" ") > 0) {
@@ -226,7 +227,7 @@ public class DABConnector {
 		if (table == null) {
 			return DABContainerComp.DEF_TABLE;
 		} else {
-			String query = String.format("SELECT COUNT(*) count FROM %s.%s", schema, table);
+			String query = String.format("SELECT COUNT(*) FROM %s.%s", schema, table);
 			return DABFormatter.formatTable(table, executeQuery(query));
 		}
 	}
@@ -309,16 +310,6 @@ public class DABConnector {
 
 	public String toString() {
 		return "DABConnector::";// +connector;
-	}
-
-	/**
-	 * main method used for testing
-	 * 
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		DABConnector dabc = new DABConnector();
-		System.out.println(dabc.executeQuery("select 1"));
 	}
 
 }

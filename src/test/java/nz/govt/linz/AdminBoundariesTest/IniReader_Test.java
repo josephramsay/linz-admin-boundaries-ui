@@ -23,24 +23,27 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
+import org.junit.runners.MethodSorters;
 
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class IniReader_Test {
 	
-	private static final String p = "testconfig.ini";
-	/** pre change reader */
+	private static final String test_path = "testconfig.ini";
+	/** reader instances each initialised seperately */
 	private IniReader reader1;
-	/** editing reader */
-	private IniReader reader2;
-	/** post change reader */
-	private IniReader reader3;
 	
-	private static boolean overwrite_flag;
 	private static Map<String,Map<String,String>> restore;
 	
+	/**
+	 * Create a new hashmap and set the test values
+	 * @throws Exception
+	 */
+	@SuppressWarnings("serial")
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {	
-		overwrite_flag = false;	
+		//System.out.println("before class init");
 		restore = new HashMap<>();
 		restore.put("user",new HashMap<String,String>(){{put("domain", "fake.domain.com");put("list", "user1,user2");}});
 		restore.put("connection",new HashMap<String,String>(){{put("ftphost", "ftp.domain.com");put("ftpport", "999");}});
@@ -49,76 +52,88 @@ public class IniReader_Test {
 
 	@AfterClass
 	public static void tearDownAfterClass() throws Exception {
+		//System.out.println("after class");
+		restore = null;
 	}
 
 	@Before
 	public void setUp() throws Exception {
-		changeReaders(p);
+		reader1 = new IniReader("r1"+test_path);
+		reader1.dump(restore);
 	}
 
 	@After
 	public void tearDown() throws Exception {
-		restoreReaders(p);
+	}
+
+	/**
+	 * Test a small selection of values to make sure reader1 is being initialised
+	 * @throws IOException
+	 */
+	@Test
+	public void test_10_init() throws IOException {
+		assertEquals(restore.get("user").get("domain"), reader1.getEntry("user", "domain"));
+		assertEquals(restore.get("user").get("list"), reader1.getEntry("user", "list"));
+		assertEquals(restore.get("connection").get("ftphost"), reader1.getEntry("connection", "ftphost"));
+		assertEquals(restore.get("connection").get("ftpport"), reader1.getEntry("connection", "ftpport"));
+		assertEquals(restore.get("database").get("host"), reader1.getEntry("database", "host"));
+		assertEquals(restore.get("database").get("port"), reader1.getEntry("database", "port"));
 	}
 	
-	private void swapReaders(String p) throws IOException {
-		reader1 = new IniReader(p);
-		reader2 = new IniReader(p);
-		for (String sec : reader2.getSections()){
-			for (String opt : reader2.getOptions(sec)){
-				if (restore.containsKey(sec) && restore.get(sec).containsKey(opt)){
-					String oldval = reader2.getEntry(sec, opt);
-					String newval = restore.get(sec).get(opt);
-					System.out.println(oldval+"//"+newval);
-					reader2.setEntry(sec,opt,newval);
-					restore.get(sec).put(opt, oldval);
+	/**
+	 * Builds static instance reader from "restore" then dumps to a set path
+	 * @throws IOException 
+	 */
+	@Test
+	public void test_20_compare() throws IOException {
+		IniReader reader2 = IniReader.getInstance(restore);
+		reader2.setPath("r2"+test_path);
+		reader2.dump();
+		assertTrue(readerItemComparison(reader1,reader2));
+	}
+	
+	/**
+	 * Initialises a reader then sets from "restore" entry by entry
+	 * @throws IOException 
+	 */
+	@Test
+	public void test_30_compare() throws IOException {
+		IniReader reader3 = new IniReader("r3"+test_path);
+		for (String sec : restore.keySet()){
+			for (String opt : restore.get(sec).keySet()){
+				String newval = restore.get(sec).get(opt);
+				reader3.setEntry(sec,opt,newval);
+			}
+		}
+		reader3.dump();
+		assertTrue(readerItemComparison(reader1,reader3));
+	}
+	
+	/**
+	 * Opens a new reader from the ini file saved by reader1. Tests read correctness
+	 */
+	@Test
+	public void test_40_compare() {
+		IniReader reader4 = new IniReader("r1"+test_path);
+		reader4.load();
+		assertTrue(readerItemComparison(reader1,reader4));
+	}
+	
+	/**
+	 * Does a cmparison between 2 inireader objects by comparing element equality
+	 * @param r1 IniReader 1
+	 * @param r2I niReader 2
+	 * @return Equivalence
+	 */
+	public boolean readerItemComparison(IniReader r1,IniReader r2) {
+		for (String sec : r1.getSections()) {
+			for (String opt : r1.getOptions(sec)) {
+				if (!r1.getEntry(sec,opt).equals(r2.getEntry(sec,opt))) {
+					return false;
 				}
 			}
 		}
-		reader2.dump();
-		reader3 = new IniReader(p);
-	}
-	
-	private void restoreReaders(String p) throws IOException {
-		System.out.println("setup restore");
-		if (overwrite_flag) {
-			swapReaders(p);
-			overwrite_flag = false;
-		}
-	}
-	
-	private void changeReaders(String p) throws IOException {
-		System.out.println("setup change");
-		if (!overwrite_flag) {
-			swapReaders(p);
-			overwrite_flag = true;
-		}
-	}
-
-	@Test
-	public void test_changed() {
-		assertNotEquals(reader1.getEntry("database", "port"), reader3.getEntry("database", "port"));
-		assertNotEquals(reader1.getEntry("database", "host"), reader3.getEntry("database", "host"));
-		assertNotEquals(reader1.getEntry("connection", "ftpport"), reader3.getEntry("connection", "ftpport"));
-		assertNotEquals(reader1.getEntry("connection", "ftphost"), reader3.getEntry("connection", "ftphost"));
-		assertNotEquals(reader1.getEntry("user", "domain"), reader3.getEntry("user", "domain"));
-		assertNotEquals(reader1.getEntry("user", "list"), reader3.getEntry("user", "list"));
-
+		return true;
 	}	
-	
-	@Test
-	public void test_unchanged() {
-		assertEquals(reader1.getEntry("layer", "geom_column"), reader3.getEntry("layer", "geom_column"));
-		assertEquals(reader1.getEntry("layer", "grid_res"), reader3.getEntry("layer", "grid_res"));
-		assertEquals(reader1.getEntry("user", "link"), reader3.getEntry("user", "link"));
-		assertEquals(reader1.getEntry("user", "smtp"), reader3.getEntry("user", "smtp"));
-
-	}
-	
-	@Test
-	public void test_underscore(){
-		assertEquals(reader1.getEntry("layer", "geom_column"), reader3.getEntry("layer", "geom_column"));
-		assertEquals(reader1.getEntry("layer", "shift_geometry"), reader3.getEntry("layer", "shift_geometry"));
-	}
 
 }

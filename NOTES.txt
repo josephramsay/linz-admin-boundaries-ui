@@ -1,3 +1,45 @@
+APPLICATION DESCRIPTION
+
+The linz-admin-boundaries-ui is the front end for the linz-admin-boundaries-uploader python script (the description of this is located in that module).
+Originally written to allow user updating of Admin-Boundaries layers, those sourced externally, it now also provides user management capabilities that allow user management for both the AdminBoundaries application and AIMS.
+Performing a supporting function for AIMS, AdminBoundaries was built around existing scripts/processes that updated external data sources. 
+Many of these processes were manual and in some cases involved users copying data from emailed spreadsheets. 
+To lend a small level of automation to these processes the AdminBoundaries script was written to both parse CSV data from an internal CIFS share and extract shapefile data from a remote FTP administered but StatsNZ.
+StatsNZ have since adapted their output and now provide layers over Kx hosted WFS.
+
+
+The AdminBoundaries (AB) application operates as a tool to allow user verification of external data before allowing it into the AIMS environment. External layers are accessed and imported into an preview schema in the main "linz_db" database where users can inspect the data before committing the data to the production system. The UI component of this application facilitates the importation, inspection and management of this process.
+
+The AB-ui presents 3 user screens. 
+1. The Import page shows the row counts on the configured layers in both the production system and those that have been recently imported. Operations to reimport/delete or transfer (into production) are provided on this page.
+2. A Config page presents a form replicating the configuration data used by the importer script. Here the user can adjust connection setting, import parameters and layer conversions
+3. The User page was written in support of AIMS whose user management interface was never delivered and deferred to a future release. This interface enables management of three levels of user access control. PostgreSQL group memberships (for AIMS), user/password management including encryption for tomcat (by editing the tomcat-users.xml file) and User login within AIMS itself.
+
+
+BUILD
+Gradle is used as the build manager. Because some dependencies are not available in the maven repositories the easiest workaround I have found is to set up a small ivy repository. (Ivy itself doesn't have to be installed, just the directory structure and format need to be set up)
+The dependencies currently supplied through Ivy are; psycopg2, pggdal and ptyprocess
+
+For deployment we use the gradle plugin com.bmuschko.cargo. It connects to tomcat for WAR upload/download.
+
+The gradle targets used to build and deploy AB are:  
+compileJava: Java source to class
+copyscripts: Copy the python repo into the WEB-INF/scripts
+war: Packaging as Web Archive
+deploy: Push the war to Tomcat (remembering to undeploy first)
+
+Only deploy/undeploy are generally needed as compilation etc are treated as dependencies of these tasks.
+
+compileJava (disambiguates compile from compileTestJava and compileJava) and builds the Java source
+copyscripts copies the python script source (linz_admin_boundaries_uploader) into a WEBAPP nested subdirectory
+war archives the java classes and the python scripts into a deployable Web jAR.
+undeploy deletes the existing .war (installation) from the server
+deploy pushes the active .war to the server. 
+The parameters on where to deploy to are set using the grade.properties file (NB like the python config, the template file in the repo will need to be modified) 
+NB the required parameters are; deployment server, deployment method (http, https) user and pass
+
+NOTES
+
 1. Parallel Resource
 1.1 Add new resource in context.xml
  <Resource name="jdbc/linz/dab"
@@ -80,7 +122,7 @@ in the source dir
 
 NOTES (problems seen in the past and their fixes)
 a. [UserAdmin won't load] Make sure the role set in the config has sufficient privileges to access the API and that TC has been restarted so this role, if new, is active
-b. "Restart AA" will restart the DAB application. Use this is changes are not showing up or the application appears to have hung
+b. "Restart AA" will restart the DAB application. Use this if changes are not showing up or the application appears to have hung
 c. "Restart TC" restarts Tomcat. For simple user changes this shouldn't cause any problems. Doing a restart with a new WAR is however not advised unless the WAR has been fully tested. Restarting by this method can sometimes cause tomcat to hang with a "org.apache.jasper.servlet.TldScanner.scanJars" error. If this is the case restart tomcat again manually.
 d. [No TA bdys to import] TA boundaries are located on an internal file server and accessed through a CIFS mount /mnt/gisdata. The most common reason for TA bdys data to be unavaiable is the loss of this mount point. To fix this first attempt to remount and then check if the fileserver is available. 
 e. [New user cant login] Ensure when restarting tomcat that either the restart.sh script is called or the -security option is appended to the startup.sh call. This enables the SecurityManager which authenticates added users

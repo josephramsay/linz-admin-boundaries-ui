@@ -36,7 +36,8 @@ public class UserReaderAIMS extends UserReader {
 	
 	private static final Logger LOGGER = Logger.getLogger(UserReaderAIMS.class.getName());
 	
-	public static final String user_ref_base = "http://<SVR>:8080/aims/api/admin/users";
+	//public static final String user_ref_base = "http://<SVR>:8080/aims/api/admin/users";
+	public static final String user_ref_base = "https://<SVR>:8443/aims/api/admin/users";
 	
 	/** Simple pair class for actions put/post and their json payloads */
 	class ActionPayload {
@@ -49,6 +50,22 @@ public class UserReaderAIMS extends UserReader {
 			this.payload = payload;
 		}
 	}
+	
+	/** Localhost hostname verifier override */
+	/*static {
+	    //for localhost testing only
+	    javax.net.ssl.HttpsURLConnection.setDefaultHostnameVerifier(
+	    new javax.net.ssl.HostnameVerifier(){
+
+	        public boolean verify(String hostname,
+	                javax.net.ssl.SSLSession sslSession) {
+	            if (hostname.equals("localhost")) {
+	                return true;
+	            }
+	            return false;
+	        }
+	    });
+	}*/
 	
 	private String aims_url;
 	private JsonObject json_conn;
@@ -103,10 +120,15 @@ public class UserReaderAIMS extends UserReader {
 	private JsonObject connect(String urlstr) {
 		try {
 			URL url = new URL(urlstr);
+			LOGGER.info(">>>AIMS_url "+urlstr);
 			HttpURLConnection uc = (HttpURLConnection)url.openConnection();
+			LOGGER.info(">>>AIMS_uc "+uc);
 			InputStream ucis = uc.getInputStream();
+			LOGGER.info(">>>AIMS_ucis "+ucis);
 			JsonReader reader = Json.createReader(ucis);
+			LOGGER.info(">>>AIMS_reader "+reader);
 			JsonObject jobj = reader.readObject();
+			LOGGER.info(">>>AIMS_jobj "+jobj);
 			reader.close();
 			return jobj;
 		}
@@ -115,6 +137,9 @@ public class UserReaderAIMS extends UserReader {
 		}
 		catch (IOException ioe) {
 			LOGGER.severe("Unable to connect to API. "+ioe);
+		}
+		catch (Exception e) {
+			LOGGER.severe("Connection exception. "+e);
 		}
 		return null;
 	}

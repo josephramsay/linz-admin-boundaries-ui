@@ -125,7 +125,6 @@ public class DABFormatter {
     		Map<String, String> opt_val = config.get(section);
     		form += "<label class=\"sec\">"+section+"</label>";
 			if (descriptions != null) {
-				LOGGER.warning(">S>"+descriptions+">>>"+section);
 				form += "<details><summary>"+section+" field description</summary>";
 				form += "<p>"+String.join("<br/>\n",descriptions.get(section))+"</p></details>";
 			}

@@ -173,7 +173,6 @@ public class DABIniReader extends IniReader{
 		entry.put("dst",dst);
 		entry.put("tmp",tmp);
 		entry.put("key",key);
-		LOGGER.warning(">3>"+dst+entry);
 		colmap.put(dst,entry);
 	}
 

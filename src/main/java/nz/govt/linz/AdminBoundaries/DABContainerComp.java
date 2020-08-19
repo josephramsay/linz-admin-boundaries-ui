@@ -155,7 +155,6 @@ public class DABContainerComp {
 	 * @return
 	 */
 	private TableInfo getTIInstance(String tm_name){
-		LOGGER.warning(">TI>"+tm_name);
 		Map<String,String> triple = reader.getTriple(tm_name);
 		return new TableInfo(triple.get("dst"),triple.get("tmp"),triple.get("key"));
 	}

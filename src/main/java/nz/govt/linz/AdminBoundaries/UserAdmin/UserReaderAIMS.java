@@ -120,15 +120,10 @@ public class UserReaderAIMS extends UserReader {
 	private JsonObject connect(String urlstr) {
 		try {
 			URL url = new URL(urlstr);
-			LOGGER.info(">>>AIMS_url "+urlstr);
 			HttpURLConnection uc = (HttpURLConnection)url.openConnection();
-			LOGGER.info(">>>AIMS_uc "+uc);
 			InputStream ucis = uc.getInputStream();
-			LOGGER.info(">>>AIMS_ucis "+ucis);
 			JsonReader reader = Json.createReader(ucis);
-			LOGGER.info(">>>AIMS_reader "+reader);
 			JsonObject jobj = reader.readObject();
-			LOGGER.info(">>>AIMS_jobj "+jobj);
 			reader.close();
 			return jobj;
 		}
@@ -136,10 +131,10 @@ public class UserReaderAIMS extends UserReader {
 			LOGGER.severe("Unable to fetch "+urlstr+". "+mue);
 		}
 		catch (IOException ioe) {
-			LOGGER.severe("Unable to connect to API. "+ioe);
+			LOGGER.severe("Unable to connect to API. "+urlstr+". "+ioe);
 		}
 		catch (Exception e) {
-			LOGGER.severe("Connection exception. "+e);
+			LOGGER.severe("Connection exception. "+urlstr+". "+e);
 		}
 		return null;
 	}

@@ -105,9 +105,10 @@ task cargosetup {
 	    port = 8080
 	
 	    deployable {
-	        file = file(warDir+warName)
+	        file = file("./"+warDir+warName)
 	        context = webContext
 	    }
+	    print "> warfile ${warDir}${warName}\n"
 	    
 	    remote {
 	       protocol = "${remoteProtocol}"

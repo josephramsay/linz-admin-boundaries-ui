@@ -3,31 +3,47 @@ name: Build
 on: [push]
 
 jobs:
-  build:
+
+  container:
   
     runs-on: ubuntu-latest
-
-    steps:
-  
-      - uses: actions/checkout@v1
+        
+    env:
+    
+      BUILD: db
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASS: postgrespass
+      POSTGRES_DATABASE: dab
+      TOMCAT_USER: admin
+      TOMCAT_PASS: password
       
-      - name: Setup JDK
-        uses: actions/setup-java@v1
-        with:
-          java-version: 1.8
-          
-      - name: Build with Gradle
+    steps: 
+    
+      - name: Pull Repo
+        uses: actions/checkout@v1
+      
+      - name: Run Docker Compose Up
         run: |
+          docker-compose up -d
+        
+      - name: Run Docker Compose Tests
+        run: |
+          docker-compose exec -T pg-test sh -c "echo 'PG BOX'"
+          docker-compose exec -T tc-test sh -c "echo 'TC BOX'"
+          docker-compose exec -T pg-test sh -c "psql -U dab -c 'select * from test;'" 
+          docker-compose exec -T tc-test sh -c "/usr/local/tomcat/bin/version.sh"
+    
+      - name: Setup Build
+        run: |
+          sed -i 's/%%REMOTEHOST/localhost/' gradle.ga.properties
+          sed -i 's/%%REMOTEUSER/${TOMCAT_USER}/' gradle.ga.properties
+          sed -i 's/%%REMOTEPASS/${TOMCAT_PASS}/' gradle.ga.properties
           mv gradle.ga.properties gradle.properties
-          gradle war 
-      
+          cat gradle.properties
 
-  
-#  deploy:
-#    runs-on: ubuntu-latest
-#      
-#    steps:
-#      - name: Test deploy to TC7
-#        uses: docker://alpine:3.8
-   
+          
+      - name: Deploy
+        run: gradle deploy
    

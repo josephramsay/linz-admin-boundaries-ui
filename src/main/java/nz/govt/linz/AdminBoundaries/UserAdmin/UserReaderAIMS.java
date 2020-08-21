@@ -36,7 +36,8 @@ public class UserReaderAIMS extends UserReader {
 	
 	private static final Logger LOGGER = Logger.getLogger(UserReaderAIMS.class.getName());
 	
-	public static final String user_ref_base = "http://<SVR>:8080/aims/api/admin/users";
+	//public static final String user_ref_base = "http://<SVR>:8080/aims/api/admin/users";
+	public static final String user_ref_base = "https://<SVR>:8443/aims/api/admin/users";
 	
 	/** Simple pair class for actions put/post and their json payloads */
 	class ActionPayload {
@@ -49,6 +50,22 @@ public class UserReaderAIMS extends UserReader {
 			this.payload = payload;
 		}
 	}
+	
+	/** Localhost hostname verifier override */
+	/*static {
+	    //for localhost testing only
+	    javax.net.ssl.HttpsURLConnection.setDefaultHostnameVerifier(
+	    new javax.net.ssl.HostnameVerifier(){
+
+	        public boolean verify(String hostname,
+	                javax.net.ssl.SSLSession sslSession) {
+	            if (hostname.equals("localhost")) {
+	                return true;
+	            }
+	            return false;
+	        }
+	    });
+	}*/
 	
 	private String aims_url;
 	private JsonObject json_conn;
@@ -114,7 +131,10 @@ public class UserReaderAIMS extends UserReader {
 			LOGGER.severe("Unable to fetch "+urlstr+". "+mue);
 		}
 		catch (IOException ioe) {
-			LOGGER.severe("Unable to connect to API. "+ioe);
+			LOGGER.severe("Unable to connect to API. "+urlstr+". "+ioe);
+		}
+		catch (Exception e) {
+			LOGGER.severe("Connection exception. "+urlstr+". "+e);
 		}
 		return null;
 	}

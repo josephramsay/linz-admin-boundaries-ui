@@ -26,7 +26,9 @@ public class DABIniReader extends IniReader{
 	private Map<String, Map<String,String>> colmap = new HashMap<>();
 
 	/** The descriptions array is the a map of sections and some descriptive text 
-	 * Its hardcoded here (for now) since it doesnt belong in the config file */
+	 * Its hardcoded here (for now) since it doesn't belong in the config file 
+	 * TODO. Push to properties file and add a default/placeholder for when a changed
+	 *  config file doesn't match any description */
 	protected static Map<String, String[]> descriptions = new HashMap<>();
 
 	/** 
@@ -55,10 +57,14 @@ public class DABIniReader extends IniReader{
 			"host - API host",
 			"user - DAB included username",
 			"password - DAB included user password"});
-		descriptions.put("wfs", new String[] {
+		descriptions.put("ldswfs", new String[] {
 			"version - WFS version for URL parameter (2.0.0)",
-			"host - WFS host (stats)",
-			"key - WFS authentication key"});
+			"host - WFS host (LDS)",
+			"key - LDS API key"});
+		descriptions.put("statswfs", new String[] {
+				"version - WFS version for URL parameter (2.0.0)",
+				"host - WFS host (stats)",
+				"key - Stats API key"});
 		descriptions.put("user", new String[] {
 			"list - comma seperated list of usernames that will be notified when import completes",
 			"domain - email list domain name (linz.govt.nz)",
